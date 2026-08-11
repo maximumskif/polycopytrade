@@ -25,6 +25,10 @@ async function throttledFetch(url: string): Promise<any> {
   return res.json();
 }
 
+// Escape hatch for endpoints (e.g. clob.polymarket.com) not covered by a
+// typed helper below, still going through the same throttle/backoff.
+export const throttledFetchRaw = throttledFetch;
+
 export interface Position {
   proxyWallet: string;
   asset: string;
@@ -79,6 +83,8 @@ export interface GammaMarket {
   slug: string;
   outcomes: string; // JSON-encoded string array, e.g. '["Yes","No"]'
   outcomePrices: string; // JSON-encoded string array, e.g. '["0.12","0.88"]'
+  clobTokenIds?: string; // JSON-encoded string array, one CLOB token id per outcome
+  startDate?: string;
   endDate: string;
   closed: boolean;
   volume: string;
@@ -104,10 +110,14 @@ interface PublicSearchResponse {
 // search lives at /public-search and groups results by event, which is
 // also exactly the shape we want: one event ("Bitcoin price on August 12?")
 // bundling the whole price-ladder of sub-markets ("$56k-58k", "$58k-60k", ...).
-export async function searchEvents(query: string, limitPerType = 20): Promise<GammaEvent[]> {
+export async function searchEvents(
+  query: string,
+  limitPerType = 20,
+  status: "active" | "closed" = "active"
+): Promise<GammaEvent[]> {
   const qs = new URLSearchParams({
     q: query,
-    events_status: "active",
+    events_status: status,
     limit_per_type: String(limitPerType),
   });
   const res: PublicSearchResponse = await throttledFetch(`${GAMMA_API}/public-search?${qs.toString()}`);
