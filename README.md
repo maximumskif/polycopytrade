@@ -107,6 +107,66 @@ match-state ground truth, e.g. a tennis live-score feed, to check whether
 these bets show real predictive skill or just get lucky on big variance) —
 this is the most promising next track.
 
+### Would copying each wallet's actual historical buys have paid off?
+
+`npm run wallet-backtest` mirrors every tracked wallet's real BUY fills
+(not a hypothesized rule — their actual trades) and holds to resolution,
+resolving against the market's real settled outcome via
+`getMarketByConditionId()`. This is the direct "should we copy this wallet"
+question.
+
+**Trustworthy results** (large enough distinct-market count that the
+sample isn't dominated by a couple of events):
+
+| Wallet | Resolved fills | Distinct markets | Win rate | Net |
+|---|---|---|---|---|
+| RN1 | 390 | 59 | 47.7% | **+20.0%** |
+| Djdjdjekekek | 1850 | 37 | 74.2% | **+10.2%** |
+| swisstony | 176 | 57 | 56.8% | +4.9% |
+| 0x_exit | 750 | 16 | 55.5% | +5.6% |
+| 0xE30E7... | 1630 | 34 | 73.7% | +2.8% |
+| SDTrading | 1556 | 673 | 50.5% | -2.7% |
+| kch123 | 1936 | 49 | 53.8% | **-34.0%** |
+
+Notes: SDTrading's -2.7% is the single most statistically solid number here
+(673 distinct markets, by far the largest sample) — but it likely
+undersells their real edge, since the "buy and hold to resolution" model
+can't capture active position management (partial exits, hedges) that a
+high-frequency sports trader plausibly does; their actual monthly-leaderboard
+profit (+$410K) says the real strategy works, just not the naive copy of it.
+RN1 is the most interesting standout: sub-50% win rate but strongly net
+positive — an asymmetric-payoff hunter (loses more often than wins, but
+wins pay disproportionately), a genuinely different archetype from the
+"buy likely favorites" style of Djdjdjekekek/0xE30E7. kch123's -34% rules
+it out as a copy target despite its all-time-leaderboard profit — another
+case where the real (unknown) strategy isn't "buy and hold."
+
+**NOT trustworthy — a look-ahead/sample-concentration trap** (added from
+the all-time leaderboard, then this same backtest applied): Theo4,
+Fredi9999, fishalive, mintblade, GRIMDRIP, and RepTrump all showed
+99-100% win rates and 87-209% net returns. Before trusting that,
+checked how far back the pulled sample actually reached — Theo4 and
+Fredi9999 have traded since **October/August 2024** (2 years), but the
+2000-fill window our current pull covers landed entirely within a small
+recent slice dominated by just 2-12 distinct markets. That's the signature
+of a look-ahead trap, not skill: we're sampling activity from right after
+their few career-defining bets already resolved in their favor, not a
+representative slice of decisions made before the outcome was known. A
+trader who got famous for one huge correct call will show 100% win rate on
+any window that happens to only contain that call — this says nothing
+about whether copying them prospectively would work. **Do not build
+anything on these 6 wallets' numbers without pulling much deeper history
+first** (current `getActivityDeep` caps at 4 pages / ~2000 fills; the API
+supports offset up to 5000, worth extending, and even that may not reach
+across a full 2-year history for the busiest wallets).
+
+**Real finding that DOES survive this caveat:** Theo4, Fredi9999, and
+RepTrump are dedicated **politics** traders (394/470/491 of their ~500
+most-recent fills respectively) — a category none of the original 5
+wallets touched. Worth deeper backtesting once pulled with real historical
+depth, but flagged here as a legitimate category discovery, independent of
+whether their win-rate numbers above hold up.
+
 ### Weather: same ladder shape, likely different edge source
 
 Live temperature-ladder markets (NYC, London, Paris — 11 rungs/day, same
@@ -120,19 +180,25 @@ different, separate project (data feed integration, not a ladder scanner).
 
 1. ~~Phase 0: data pipeline~~ — `walletTracker.ts`, `ladderScanner.ts`.
 2. ~~Phase 1a: backtest ladder-harvesting~~ — `backtestLadder.ts`.
-   **Result: negative edge, track killed pending new evidence** (see
-   findings above).
-3. Phase 1b (current): backtest the live-sports whale pattern
-   (Djdjdjekekek/swisstony/0xE30E7-style) against real match outcomes —
-   start with SDTrading's MLB track, since MLB has easily obtainable free
-   historical odds/outcomes data, unlike obscure Challenger tennis. Refine
-   `walletStats.ts`'s category classifier (SDTrading has $1.67M sitting in
-   an unclassified "other" bucket).
-4. Phase 2: paper trade whichever track survives backtesting, log
-   hypothetical fills/P&L for a few weeks.
-5. Phase 3: small live capital — needs CLOB signer key + API creds,
+   **Result: negative edge, track killed pending new evidence.**
+3. ~~Phase 1b: backtest copying each tracked wallet's real trades~~ —
+   `walletBacktest.ts`, expanded `wallets.ts` with 8 all-time-leaderboard
+   traders. **Result: Djdjdjekekek (+10.2%, n=37 markets) and RN1 (+20.0%,
+   n=59 markets) are the strongest trustworthy leads. 6 newly-added wallets'
+   near-100% win rates are a look-ahead sample-concentration artifact, not
+   validated edge — see findings above before trusting them.**
+4. Phase 1c (current, not started): pull deeper history (extend
+   `getActivityDeep` past 4 pages) for Theo4/Fredi9999/fishalive/mintblade/
+   GRIMDRIP/RepTrump before their numbers mean anything; separately,
+   properly backtest the politics category (Theo4/Fredi9999/RepTrump) once
+   that's done. Refine `walletStats.ts`'s category classifier further (still
+   has an "other" bucket per wallet worth auditing).
+5. Phase 2: paper trade the trustworthy leads (Djdjdjekekek-style
+   whale-conviction copying, RN1's asymmetric-payoff pattern) with no
+   capital, log hypothetical fills/P&L for a few weeks.
+6. Phase 3: small live capital — needs CLOB signer key + API creds,
    deliberately not automated yet.
-6. Phase 4: scale & risk controls — position sizing, per-category exposure
+7. Phase 4: scale & risk controls — position sizing, per-category exposure
    caps, kill switches.
 
 ## Setup
