@@ -68,12 +68,25 @@ export async function getPositions(address: string): Promise<Position[]> {
 
 export async function getActivity(
   address: string,
-  opts: { limit?: number; start?: number } = {}
+  opts: { limit?: number; start?: number; offset?: number } = {}
 ): Promise<Activity[]> {
   const limit = opts.limit ?? 500;
   const start = opts.start ?? 1;
-  const url = `${DATA_API}/activity?user=${address}&limit=${limit}&start=${start}&sortBy=TIMESTAMP&sortDirection=DESC`;
+  const offset = opts.offset ?? 0;
+  const url = `${DATA_API}/activity?user=${address}&limit=${limit}&offset=${offset}&start=${start}&sortBy=TIMESTAMP&sortDirection=DESC`;
   return throttledFetch(url);
+}
+
+// Pages back through /activity (offset capped at 5000 by the API) until
+// `pages` batches are collected or a short page signals we've hit the end.
+export async function getActivityDeep(address: string, pages = 4): Promise<Activity[]> {
+  const out: Activity[] = [];
+  for (let page = 0; page < pages; page++) {
+    const batch = await getActivity(address, { limit: 500, offset: page * 500 });
+    out.push(...batch);
+    if (batch.length < 500) break;
+  }
+  return out;
 }
 
 export interface GammaMarket {
@@ -122,6 +135,16 @@ export async function searchEvents(
   });
   const res: PublicSearchResponse = await throttledFetch(`${GAMMA_API}/public-search?${qs.toString()}`);
   return res.events ?? [];
+}
+
+// Direct market lookup by conditionId — needed to resolve what a historical
+// trade's market actually settled to. `closed` isn't a tri-state filter
+// (omit-to-get-both); a closed market only shows up when closed=true is
+// passed explicitly, confirmed by testing.
+export async function getMarketByConditionId(conditionId: string, closed: boolean): Promise<GammaMarket | null> {
+  const qs = new URLSearchParams({ condition_ids: conditionId, closed: String(closed) });
+  const res: GammaMarket[] = await throttledFetch(`${GAMMA_API}/markets?${qs.toString()}`);
+  return res[0] ?? null;
 }
 
 interface Profile {

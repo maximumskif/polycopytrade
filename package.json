@@ -10,7 +10,8 @@
     "track-wallets": "tsx src/walletTracker.ts",
     "scan-ladders": "tsx src/ladderScanner.ts",
     "backtest-ladder": "tsx src/backtestLadder.ts",
-    "wallet-stats": "tsx src/walletStats.ts"
+    "wallet-stats": "tsx src/walletStats.ts",
+    "wallet-backtest": "tsx src/walletBacktest.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
