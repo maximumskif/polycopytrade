@@ -11,6 +11,7 @@
 
 import { getActivity, type Activity } from "./polymarketClient";
 import { TRACKED_WALLETS } from "./wallets";
+import { categorize } from "./categorize";
 
 interface SyntheticOrder {
   conditionId: string;
@@ -61,34 +62,13 @@ function clusterFills(trades: Activity[]): SyntheticOrder[] {
   return orders;
 }
 
-// Coarse keyword categorizer. "other" is a real bucket, not a bug — see
-// README note on refining this once a category is worth building for.
-function categorize(title: string): string {
-  const t = title.toLowerCase();
-  if (["bitcoin", "wti", "ethereum", "crude oil", " btc", " eth"].some((k) => t.includes(k))) return "crypto/commodity";
-  if (["temperature"].some((k) => t.includes(k))) return "weather";
-  if (["president", "election", "senate", "governor", "congress", "parliament", "prime minister"].some((k) => t.includes(k)))
-    return "politics";
-  if (
-    [" vs ", "spread:", "o/u", "moneyline", "exact score", "inning", "win on 20", "advance to", "clinch"].some((k) =>
-      t.includes(k)
-    )
-  )
-    return "sports"; // "win on 20" catches "Will <team> win on 2026-06-15?" (World Cup-style match markets)
-  return "other";
-}
-
-async function statsForWallet(wallet: (typeof TRACKED_WALLETS)[number], pages = 3) {
+async function statsForWallet(wallet: (typeof TRACKED_WALLETS)[number], pages?: number) {
+  const effectivePages = pages ?? wallet.historyPages ?? 3;
   const trades: Activity[] = [];
-  for (let page = 0; page < pages; page++) {
-    const batch = await getActivity(wallet.address, { limit: 500 });
-    // NOTE: getActivity doesn't currently support offset pagination; this
-    // re-fetches the same most-recent 500 each call. Fine for a first pass
-    // (recent behavior is what matters most for Phase 2 signal design) —
-    // extend polymarketClient.getActivity with an offset param before
-    // relying on this for full-history backtesting.
+  for (let page = 0; page < effectivePages; page++) {
+    const batch = await getActivity(wallet.address, { limit: 500, offset: page * 500 });
     trades.push(...batch.filter((a) => a.type === "TRADE"));
-    break; // remove this line once offset pagination is wired up
+    if (batch.length < 500) break; // reached the end of this wallet's history
   }
 
   const orders = clusterFills(trades);

@@ -68,21 +68,48 @@ export async function getPositions(address: string): Promise<Position[]> {
 
 export async function getActivity(
   address: string,
-  opts: { limit?: number; start?: number; offset?: number } = {}
+  opts: { limit?: number; start?: number; offset?: number; sortDirection?: "ASC" | "DESC" } = {}
 ): Promise<Activity[]> {
   const limit = opts.limit ?? 500;
   const start = opts.start ?? 1;
   const offset = opts.offset ?? 0;
-  const url = `${DATA_API}/activity?user=${address}&limit=${limit}&offset=${offset}&start=${start}&sortBy=TIMESTAMP&sortDirection=DESC`;
+  const sortDirection = opts.sortDirection ?? "DESC";
+  const url = `${DATA_API}/activity?user=${address}&limit=${limit}&offset=${offset}&start=${start}&sortBy=TIMESTAMP&sortDirection=${sortDirection}`;
   return throttledFetch(url);
 }
 
 // Pages back through /activity (offset capped at 5000 by the API) until
 // `pages` batches are collected or a short page signals we've hit the end.
+// Window shifts every call for high-frequency wallets — "most recent 500"
+// means something different every time it's fetched (confirmed: re-running
+// this a day apart pulled entirely different fills for Djdjdjekekek/RN1,
+// see README Phase 1c). Fine for walletStats.ts's "how does this wallet
+// currently behave" question; NOT fine for a reproducible backtest — use
+// getActivityFromStart for that.
 export async function getActivityDeep(address: string, pages = 4): Promise<Activity[]> {
   const out: Activity[] = [];
   for (let page = 0; page < pages; page++) {
     const batch = await getActivity(address, { limit: 500, offset: page * 500 });
+    out.push(...batch);
+    if (batch.length < 500) break;
+  }
+  return out;
+}
+
+// Pages FORWARD from the wallet's oldest activity (sortDirection=ASC,
+// offset=0 first) instead of backward from "now". Confirmed by testing
+// (offset 0/ASC then offset 500/ASC returned contiguous, non-overlapping
+// batches in increasing timestamp order): unlike getActivityDeep, the
+// window this returns is stable across reruns — new fills only ever append
+// at the far (recent) end, so a wallet's oldest N fills are the same set
+// today as they'll be next week. That reproducibility is exactly what a
+// backtest needs (see README Phase 1d): re-running should either return an
+// identical trial set, or a strict superset as previously-open markets
+// resolve — never an arbitrary different sample.
+export async function getActivityFromStart(address: string, pages = 10): Promise<Activity[]> {
+  const out: Activity[] = [];
+  for (let page = 0; page < pages; page++) {
+    const batch = await getActivity(address, { limit: 500, offset: page * 500, sortDirection: "ASC" });
     out.push(...batch);
     if (batch.length < 500) break;
   }
