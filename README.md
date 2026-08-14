@@ -356,8 +356,9 @@ boundary fill is re-fetched).
 
 With that fixed, pulling 40 pages against 0x_exit's wallet reached **its
 entire lifetime — not page-capped, "this is the wallet's full history."**
-The account is only 23 days old (2026-04-24 to present) but extremely
-high-frequency: 19,995 total fills, 18,651 resolved BUY fills across 253
+The account was only active for 23 days (2026-04-24 to 2026-05-17) and has
+had zero activity in the ~3 months since, but was extremely high-frequency
+while active: 19,995 total fills, 18,651 resolved BUY fills across 253
 distinct markets.
 
 **Result: win rate 53.3%, net +7.1%** — down sharply from Phase 1d's
@@ -371,6 +372,54 @@ early slice of a wallet's history should be treated as provisional until
 retested on the wallet's full history — this is now the second time a
 shallow pull (Phase 1c's look-ahead issue was the first) made a wallet look
 better than it is.**
+
+### Phase 1f: what the wallet actually buys — a decaying, narrow-band edge, not a repeatable strategy
+
+Added `walletBreakdown.ts` (`npm run wallet-breakdown -- <filter>`) to slice
+the 253-market trial set by category, entry-price band, ladder side
+(`(HIGH)`/`(LOW)`), and week-of-lifetime, and caches the full trial set to
+`data/<address>-trials.json` (gitignored) so this kind of reanalysis doesn't
+need another slow full-history pull. Findings, most important first:
+
+**The edge decays across the wallet's own lifetime and goes negative by the
+end**, broken out by week: wk0 net +49.5%, wk1 +13.8%, wk2 +1.7%, wk3
+**-17.6%**. This — not sampling noise — is the real explanation for Phase
+1d's 33.8% vs Phase 1e's 7.1%: Phase 1d's shallow pull only ever saw the
+wallet's best days. By its last week the strategy was already losing money,
+and the account then went dormant. **This is the single most important
+finding of the phase: whatever mispricing this wallet found got closed out
+within its own 23-day trading window. There's no evidence its edge is
+ongoing or repeatable — copying this wallet going forward would be copying
+a strategy that had already stopped working by the time it stopped
+trading**, not a still-live edge like Phase 1d's numbers implied.
+
+**Nearly all of the wallet's total profit came from one narrow slice**:
+markets are literally WTI monthly-ladder rungs (`Will WTI Crude Oil hit
+(HIGH/LOW) $X in <month>?`) — this wallet IS the ladder-harvester from the
+project's original premise (Phase 1a), just with real selectivity Phase
+1a's naive "buy 5-45c, hold" rule didn't have. Splitting the entry-price
+bands finer than Phase 1a shows why blending them washed out the signal:
+0-15c is a near-total loss (-100%/-85.6% net), 15-30c is spectacular
+(+60.1% net, $88.8K staked), and everything above 30c is only mildly
+positive to flat. Within 15-30c specifically, the HIGH-side rungs are the
+whole story: +103.2% net on $50.6K staked (~$52K profit) vs LOW-side's
++52.0% net on $19K staked (~$10K profit) — together **15-30c HIGH+LOW
+account for roughly 57% of the wallet's entire $109K profit from under 5%
+of its total capital deployed.** Every other price band and the "other"
+category (non-ladder markets, 147 markets, net +0.2%) is close to
+breakeven — the wallet's real edge, such as it was, lived almost entirely
+in "cheap-but-not-longshot" HIGH-side rungs.
+
+**Net conclusion: rule out blind copy-trading of this wallet.** Its edge
+wasn't stable even during its own active window, let alone provably
+ongoing three months later. The narrower finding — HIGH-side ladder rungs
+priced 15-30c outperformed sharply, at least during this wallet's first two
+weeks — is a testable hypothesis in its own right, independent of this
+particular wallet or its stale trades: it could be checked against
+*current* live ladder markets (reusing `backtestLadder.ts`'s infrastructure
+with a narrowed, side-aware rule) to see whether that specific mispricing
+still exists today, rather than continuing to study one dormant wallet's
+three-month-old history.
 
 ## Roadmap
 
@@ -415,17 +464,31 @@ better than it is.**
    holds (still >50% win, still net positive, still the best lead in the
    project) but is much smaller than Phase 1d's early-snapshot read
    suggested. See Phase 1e findings above.**
-7. Phase 1f (not started): inspect what 0x_exit's wallet is actually
-   buying (category/price-band breakdown of the 253 resolved markets) to
-   understand the real selection rule before committing to Phase 2 — a
-   thin +7.1% edge is not yet obviously worth paper-trading as-is. Also
-   worth a deeper (full-history) pull for `unnamed #12` and KeyTransporter
-   as fallbacks if this doesn't look strong enough on inspection.
-8. Phase 2: paper trade whichever leads survive Phase 1f with no capital,
+7. ~~Phase 1f: inspect what 0x_exit's wallet is actually buying~~ —
+   `walletBreakdown.ts`, category/price-band/side/weekly breakdown of the
+   253 resolved markets. **Result: ruled out blind copy-trading of this
+   wallet — its net P&L decayed to -17.6% by its final week and it's been
+   dormant for ~3 months, so the earlier positive reads were an artifact of
+   only having seen its good early days. Nearly all its profit came from
+   one narrow slice (HIGH-side WTI ladder rungs at 15-30c, +103% net) —
+   a specific, testable mispricing hypothesis, independent of this wallet,
+   worth checking against *current* live markets. See Phase 1f findings
+   above.**
+8. Phase 1g (not started, current fork — needs a decision on which branch
+   to pursue): (a) backtest the narrow "HIGH-side rung, 15-30c entry" rule
+   from Phase 1f against current/recent live ladder markets using
+   `backtestLadder.ts`'s infrastructure, to see if that specific mispricing
+   still exists now that it's understood, independent of the dormant
+   wallet that revealed it; or (b) fall back to a full-history pull (same
+   treatment as Phase 1e/1f, not just Phase 1d's shallow numbers) for
+   `unnamed #12` (670 markets, 60% win, -1.6% net) and KeyTransporter
+   (67.3% win, 15 markets, +45.7% net) to see if either holds up better
+   than 0x_exit's wallet did.
+9. Phase 2: paper trade whichever leads survive Phase 1g with no capital,
    log hypothetical fills/P&L for a few weeks.
-9. Phase 3: small live capital — needs CLOB signer key + API creds,
-   deliberately not automated yet.
-10. Phase 4: scale & risk controls — position sizing, per-category exposure
+10. Phase 3: small live capital — needs CLOB signer key + API creds,
+    deliberately not automated yet.
+11. Phase 4: scale & risk controls — position sizing, per-category exposure
     caps, kill switches.
 
 ## Setup

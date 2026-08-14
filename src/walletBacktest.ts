@@ -25,7 +25,7 @@ import { getActivityFromStart, getMarketByConditionId, type Activity, type Gamma
 import { TRACKED_WALLETS } from "./wallets";
 import { categorize } from "./categorize";
 
-interface ResolvedTrial {
+export interface ResolvedTrial {
   conditionId: string;
   question: string;
   category: string;
@@ -34,9 +34,10 @@ interface ResolvedTrial {
   usdcStaked: number;
   shares: number;
   won: boolean;
+  timestamp: number;
 }
 
-function summarize(trials: ResolvedTrial[]) {
+export function summarize(trials: ResolvedTrial[]) {
   const totalStaked = trials.reduce((s, t) => s + t.usdcStaked, 0);
   const totalReturned = trials.reduce((s, t) => s + (t.won ? t.shares : 0), 0);
   const wins = trials.filter((t) => t.won).length;
@@ -63,7 +64,7 @@ async function resolveMarket(conditionId: string): Promise<GammaMarket | null> {
 // trial set and the fetch is trivially reproducible.
 const BACKTEST_PAGES = 10;
 
-async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
+export async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
   // Phase 1e: 0x_exit's wallet hit the flat 10-page cap in Phase 1d while
   // still showing the project's best edge (62.1% win/+33.8% net) from only
   // its earliest ~12 days. wallets.ts's per-wallet historyPages overrides
@@ -110,6 +111,7 @@ async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
         usdcStaked: b.usdcSize,
         shares: b.size,
         won: finalPrices[idx] > 0.5,
+        timestamp: b.timestamp,
       });
     }
   }
