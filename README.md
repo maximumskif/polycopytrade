@@ -340,6 +340,38 @@ history pulled before treating it as confirmed. `unnamed #12` and
 KeyTransporter are the next things worth a deeper look (bigger `historyPages`
 pull) if 0x_exit's wallet doesn't pan out.
 
+### Phase 1e: 0x_exit's wallet pulled to its full history — edge holds, but is much smaller than it looked
+
+Two blockers fixed to make this possible: (1) `walletBacktest.ts` had a flat
+`BACKTEST_PAGES = 10` that ignored `wallets.ts`'s per-wallet `historyPages`
+entirely — raising the field alone did nothing; the script now uses
+`wallet.historyPages ?? BACKTEST_PAGES`. (2) `getActivityFromStart`'s
+`offset` param is hard-capped by the API — confirmed directly, offset=5000
+succeeds and offset=5500 400s, for every wallet, regardless of `start`.
+Fixed by re-opening the window: once a window 400s or is exhausted, `start`
+advances to the last fill's own timestamp and `offset` resets to 0, so a
+wallet's full history can be walked in ~11-page windows instead of stopping
+at the first one (fills deduped across the window boundary since the
+boundary fill is re-fetched).
+
+With that fixed, pulling 40 pages against 0x_exit's wallet reached **its
+entire lifetime — not page-capped, "this is the wallet's full history."**
+The account is only 23 days old (2026-04-24 to present) but extremely
+high-frequency: 19,995 total fills, 18,651 resolved BUY fills across 253
+distinct markets.
+
+**Result: win rate 53.3%, net +7.1%** — down sharply from Phase 1d's
+62.1%/+33.8% read, which turned out to be an early-days snapshot (its first
+12 days / 106 markets, before the 10-page cap was reached) that was not
+representative of the full 23-day/253-market picture. The edge did not
+vanish — it's still net positive with a win rate above 50%, still the best
+fully-checked lead in the project — but Phase 1d overstated its magnitude by
+roughly 5x. **Lesson for the project generally: an edge measured on a small
+early slice of a wallet's history should be treated as provisional until
+retested on the wallet's full history — this is now the second time a
+shallow pull (Phase 1c's look-ahead issue was the first) made a wallet look
+better than it is.**
+
 ## Roadmap
 
 1. ~~Phase 0: data pipeline~~ — `walletTracker.ts`, `ladderScanner.ts`.
@@ -375,19 +407,26 @@ pull) if 0x_exit's wallet doesn't pan out.
    from only its earliest 12 days of history (page-capped, more exists).
    First wallet in the project with both a >50% win rate and a large,
    non-concentrated sample. See Phase 1d findings above.**
-6. Phase 1e (not started): pull 0x_exit's wallet deeper (raise its
-   `historyPages` past 10) to see if the 62.1%/+33.8% edge holds over more
-   than 12 days, and inspect what it's actually buying — the real selection
-   rule isn't the naive ladder-harvest one from Phase 1a. Also worth a
-   second look: `unnamed #12` (670 markets, 60% win, but only -1.6% net —
-   largest sample of any wallet studied) and KeyTransporter (67.3% win, 15
-   markets, +45.7% net) as fallbacks if 0x_exit's wallet doesn't hold up.
-7. Phase 2: paper trade whichever leads survive Phase 1e with no capital,
+6. ~~Phase 1e: pull 0x_exit's wallet deeper~~ — fixed `walletBacktest.ts`
+   to actually honor per-wallet `historyPages` (was hardcoded), and fixed
+   `getActivityFromStart` to page past the API's offset cap by advancing
+   `start`. **Result: pulled the wallet's entire 23-day lifetime (19,995
+   fills, 253 distinct markets). Win rate 53.3%, net +7.1% — the edge
+   holds (still >50% win, still net positive, still the best lead in the
+   project) but is much smaller than Phase 1d's early-snapshot read
+   suggested. See Phase 1e findings above.**
+7. Phase 1f (not started): inspect what 0x_exit's wallet is actually
+   buying (category/price-band breakdown of the 253 resolved markets) to
+   understand the real selection rule before committing to Phase 2 — a
+   thin +7.1% edge is not yet obviously worth paper-trading as-is. Also
+   worth a deeper (full-history) pull for `unnamed #12` and KeyTransporter
+   as fallbacks if this doesn't look strong enough on inspection.
+8. Phase 2: paper trade whichever leads survive Phase 1f with no capital,
    log hypothetical fills/P&L for a few weeks.
-8. Phase 3: small live capital — needs CLOB signer key + API creds,
+9. Phase 3: small live capital — needs CLOB signer key + API creds,
    deliberately not automated yet.
-9. Phase 4: scale & risk controls — position sizing, per-category exposure
-   caps, kill switches.
+10. Phase 4: scale & risk controls — position sizing, per-category exposure
+    caps, kill switches.
 
 ## Setup
 

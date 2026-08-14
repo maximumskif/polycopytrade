@@ -38,6 +38,11 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     label: "0x_exit's featured wallet",
     archetype: "ladder-harvester",
     source: "https://x.com/0x_exit/status/2086940839834444084",
+    // Phase 1e: Phase 1d's 10-page (5000-fill) pull only reached this
+    // wallet's first ~12 days of history and still showed a 62.1%
+    // win/+33.8% net edge, the best in the whole project. Raised past 10 to
+    // see if that holds over more history before treating it as confirmed.
+    historyPages: 40,
   },
   {
     address: "0xe30e74595517de48f1fb19f4553dd3d9f1e96b87",

@@ -64,7 +64,13 @@ async function resolveMarket(conditionId: string): Promise<GammaMarket | null> {
 const BACKTEST_PAGES = 10;
 
 async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
-  const activity = await getActivityFromStart(wallet.address, BACKTEST_PAGES);
+  // Phase 1e: 0x_exit's wallet hit the flat 10-page cap in Phase 1d while
+  // still showing the project's best edge (62.1% win/+33.8% net) from only
+  // its earliest ~12 days. wallets.ts's per-wallet historyPages overrides
+  // the flat cap here, deliberately breaking cross-wallet comparability for
+  // this one wallet, to see if that edge holds over more history.
+  const pages = wallet.historyPages ?? BACKTEST_PAGES;
+  const activity = await getActivityFromStart(wallet.address, pages);
   const oldestTs = activity.length ? Math.min(...activity.map((a) => a.timestamp)) : 0;
   const newestTs = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : 0;
   const spanDays = oldestTs && newestTs ? (newestTs - oldestTs) / 86400 : 0;
@@ -114,7 +120,7 @@ async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
   console.log(
     `  earliest ${activity.length} fills, spanning ${spanDays.toFixed(0)} days from ` +
       `${oldestTs ? new Date(oldestTs * 1000).toISOString().slice(0, 10) : "n/a"}` +
-      (activity.length >= BACKTEST_PAGES * 500 ? ` (hit ${BACKTEST_PAGES}-page cap — wallet has more history not sampled)` : ` (this is the wallet's full history)`)
+      (activity.length >= pages * 500 ? ` (hit ${pages}-page cap — wallet has more history not sampled)` : ` (this is the wallet's full history)`)
   );
   console.log(
     `  ${trials.length} resolved buy fills across ${realOrders} distinct markets ` +
@@ -145,7 +151,18 @@ async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
 }
 
 export async function main() {
-  for (const wallet of TRACKED_WALLETS) {
+  // Optional CLI filter (address substring or label substring, case-
+  // insensitive) so a single wallet can be re-run — e.g. after raising its
+  // historyPages — without re-pulling all 24 tracked wallets under the
+  // client's ~1 req/sec throttle.
+  const filter = process.argv[2]?.toLowerCase();
+  const wallets = filter
+    ? TRACKED_WALLETS.filter(
+        (w) => w.address.toLowerCase().includes(filter) || w.label.toLowerCase().includes(filter)
+      )
+    : TRACKED_WALLETS;
+
+  for (const wallet of wallets) {
     if (!wallet.address) continue;
     try {
       await backtestWallet(wallet);

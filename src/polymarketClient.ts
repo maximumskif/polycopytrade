@@ -106,12 +106,56 @@ export async function getActivityDeep(address: string, pages = 4): Promise<Activ
 // backtest needs (see README Phase 1d): re-running should either return an
 // identical trial set, or a strict superset as previously-open markets
 // resolve — never an arbitrary different sample.
+//
+// Phase 1e: `offset` is hard-capped by the API — confirmed by testing,
+// offset=5000 (page 10) succeeds but offset=5500 (page 11) 400s, for every
+// wallet, regardless of `start`. To pull deeper than that single window,
+// once a 400 is hit (or `pages` successful pages have been used up within
+// the current window) the window is re-opened by setting `start` to the
+// last fill's own timestamp and resetting `offset` back to 0 — `start` is
+// a timestamp filter independent of the offset cap, so this lets the
+// wallet's full history be walked forward in ~11-page windows instead of
+// stopping at the first one. Fills are deduped (transactionHash + outcome +
+// side + size + price) because the boundary fill at the old window's last
+// timestamp is re-fetched as the first row of the next window.
 export async function getActivityFromStart(address: string, pages = 10): Promise<Activity[]> {
   const out: Activity[] = [];
-  for (let page = 0; page < pages; page++) {
-    const batch = await getActivity(address, { limit: 500, offset: page * 500, sortDirection: "ASC" });
-    out.push(...batch);
-    if (batch.length < 500) break;
+  const seen = new Set<string>();
+  const addFresh = (batch: Activity[]) => {
+    let added = 0;
+    for (const a of batch) {
+      const key = `${a.transactionHash}:${a.conditionId}:${a.outcome}:${a.side}:${a.size}:${a.price}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(a);
+      added++;
+    }
+    return added;
+  };
+
+  let startTs = 1;
+  let pagesUsed = 0;
+  while (pagesUsed < pages) {
+    let offset = 0;
+    let reachedEndOfHistory = false;
+    while (pagesUsed < pages) {
+      let batch: Activity[];
+      try {
+        batch = await getActivity(address, { limit: 500, offset, start: startTs, sortDirection: "ASC" });
+      } catch (err) {
+        if ((err as Error).message.startsWith("400")) break; // hit the offset cap for this window
+        throw err;
+      }
+      pagesUsed++;
+      addFresh(batch);
+      if (batch.length < 500) {
+        reachedEndOfHistory = true;
+        break;
+      }
+      offset += 500;
+    }
+    if (reachedEndOfHistory || out.length === 0) break;
+    startTs = Math.max(...out.map((a) => a.timestamp));
   }
   return out;
 }
