@@ -47,18 +47,79 @@ address for 0x_exit's wallet silently returned `[]`.
 - Rate-limits aggressively (429s within seconds of a handful of calls) — `polymarketClient.ts` throttles every call to ~1/sec with backoff on 429.
 - Order placement (CLOB API) needs a signer private key + API credentials — not wired up, see Roadmap.
 
-## Phase 1 findings (2026-08-11)
+## Phase 1 findings (2026-08-11, return math corrected 2026-08-13 — see docs/AUDIT.md §4)
 
-### Ladder-harvesting backtests NEGATIVE — do not fund
+### Ladder-harvesting backtests NEGATIVE — do not fund (magnitude corrected, conclusion unchanged)
 
-`npm run backtest-ladder` replays 138 real historical BTC/WTI monthly-ladder
-rungs (Mar-Aug 2026): buy whichever side sits in the 5-45c "harvest zone"
-the first time it gets there, hold to expiry. Two independent passes, one
-requiring the rung to have been a genuine early toss-up (>=20c both sides)
-before drifting cheap, to rule out "this was always a longshot decaying to
-zero" contamination:
+**A return-calculation bug was found and fixed in `backtestLadder.ts` on
+2026-08-13** (full writeup: `docs/AUDIT.md` §4). The old `summarize()`
+summed each trial's binary win/lose payout (1 or 0) as if a $1 stake could
+only ever return $1, when a $1 stake at price `p` actually buys `1/p`
+shares worth $1 each on a win. This made every reported "net" collapse to
+`winRate − 100%`, completely independent of entry price — provably wrong,
+and confirmed against the table below (every "net" value in it is exactly
+its row's win rate minus 100%, to one decimal place). **The corrected math
+still shows a net-negative strategy — the original "do not fund" conclusion
+stands — but the reported magnitude was overstated.**
 
-| Bucket | n | win rate | breakeven win rate | net |
+Corrected re-run, `npm run backtest-ladder`, 2026-08-13 (4 closed BTC + 4
+closed WTI monthly-ladder events, same "first touch into 5-45c, hold to
+expiry" rule; the underlying event set may not be bit-for-bit identical to
+the original 2026-08-11 run — see the non-reproducibility caveat in
+`docs/AUDIT.md` §3):
+
+| Bucket | n | win rate | avg entry (≈breakeven) | shares | gross returned | net |
+|---|---|---|---|---|---|---|
+| 5-15c | 37 | 5.4% | 8.5c | 491.5 | $15.59 | -57.9% |
+| 15-25c | 36 | 8.3% | 19.6c | 187.7 | $13.59 | -62.2% |
+| 25-35c | 29 | 10.3% | 31.2c | 93.8 | $9.30 | -67.9% |
+| 35-45c | 31 | 32.3% | 40.5c | 76.9 | $23.62 | -23.8% |
+| **All** | **138** | **13.8%** | **24.7c** | **861.0** | **$64.32** | **-53.4%** |
+
+Split by asset, the picture is not uniform — BTC is unambiguously bad across
+every bucket (two buckets show a literal 0% win rate), while WTI's priciest
+band is close to fair:
+
+| | n | win rate | net |
+|---|---|---|---|
+| BTC, 5-15c | 8 | 0.0% | -100.0% |
+| BTC, 15-25c | 14 | 0.0% | -100.0% |
+| BTC, 25-35c | 11 | 9.1% | -72.0% |
+| BTC, 35-45c | 12 | 16.7% | -61.5% |
+| **BTC all** | **47** | **6.4%** | **-83.6%** |
+| WTI, 5-15c | 29 | 6.9% | -46.2% |
+| WTI, 15-25c | 22 | 13.6% | -38.2% |
+| WTI, 25-35c | 18 | 11.1% | -65.4% |
+| WTI, 35-45c | 19 | 42.1% | **-0.0%** |
+| **WTI all** | **91** | **17.6%** | **-37.8%** |
+
+Every bucket still loses, and actual win rate is still well below the
+breakeven rate the entry price implies in every bucket except WTI's 35-45c
+band (42.1% actual vs. ~40.5% breakeven — essentially fair-priced, not
+exploitable either way). **Conclusion is unchanged from the original
+finding: the tweet's claimed strategy, taken at face value as a flat
+price-band rule, does not survive contact with historical data. Do not fund
+a ladder-harvester with real capital based on this.** What's new in the
+corrected numbers: the strategy is meaningfully worse for BTC than WTI, and
+WTI's most-expensive band is close to fairly priced rather than "somewhat
+less bad" — both details the old bug's `winRate-100%` tautology completely
+erased (every bucket looked equally bad regardless of price under the old
+math). Possible explanations for the original 0x_exit-post gap are
+unchanged: a much more selective real entry rule (see Phase 1e/1f below, now
+answered — the featured wallet's real rule was WTI-specific and narrow, and
+its edge still decayed to negative within its own trading window), an
+unverified/cherry-picked headline figure, or a sample that doesn't
+generalize.
+
+<details>
+<summary><strong>Historical, superseded table (2026-08-11) — do not use, kept only for the record</strong></summary>
+
+The table originally published here on 2026-08-11 is reproduced verbatim
+below. **Every "net" value in it is mathematically just that row's win rate
+minus 100%**, an artifact of the bug described above, not a real measurement
+of strategy return — see `docs/AUDIT.md` §4 for the derivation.
+
+| Bucket | n | win rate | breakeven win rate | net (BUGGY — do not use) |
 |---|---|---|---|---|
 | 5-15c | 37 | 8.1% | ~10% | -91.9% |
 | 15-25c | 36 | 8.3% | ~20% | -91.7% |
@@ -66,22 +127,7 @@ zero" contamination:
 | 35-45c | 31 | 32.3% | ~40% | -67.7% |
 | **All** | **138** | **14.5%** | — | **-85.5%** |
 
-Every bucket loses, and not marginally — actual win rate is roughly
-**half or less of the breakeven rate the entry price implies**. That's not
-"no edge," it's negative edge: these rungs are systematically *overpriced*
-relative to how often they actually resolve YES, the opposite of 0x_exit's
-claim. The early-contested filter (excluding rungs that were deep longshots
-from the start) only removed 15 of 153 trials and barely moved the result,
-so this isn't an artifact of conflating "genuine mispricing" with "normal
-decay to zero" — the literal "buy anything under 45c" rule is a value trap
-either way. **Conclusion: the tweet's claimed strategy, taken at face
-value, does not survive contact with historical data. Do not fund a
-ladder-harvester with real capital based on this.** Possible explanations
-for the gap: the wallet uses a much more selective entry rule than a static
-price band (timing, size, or rung selection we haven't reverse-engineered),
-the $264k figure is cherry-picked/unverified, or this backtest's ~6-month,
-2-asset sample doesn't generalize. Any of those needs more evidence before
-this track gets revisited.
+</details>
 
 ### The real signal: 3 of the top 4 monthly earners share one pattern
 
@@ -421,6 +467,44 @@ with a narrowed, side-aware rule) to see whether that specific mispricing
 still exists today, rather than continuing to study one dormant wallet's
 three-month-old history.
 
+### Phase 1g: tested the narrow signal out-of-sample — does not clearly replicate
+
+Built `backtestLadderNarrow.ts` (`npm run backtest-ladder-narrow`), reusing
+`backtestLadder.ts`'s methodology narrowed to 15-30c entries and restricted
+to WTI/BTC monthly ladder events that **closed after 2026-05-17** (the day
+0x_exit's wallet went dormant) — genuinely out-of-sample relative to Phase
+1f's data, not a re-read of the same historical window. First run (before
+the §4 math fix existed) reported a nonsensical n=112/win 16.1%/net -83.9%
+— exactly `winRate-100%`, confirming it was contaminated by the same bug
+just fixed, not a real result. **Corrected re-run, 2026-08-13** (4 WTI + 4
+BTC out-of-sample events; no BTC event had any HIGH-side rung actually
+touch the 15-30c zone, so BTC's generalization check is empty — WTI-only
+below):
+
+| Slice | n | win rate | net |
+|---|---|---|---|
+| All rungs, 15-30c | 112 | 17.0% | -29.1% |
+| HIGH-side only (the Phase 1f signal) | 43 | 20.9% | **-14.4%** |
+| — HIGH-side, 15-25c | 25 | 12.0% | -39.6% |
+| — HIGH-side, 25-35c | 18 | 33.3% | **+20.6%** |
+| LOW-side only | 28 | 21.4% | -9.4% |
+
+**The specific Phase 1f signal (HIGH-side WTI rungs, 15-30c) does not
+clearly replicate out-of-sample** — corrected math shows it's still net
+negative overall (-14.4%), just far less catastrophic than the pre-fix
+number implied. There's a hint of something in the narrower 25-35c slice
+(+20.6% net, but only n=18 — too small to treat as confirmed), while 15-25c
+is clearly bad (-39.6%). **Conclusion: the mispricing 0x_exit's wallet
+seemed to exploit in April-May 2026 either didn't persist into June-August,
+was narrower than "15-30c HIGH-side" captures, or the wallet's edge was
+never really about a stable price-band mispricing to begin with (consistent
+with Phase 1f's own finding that the wallet's edge decayed to negative
+within its own trading window).** Not worth paper-trading as a standalone
+rule without a larger out-of-sample confirmation than n=18 provides. Combined
+with Phase 1f, both of the project's two live leads (blind wallet-copy, and
+the narrow price-band rule the wallet's trades pointed to) are now ruled out
+or unconfirmed — see Roadmap for the remaining fallback wallets.
+
 ## Roadmap
 
 1. ~~Phase 0: data pipeline~~ — `walletTracker.ts`, `ladderScanner.ts`.
@@ -474,21 +558,26 @@ three-month-old history.
    a specific, testable mispricing hypothesis, independent of this wallet,
    worth checking against *current* live markets. See Phase 1f findings
    above.**
-8. Phase 1g (not started, current fork — needs a decision on which branch
-   to pursue): (a) backtest the narrow "HIGH-side rung, 15-30c entry" rule
-   from Phase 1f against current/recent live ladder markets using
-   `backtestLadder.ts`'s infrastructure, to see if that specific mispricing
-   still exists now that it's understood, independent of the dormant
-   wallet that revealed it; or (b) fall back to a full-history pull (same
+8. ~~Phase 1g: backtest the narrow "HIGH-side rung, 15-30c entry" rule
+   out-of-sample~~ — `backtestLadderNarrow.ts`. **Result: does not clearly
+   replicate (-14.4% net on the exact signal, though a narrower 25-35c
+   HIGH-side slice showed +20.6% on a too-small n=18). Neither of the
+   project's two live leads (0x_exit's wallet, and the price-band rule its
+   trades pointed to) is currently validated. See Phase 1g findings above.**
+   Also found and fixed a return-calculation bug in `backtestLadder.ts`
+   while building this (see `docs/AUDIT.md` §4) that had overstated how bad
+   Phase 1a's original result looked, though its conclusion held either way.
+9. Phase 1h (not started): fall back to a full-history pull (same
    treatment as Phase 1e/1f, not just Phase 1d's shallow numbers) for
    `unnamed #12` (670 markets, 60% win, -1.6% net) and KeyTransporter
    (67.3% win, 15 markets, +45.7% net) to see if either holds up better
-   than 0x_exit's wallet did.
-9. Phase 2: paper trade whichever leads survive Phase 1g with no capital,
-   log hypothetical fills/P&L for a few weeks.
-10. Phase 3: small live capital — needs CLOB signer key + API creds,
+   than 0x_exit's wallet did — the project's two most-studied leads are
+   both now unconfirmed/ruled out.
+10. Phase 2: paper trade whichever leads survive Phase 1h with no capital,
+    log hypothetical fills/P&L for a few weeks.
+11. Phase 3: small live capital — needs CLOB signer key + API creds,
     deliberately not automated yet.
-11. Phase 4: scale & risk controls — position sizing, per-category exposure
+12. Phase 4: scale & risk controls — position sizing, per-category exposure
     caps, kill switches.
 
 ## Setup

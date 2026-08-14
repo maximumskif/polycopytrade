@@ -36,7 +36,7 @@ const EVENTS_PER_ASSET = 4; // keep API-call volume sane given the ~1req/sec thr
 const EARLY_WINDOW_FRACTION = 0.2;
 const EARLY_CONTESTED_THRESHOLD = 0.2;
 
-interface Trial {
+export interface Trial {
   asset: "BTC" | "WTI";
   event: string;
   market: string;
@@ -47,7 +47,7 @@ interface Trial {
   pnlPerDollarStaked: number;
 }
 
-async function getClosedLadderEvents(query: string, monthSlugFragment: string): Promise<GammaEvent[]> {
+export async function getClosedLadderEvents(query: string, monthSlugFragment: string): Promise<GammaEvent[]> {
   const events = await searchEvents(query, 30, "closed");
   // Keep only the monthly-ladder shape ("what-price-will-<asset>-hit-in-<month>-<year>"),
   // not the daily/weekly variants which have far fewer, noisier rungs.
@@ -63,7 +63,12 @@ async function getClosedLadderEvents(query: string, monthSlugFragment: string): 
 // together instead of one call per market.
 const MAX_CHUNK_SECONDS = 6 * 24 * 3600;
 
-async function backtestMarket(asset: "BTC" | "WTI", eventTitle: string, market: GammaMarket): Promise<Trial | null> {
+export async function backtestMarket(
+  asset: "BTC" | "WTI",
+  eventTitle: string,
+  market: GammaMarket,
+  zone: { min: number; max: number } = HARVEST_ZONE
+): Promise<Trial | null> {
   const tokenIds: string[] = JSON.parse(market.clobTokenIds ?? "[]");
   const outcomes: string[] = JSON.parse(market.outcomes ?? "[]");
   const finalPrices: number[] = JSON.parse(market.outcomePrices ?? "[]").map(Number);
@@ -98,7 +103,7 @@ async function backtestMarket(asset: "BTC" | "WTI", eventTitle: string, market: 
     for (const point of (res.history ?? []) as { t: number; p: number }[]) {
       const cheapness = Math.min(point.p, 1 - point.p);
       if (point.t < earlyWindowEnd) earlyContestedPeak = Math.max(earlyContestedPeak, cheapness);
-      if (crossingYesPrice === null && point.t >= warmupCutoff && cheapness >= HARVEST_ZONE.min && cheapness <= HARVEST_ZONE.max) {
+      if (crossingYesPrice === null && point.t >= warmupCutoff && cheapness >= zone.min && cheapness <= zone.max) {
         crossingYesPrice = point.p;
       }
     }
@@ -124,14 +129,46 @@ async function backtestMarket(asset: "BTC" | "WTI", eventTitle: string, market: 
   };
 }
 
-function summarize(trials: Trial[]) {
+export interface LadderSummary {
+  n: number;
+  wins: number;
+  winRate: number;
+  totalStaked: number;
+  sharesAcquired: number;
+  grossReturned: number;
+  netProfit: number;
+  roi: number;
+  avgEntryPrice: number;
+}
+
+// Each trial stakes exactly $1 (see backtestMarket), which at price p buys
+// 1/p shares of the cheap side; a share redeems for exactly $1 if it won,
+// $0 if it lost. FIXED BUG (found auditing this file): the previous version
+// summed the per-trial binary `payout` (0 or 1) as if a $1 stake could only
+// ever return $1, which made the reported "net" mathematically collapse to
+// win_rate - 100% for every group regardless of entry price — confirmed by
+// re-deriving the original Phase 1a README table, where every bucket's
+// published "net" was exactly winRate-100% to one decimal place. Reworked
+// to sum 1/entryPrice for winning trials, the actual payout of a $1 stake.
+export function summarize(trials: Trial[]): LadderSummary {
   const n = trials.length;
   const wins = trials.filter((t) => t.won).length;
   const totalStaked = n; // $1 per trial
-  const totalReturned = trials.reduce((s, t) => s + t.payout, 0);
-  console.log(`\nn=${n}  win rate=${((wins / n) * 100).toFixed(1)}%  ` +
-    `staked $${totalStaked}  returned $${totalReturned.toFixed(2)}  ` +
-    `net ${(((totalReturned - totalStaked) / totalStaked) * 100).toFixed(1)}%`);
+  const sharesAcquired = trials.reduce((s, t) => s + 1 / t.entryPrice, 0);
+  const grossReturned = trials.reduce((s, t) => s + (t.won ? 1 / t.entryPrice : 0), 0);
+  const netProfit = grossReturned - totalStaked;
+  const roi = n > 0 ? netProfit / totalStaked : 0;
+  const winRate = n > 0 ? wins / n : 0;
+  const avgEntryPrice = n > 0 ? trials.reduce((s, t) => s + t.entryPrice, 0) / n : 0;
+
+  if (n > 0) {
+    console.log(
+      `\nn=${n}  win rate=${(winRate * 100).toFixed(1)}%  avg entry=${(avgEntryPrice * 100).toFixed(1)}c ` +
+        `(breakeven win rate, approx ~=avg entry price)\n` +
+        `  staked $${totalStaked}  shares ${sharesAcquired.toFixed(2)}  gross returned $${grossReturned.toFixed(2)}  ` +
+        `net profit $${netProfit.toFixed(2)}  ROI ${(roi * 100).toFixed(1)}%`
+    );
+  }
 
   const buckets = [
     [0.05, 0.15],
@@ -143,13 +180,18 @@ function summarize(trials: Trial[]) {
     const bucket = trials.filter((t) => t.entryPrice >= lo && t.entryPrice < hi);
     if (bucket.length === 0) continue;
     const bw = bucket.filter((t) => t.won).length;
-    const bReturned = bucket.reduce((s, t) => s + t.payout, 0);
+    const bShares = bucket.reduce((s, t) => s + 1 / t.entryPrice, 0);
+    const bReturned = bucket.reduce((s, t) => s + (t.won ? 1 / t.entryPrice : 0), 0);
+    const bAvgEntry = bucket.reduce((s, t) => s + t.entryPrice, 0) / bucket.length;
     console.log(
       `  ${(lo * 100).toFixed(0)}-${(hi * 100).toFixed(0)}c: n=${bucket.length} ` +
-        `win rate=${((bw / bucket.length) * 100).toFixed(1)}% ` +
+        `win rate=${((bw / bucket.length) * 100).toFixed(1)}% avg entry=${(bAvgEntry * 100).toFixed(1)}c ` +
+        `shares=${bShares.toFixed(2)} gross=$${bReturned.toFixed(2)} ` +
         `net=${(((bReturned - bucket.length) / bucket.length) * 100).toFixed(1)}%`
     );
   }
+
+  return { n, wins, winRate, totalStaked, sharesAcquired, grossReturned, netProfit, roi, avgEntryPrice };
 }
 
 export async function main() {
