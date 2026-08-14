@@ -570,14 +570,21 @@ or unconfirmed — see Roadmap for the remaining fallback wallets.
    Also found and fixed a return-calculation bug in `backtestLadder.ts`
    while building this (see `docs/AUDIT.md` §4) that had overstated how bad
    Phase 1a's original result looked, though its conclusion held either way.
-9. Phase 1h (not started): fall back to a full-history pull (same
-   treatment as Phase 1e/1f, not just Phase 1d's shallow numbers) for
-   `unnamed #12` (670 markets, 60% win, -1.6% net) and KeyTransporter
-   (67.3% win, 15 markets, +45.7% net) to see if either holds up better
-   than 0x_exit's wallet did — the project's two most-studied leads are
-   both now unconfirmed/ruled out.
-10. Phase 2: paper trade whichever leads survive Phase 1h with no capital,
-    log hypothetical fills/P&L for a few weeks.
+9. ~~Phase 1h: full-history treatment for `unnamed #12` and
+   KeyTransporter~~ — done via the Phase 2 wallet-scoring engine
+   (`docs/AUDIT.md` "Phase status" §Phase 2, 2026-08-14) rather than a
+   separate `walletBreakdown.ts` pull. **Result: `unnamed #12` reached
+   387 real independent events, 60% win, but only -1.6% ROI —
+   essentially breakeven, ruled out on performance. `RN1` (also
+   large-sample, previously unconfirmed) reached 250 events, 46.2% win,
+   only +4.0% ROI — below the 50% bar, ruled out. Every wallet ever
+   tracked by this project (24/24) is now ruled out or dormant with no
+   confirmed edge — there is currently no candidate to paper-trade.**
+   Finding new candidates is the open work, not validating known ones.
+10. Phase 2 (research engine, 0x_exit terminology only — not the same
+    "Phase 2" as `docs/AUDIT.md`'s platform-rebuild numbering): paper
+    trade whichever leads survive #9 with no capital, log hypothetical
+    fills/P&L for a few weeks. **Currently blocked — see #9.**
 11. Phase 3: small live capital — needs CLOB signer key + API creds,
     deliberately not automated yet.
 12. Phase 4: scale & risk controls — position sizing, per-category exposure

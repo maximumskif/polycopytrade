@@ -60,8 +60,11 @@ today.
     backtest-run tables, the reusable backtest engine, position
     reconstruction, wallet scoring, paper trading, risk engine, dashboard,
     CI. These are Phase 2-4.
-- **Phase 2 (research engine) — IN PROGRESS as of 2026-08-14, stopped mid-session
-  for the night, not yet committed. Resume here tomorrow.**
+- **Phase 2 (research engine) — done as of 2026-08-14.** Code+tests
+  committed and pushed (commit `8606380`); the three items originally left
+  open were finished in a follow-up session the same day — see "All 24
+  wallets scored" and "Follower-delay-demo run live" below, and the "keep
+  the old scripts as-is" decision closing out the migration question.
   - **Done and tested:**
     - `src/backtesting/positionReconstruction.ts` — inventory/weighted-avg-cost
       BUY+SELL position reconstruction, cycle-based (a full close then
@@ -135,43 +138,74 @@ today.
       `followerExecution.test.ts`, `rollingWindow.test.ts`) — 68 total in
       the repo, `npm test`, all passing, no network required. `npm run
       typecheck` and `npm run build` both clean.
-  - **Partially run against the live API, then deliberately stopped for the
-    night (not a failure — a scoping decision to check in before burning
-    more of the rate-limited API budget unattended):** `npm run
-    wallet-score -- all` was run against all 24 tracked wallets but manually
-    stopped after 11 completed (`SDTrading` alone needed ~670 sequential
-    market lookups at ~1 req/sec — each large-sample wallet costs several
-    minutes). **Every one of the 11 scored wallets' flags matched this
-    project's established manual findings**, which is strong evidence the
-    scoring logic is sound: `SDTrading` got zero flags (670 events, 47.2%
-    win, +0.7% ROI — matches the README's "roughly breakeven, largest
-    sample" read); `Djdjdjekekek` came back 37.7% win / +23.0% ROI,
-    matching the Phase 1d re-test almost exactly; and all six wallets the
-    README already ruled out as one-shot 2024-election bets (`Theo4`,
-    `Fredi9999`, `fishalive`, `mintblade`, `GRIMDRIP`, `RepTrump`) were
-    independently flagged `one-shot`/`election-only`/`highly-concentrated`
-    by the new scorer without being told anything about that history.
-    `0x_exit`'s wallet scored `dormant, highly-concentrated` — also
-    consistent. **The remaining 13 wallets (mostly already-known
-    small-sample one-shot bets per Phase 1d, except `RN1` and `unnamed #12`
-    which are large-sample and untested by this scorer) were not reached.**
-  - **Left for tomorrow:**
-    1. Finish `npm run wallet-score -- all` for the remaining 13 wallets
-       (cheap for the small ones; `RN1`/`unnamed #12` will each take
-       several minutes like `SDTrading` did).
-    2. Actually run `npm run follower-delay-demo -- 0x_exit` against the
-       live API (code is done and unit-tested, just not yet exercised for
-       real) and record what real execution-delay slippage looks like.
-    3. Decide whether to also refactor `walletBacktest.ts`/
-       `walletBreakdown.ts` onto the new engine now that it's cross-checked
-       (deliberately deferred so far — see the engine's own header comment
-       for why), or leave them as the historically-cited originals
-       indefinitely.
-    4. Commit this session's work (currently uncommitted:
-       `src/backtesting/`, `src/cli/`, `src/scoring/`, six new test files,
-       and modified `src/domain/types.ts`/`src/api/schemas.ts`/
-       `tests/fixtures/activity.sample.json`/`package.json`).
-- **Phase 3-5: not started.**
+  - **All 24 tracked wallets scored (`npm run wallet-score -- all`
+    equivalent, run per-wallet across two sessions, 2026-08-14).** The
+    first 11 (`0x_exit`, `0xE30E7`, `SDTrading`, `Djdjdjekekek`,
+    `swisstony`, `Theo4`, `Fredi9999`, `fishalive`, `mintblade`, `GRIMDRIP`,
+    `RepTrump`) all matched this project's established manual findings —
+    strong evidence the scoring logic is sound (`SDTrading` zero flags,
+    670 events, 47.2% win, +0.7% ROI; `Djdjdjekekek` 37.7% win/+23.0% ROI
+    matching the Phase 1d re-test almost exactly; all six known one-shot
+    2024-election wallets independently re-flagged `one-shot`/
+    `election-only`/`highly-concentrated` with zero prior knowledge fed
+    in). The remaining 13 were then run: 11 small/cheap wallets
+    (`kch123`, `frostrizz`, `Len9311238`, `sparklingwater123`, `DEEDDIT`,
+    `zxgngl`, `endlessFate`, `BreakTheBank`, `PrincessCaro`, `walletmobile`,
+    `KeyTransporter`) all came back `dormant` plus some combination of
+    `one-shot`/`election-only`/`highly-concentrated`/
+    `uncopyable-high-frequency` — no new candidates, consistent with the
+    project's established "assume one-shot until proven otherwise" base
+    rate. The two large-sample holdouts:
+    - **`RN1`**: 250 real independent events (its previously-cited "483
+      markets" was inflated the same way 0x_exit's 253-markets/16-events
+      finding showed — see §7), 46.2% win rate, only +4.0% ROI. Below the
+      50% win-rate bar this project uses as a floor. **Ruled out.**
+    - **`unnamed #12`**: 387 real independent events (again roughly half
+      of the previously-cited "670 markets"), 60% win rate but -1.6% ROI —
+      essentially breakeven. No disqualifying flags (not concentrated, not
+      one-shot, not high-frequency) — this is a genuinely large,
+      diversified, still-active-enough sample, it is simply not
+      profitable under hold-to-resolution. **Ruled out on performance, not
+      data quality.**
+
+    **Net result: every one of the 24 originally-tracked wallets is now
+    ruled out or dormant-and-unconfirmed. There is currently no wallet in
+    `wallets.ts` this project would recommend copy-trading.** Finding new
+    candidates (a fresh leaderboard sweep, or a different sourcing
+    strategy entirely) is the open question for whoever picks this back
+    up, not a known-good wallet waiting to be productionized.
+  - **`follower-delay-demo` run against the live API for the first time
+    (2026-08-14)**, on 20 of 0x_exit's 18,651 resolved trials (small
+    sample deliberately, given the ~1 req/sec throttle and one
+    market-lookup-plus-prices-history call per fill). Result: slippage
+    from execution delay is tiny even at the full 60s mark (+0.001 to
+    +0.002 on entry price; leaderROI -51.2% vs followerROI -51.3% on this
+    particular 20-trial sample). **Confirms the mechanism works
+    end-to-end against real data**, and confirms execution delay is not a
+    material driver of the gap between a wallet's raw backtest number and
+    what a real follower would have captured — the known granularity
+    limit noted above (candles collapse 5/15/30s into the same bucket)
+    means finer-than-1-minute claims still aren't resolvable with this
+    API, but the signal at 60s is clear enough to trust as a rough
+    magnitude. (The -51% ROI on this specific 20-trial sample is just
+    normal sampling variance from a random 20-of-18,651 draw — not a
+    revised estimate of the wallet's overall performance; see the
+    full-history +7.1% net figure in the README for that.)
+  - **Decision made: keep `walletBacktest.ts`/`walletBreakdown.ts` as the
+    historically-cited originals, do not migrate them onto the new
+    engine.** Every number in the README's Phase 1b-1f findings is cited
+    against these two scripts' exact output; migrating them onto
+    `src/backtesting/engine.ts` would risk subtly changing cited numbers
+    (as already happened once, benignly, in the cross-check above — the
+    new engine's share-count convention differs slightly) without
+    unblocking any future work, since the new engine is what
+    `wallet-score`/`backtest`/`follower-delay-demo` actually build on
+    going forward. Revisit only if `walletBacktest.ts`/
+    `walletBreakdown.ts` need a bug fix or new feature; don't refactor
+    them proactively.
+- **Phase 3-5: not started. Phase 3 (paper trading) is next if/when new
+  wallet candidates are found — nothing in the current wallet list is a
+  paper-trading candidate as of this session (see "Net result" above).**
 
 ## 1. Existing commands and responsibilities
 
