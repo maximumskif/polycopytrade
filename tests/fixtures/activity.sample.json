@@ -10,6 +10,7 @@
     "outcome": "Yes",
     "title": "Will Donald Trump win the 2024 US Presidential Election?",
     "slug": "will-donald-trump-win-the-2024-us-presidential-election",
+    "eventSlug": "presidential-election-winner-2024",
     "proxyWallet": "0xe9ad918c7678cd38b12603a762e638a5d1ee7091",
     "transactionHash": "0xb311ad3f0aadf3ef796e2dc8ce065bcc162aeb7567f01f2df60728e9f8b32546"
   },

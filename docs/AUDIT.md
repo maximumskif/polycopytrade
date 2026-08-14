@@ -60,7 +60,118 @@ today.
     backtest-run tables, the reusable backtest engine, position
     reconstruction, wallet scoring, paper trading, risk engine, dashboard,
     CI. These are Phase 2-4.
-- **Phase 2-5: not started.**
+- **Phase 2 (research engine) — IN PROGRESS as of 2026-08-14, stopped mid-session
+  for the night, not yet committed. Resume here tomorrow.**
+  - **Done and tested:**
+    - `src/backtesting/positionReconstruction.ts` — inventory/weighted-avg-cost
+      BUY+SELL position reconstruction, cycle-based (a full close then
+      re-open is a new position, not a merge), flags `incompleteHistory`
+      when a SELL exceeds tracked BUYs.
+    - `src/backtesting/statistics.ts` (`computeStrategyResult`) — win
+      rate/ROI/profit factor/max drawdown/volatility/Sharpe-like/
+      Sortino-like/category breakdown, `MIN_SAMPLE_SIZE = 20` gate,
+      `effectiveIndependentSampleCount` (distinct real-world events, not
+      distinct markets or fills — see §7). **Bootstrap ROI CI resamples
+      whole EVENTS (with every trial they contain), not individual
+      trials** — an earlier draft resampled trials directly, which would
+      have silently ignored the exact correlation problem
+      `effectiveIndependentSampleCount` exists to flag (e.g. one WTI-ladder
+      month's ~19 rungs are one real bet, not 19 independent ones); fixed
+      before this was ever cited anywhere, so no prior finding in this repo
+      used the unfixed version.
+    - `src/backtesting/engine.ts` (`buildTrials`) — two resolution
+      treatments: `hold-to-resolution` (the original `walletBacktest.ts`
+      methodology, every BUY an independent trial) and `mirror-exit` (uses
+      position reconstruction, force-closes at settlement if the wallet
+      never sold but the market resolved). `npm run backtest -- <filter>
+      [--mirror-exit] [--rolling-window=<days>]`.
+    - **Cross-check against the existing `walletBacktest.ts` PASSED**, with
+      two genuinely new findings, not just a bug hunt: run against
+      0x_exit's wallet (hold-to-resolution) reproduced the exact trial
+      count, market count, and win rate (18,651 trials / 253 markets /
+      53.3%) from the README's Phase 1e number. Net profit came out
+      slightly higher ($121,222/7.9% ROI vs the old $108,964/7.1%) — traced
+      to a real methodological difference, not a bug: the old tool used
+      each fill's recorded `size`; the new engine computes shares as
+      `usdcStaked / entryPrice`, i.e. what a follower spending the same
+      dollars at the same quoted price would actually receive. Arguably the
+      more honest framing for a copy-trading context. **Second, bigger
+      finding: this wallet's 253 "distinct markets" collapse to only 16
+      real independent events** once grouped correctly (every rung of one
+      month's WTI ladder is one bet, not ~19) — the first time this project
+      has measured, not just described, the sample-inflation problem.
+    - `src/backtesting/rollingWindow.ts` (`computeRollingWindowResults`) —
+      buckets a trial set into fixed-size (optionally overlapping) time
+      windows and runs `computeStrategyResult` on each independently.
+      Generalizes Phase 1f's hand-built "net P&L by week" table (wk0
+      +49.5% → wk3 −17.6% for 0x_exit's wallet) into a reusable check any
+      wallet/strategy in the new engine can run. Wired into the `backtest`
+      CLI via `--rolling-window=<days>`.
+    - `src/scoring/walletScore.ts` (`computeWalletScore` pure /
+      `scoreWallet` async orchestrator) — flags: `one-shot`
+      (≤3 distinct events), `dormant` (>30 days since last activity),
+      `election-only` (>70% of trials are politics-category),
+      `highly-concentrated` (>50% of stake in one event),
+      `uncopyable-high-frequency` (≥50 fills, <5s median gap),
+      `insufficient-sample` (below `MIN_SAMPLE_SIZE`). `npm run
+      wallet-score -- <filter>|all`.
+    - `src/backtesting/followerExecution.ts` — estimates realistic
+      follower entry price at 5/15/30/60s execution delay using the CLOB's
+      real observed price path around each leader fill (not a guessed
+      slippage-bps constant) — the first thing in this project to actually
+      measure the "follower doesn't get the leader's exact price"
+      assumption flagged in §6/§3, instead of just naming it. Deliberately
+      scoped to a demo on ONE wallet's sampled fills, not all 24 tracked
+      wallets, given the ~1 req/sec throttle (one market lookup + one
+      prices-history call per fill). **Known granularity limit**:
+      `getPricesHistory`'s finest fidelity is ~1-minute candles, so
+      5/15/30s delay estimates frequently collapse to the same candle —
+      that reflects the API's resolution, not an absence of real
+      intra-minute movement. `npm run follower-delay-demo -- <filter>
+      [sampleSize]` — **written and unit-tested against a mocked fetch,
+      but not yet run against the live API** (see "left for tomorrow").
+    - 50 new tests across 6 files (`positionReconstruction.test.ts`,
+      `statistics.test.ts`, `engine.test.ts`, `walletScore.test.ts`,
+      `followerExecution.test.ts`, `rollingWindow.test.ts`) — 68 total in
+      the repo, `npm test`, all passing, no network required. `npm run
+      typecheck` and `npm run build` both clean.
+  - **Partially run against the live API, then deliberately stopped for the
+    night (not a failure — a scoping decision to check in before burning
+    more of the rate-limited API budget unattended):** `npm run
+    wallet-score -- all` was run against all 24 tracked wallets but manually
+    stopped after 11 completed (`SDTrading` alone needed ~670 sequential
+    market lookups at ~1 req/sec — each large-sample wallet costs several
+    minutes). **Every one of the 11 scored wallets' flags matched this
+    project's established manual findings**, which is strong evidence the
+    scoring logic is sound: `SDTrading` got zero flags (670 events, 47.2%
+    win, +0.7% ROI — matches the README's "roughly breakeven, largest
+    sample" read); `Djdjdjekekek` came back 37.7% win / +23.0% ROI,
+    matching the Phase 1d re-test almost exactly; and all six wallets the
+    README already ruled out as one-shot 2024-election bets (`Theo4`,
+    `Fredi9999`, `fishalive`, `mintblade`, `GRIMDRIP`, `RepTrump`) were
+    independently flagged `one-shot`/`election-only`/`highly-concentrated`
+    by the new scorer without being told anything about that history.
+    `0x_exit`'s wallet scored `dormant, highly-concentrated` — also
+    consistent. **The remaining 13 wallets (mostly already-known
+    small-sample one-shot bets per Phase 1d, except `RN1` and `unnamed #12`
+    which are large-sample and untested by this scorer) were not reached.**
+  - **Left for tomorrow:**
+    1. Finish `npm run wallet-score -- all` for the remaining 13 wallets
+       (cheap for the small ones; `RN1`/`unnamed #12` will each take
+       several minutes like `SDTrading` did).
+    2. Actually run `npm run follower-delay-demo -- 0x_exit` against the
+       live API (code is done and unit-tested, just not yet exercised for
+       real) and record what real execution-delay slippage looks like.
+    3. Decide whether to also refactor `walletBacktest.ts`/
+       `walletBreakdown.ts` onto the new engine now that it's cross-checked
+       (deliberately deferred so far — see the engine's own header comment
+       for why), or leave them as the historically-cited originals
+       indefinitely.
+    4. Commit this session's work (currently uncommitted:
+       `src/backtesting/`, `src/cli/`, `src/scoring/`, six new test files,
+       and modified `src/domain/types.ts`/`src/api/schemas.ts`/
+       `tests/fixtures/activity.sample.json`/`package.json`).
+- **Phase 3-5: not started.**
 
 ## 1. Existing commands and responsibilities
 

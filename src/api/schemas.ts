@@ -51,6 +51,14 @@ export const ActivitySchema = z.object({
   outcome: z.string(),
   title: z.string(),
   slug: z.string(),
+  // The event a market belongs to (e.g. every WTI-ladder rung market for
+  // one month shares one eventSlug) — not in the original interface, found
+  // by inspecting a real payload while building Phase 2's event-level
+  // grouping (docs/AUDIT.md §7: fill/market counts overstate independent
+  // sample size when many markets move together as one real-world event).
+  // Optional: not confirmed present on every activity type (e.g. REWARD
+  // rows), so a missing field shouldn't fail validation.
+  eventSlug: z.string().optional(),
   proxyWallet: z.string(),
   transactionHash: z.string(),
 });

@@ -18,7 +18,10 @@
     "backtest-ladder-narrow": "tsx src/backtestLadderNarrow.ts",
     "wallet-stats": "tsx src/walletStats.ts",
     "wallet-backtest": "tsx src/walletBacktest.ts",
-    "wallet-breakdown": "tsx src/walletBreakdown.ts"
+    "wallet-breakdown": "tsx src/walletBreakdown.ts",
+    "backtest": "tsx src/cli/backtest.ts",
+    "wallet-score": "tsx src/cli/walletScore.ts",
+    "follower-delay-demo": "tsx src/cli/followerDelayDemo.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
