@@ -21,7 +21,7 @@
 // don't change as new ones come in, so reruns either match exactly or grow
 // (as previously-open markets in the sample resolve) — never jump around.
 
-import { getActivityFromStart, getMarketByConditionId, type Activity, type GammaMarket } from "./polymarketClient";
+import { getActivityFromStart, getMarketByConditionId, type Activity, type GammaMarket } from "./api/client";
 import { TRACKED_WALLETS } from "./wallets";
 import { categorize } from "./categorize";
 

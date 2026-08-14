@@ -9,7 +9,7 @@
 // understates size. This clusters fills back into synthetic orders
 // (same market + outcome + side, gaps <=120s) before computing stats.
 
-import { getActivity, type Activity } from "./polymarketClient";
+import { getActivity, type Activity } from "./api/client";
 import { TRACKED_WALLETS } from "./wallets";
 import { categorize } from "./categorize";
 

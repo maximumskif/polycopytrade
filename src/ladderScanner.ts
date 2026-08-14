@@ -13,7 +13,7 @@
 // "what-price-will-wti-hit-in-august-2026". Each event bundles the whole
 // ladder of "hit $X" sub-markets.
 
-import { searchEvents, type GammaEvent, type GammaMarket } from "./polymarketClient";
+import { searchEvents, type GammaEvent, type GammaMarket } from "./api/client";
 
 const QUERIES = ["what price will bitcoin hit", "what price will wti hit"];
 

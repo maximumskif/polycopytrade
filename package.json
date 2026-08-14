@@ -8,7 +8,11 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test \"tests/**/*.test.ts\"",
-    "track-wallets": "tsx src/walletTracker.ts",
+    "migrate": "tsx src/storage/migrate.ts",
+    "track:once": "tsx src/tracking/trackOnce.ts",
+    "track:daemon": "tsx src/tracking/trackDaemon.ts",
+    "wallets:health": "tsx src/tracking/health.ts",
+    "wallets:add": "tsx src/tracking/addWallet.ts",
     "scan-ladders": "tsx src/ladderScanner.ts",
     "backtest-ladder": "tsx src/backtestLadder.ts",
     "backtest-ladder-narrow": "tsx src/backtestLadderNarrow.ts",
@@ -17,7 +21,8 @@
     "wallet-breakdown": "tsx src/walletBreakdown.ts"
   },
   "dependencies": {
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

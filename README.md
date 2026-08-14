@@ -20,8 +20,9 @@ information.
 ## Trader archetypes being studied
 
 Provisional — assigned from public profiles/leaderboard before looking at
-real trade history. `npm run track-wallets` pulls the real data; update this
-table once Phase 1 backtesting confirms or corrects them.
+real trade history. `npm run track:once` pulls the real data into SQLite
+(see `docs/AUDIT.md` for the Phase 1 data layer); update this table once
+Phase 1 backtesting confirms or corrects them.
 
 | Wallet | Archetype | Notes |
 |---|---|---|
@@ -34,7 +35,7 @@ table once Phase 1 backtesting confirms or corrects them.
 **Important gotcha:** a `polymarket.com/@<slug>` profile URL is *not* the
 wallet to query — that slug is a display identifier. The real address
 (`proxyWallet`, the one holding funds/positions) must be resolved via
-`resolveProxyWallet()` in `src/polymarketClient.ts`
+`resolveProxyWallet()` in `src/api/client.ts`
 (`gamma-api.polymarket.com/public-search?search_profiles=true`). Confirmed
 by testing: querying `data-api.polymarket.com/positions` with the slug
 address for 0x_exit's wallet silently returned `[]`.
@@ -44,7 +45,7 @@ address for 0x_exit's wallet silently returned `[]`.
 - `data-api.polymarket.com/positions?user=<address>` — current positions
 - `data-api.polymarket.com/activity?user=<address>` — trade history
 - `gamma-api.polymarket.com/public-search?q=<query>` — search events/markets/profiles (the real search; `/markets?search=` is silently ignored)
-- Rate-limits aggressively (429s within seconds of a handful of calls) — `polymarketClient.ts` throttles every call to ~1/sec with backoff on 429.
+- Rate-limits aggressively (429s within seconds of a handful of calls) — `src/api/client.ts` throttles every call to ~1/sec per host, with a bounded (never-infinite) exponential-backoff-with-jitter retry on 429s and transient network errors, plus a request timeout and runtime response validation. See `docs/AUDIT.md` for the full design.
 - Order placement (CLOB API) needs a signer private key + API credentials — not wired up, see Roadmap.
 
 ## Phase 1 findings (2026-08-11, return math corrected 2026-08-13 — see docs/AUDIT.md §4)
@@ -507,7 +508,9 @@ or unconfirmed — see Roadmap for the remaining fallback wallets.
 
 ## Roadmap
 
-1. ~~Phase 0: data pipeline~~ — `walletTracker.ts`, `ladderScanner.ts`.
+1. ~~Phase 0: data pipeline~~ — original `walletTracker.ts` (superseded
+   2026-08-13 by `src/tracking/` + SQLite, see `docs/AUDIT.md`),
+   `ladderScanner.ts`.
 2. ~~Phase 1a: backtest ladder-harvesting~~ — `backtestLadder.ts`.
    **Result: negative edge, track killed pending new evidence.**
 3. ~~Phase 1b: backtest copying each tracked wallet's real trades~~ —
@@ -585,6 +588,14 @@ or unconfirmed — see Roadmap for the remaining fallback wallets.
 ```
 npm install
 cp .env.example .env
-npm run track-wallets   # poll tracked wallets -> data/*.jsonl
+npm run migrate         # create/update the local SQLite database
+npm run track:once      # poll tracked wallets once -> SQLite (data/polycopytrade.db)
+npm run track:daemon    # or: poll continuously at POLL_INTERVAL_MS, Ctrl-C to stop
+npm run wallets:health  # per-wallet freshness/health
+npm run wallets:add -- <address> <label>  # track a wallet without editing wallets.ts
 npm run scan-ladders    # scan current BTC/WTI ladders for harvest-zone rungs
+npm test                # regression tests (no network access needed)
 ```
+
+See `docs/AUDIT.md` for the full data-layer design (SQLite schema,
+idempotent ingestion, API client reliability) and the phased rebuild plan.

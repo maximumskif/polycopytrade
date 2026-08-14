@@ -4,3 +4,5 @@ dist/
 *.log
 data/*.jsonl
 data/*.json
+data/*.db
+data/*.db-*

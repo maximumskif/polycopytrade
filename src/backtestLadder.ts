@@ -29,7 +29,7 @@
 // model order book depth/slippage or re-entry. Good enough to answer: is
 // there edge here at all, and in which price band / which rung shape.
 
-import { throttledFetchRaw, type GammaEvent, type GammaMarket, searchEvents } from "./polymarketClient";
+import { getPricesHistory, type GammaEvent, type GammaMarket, searchEvents } from "./api/client";
 
 const HARVEST_ZONE = { min: 0.05, max: 0.45 };
 const EVENTS_PER_ASSET = 4; // keep API-call volume sane given the ~1req/sec throttle
@@ -97,10 +97,8 @@ export async function backtestMarket(
     chunkStart += MAX_CHUNK_SECONDS
   ) {
     const chunkEnd = Math.min(chunkStart + MAX_CHUNK_SECONDS, endTs);
-    const res = await throttledFetchRaw(
-      `https://clob.polymarket.com/prices-history?market=${yesTokenId}&startTs=${chunkStart}&endTs=${chunkEnd}&fidelity=180`
-    );
-    for (const point of (res.history ?? []) as { t: number; p: number }[]) {
+    const res = await getPricesHistory(yesTokenId, chunkStart, chunkEnd, 180);
+    for (const point of res.history ?? []) {
       const cheapness = Math.min(point.p, 1 - point.p);
       if (point.t < earlyWindowEnd) earlyContestedPeak = Math.max(earlyContestedPeak, cheapness);
       if (crossingYesPrice === null && point.t >= warmupCutoff && cheapness >= zone.min && cheapness <= zone.max) {

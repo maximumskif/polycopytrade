@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": 1730901742,
+    "conditionId": "0xdd22472e552920b8438158ea7238bfadfa4f736aa4cee91a6b86c39ead110917",
+    "type": "TRADE",
+    "size": 16.78,
+    "usdcSize": 16.71288,
+    "price": 0.996,
+    "side": "SELL",
+    "outcome": "Yes",
+    "title": "Will Donald Trump win the 2024 US Presidential Election?",
+    "slug": "will-donald-trump-win-the-2024-us-presidential-election",
+    "proxyWallet": "0xe9ad918c7678cd38b12603a762e638a5d1ee7091",
+    "transactionHash": "0xb311ad3f0aadf3ef796e2dc8ce065bcc162aeb7567f01f2df60728e9f8b32546"
+  },
+  {
+    "timestamp": 1731801648,
+    "conditionId": "",
+    "type": "REWARD",
+    "size": 1.449,
+    "usdcSize": 1.449,
+    "price": 0,
+    "side": "",
+    "outcome": "",
+    "title": "",
+    "slug": "",
+    "proxyWallet": "0xd235973291b2b75ff4070e9c0b01728c520b0f29",
+    "transactionHash": "0xd113bcf571a9796382bef5e3e77568909dc07e6daf1bbf77693f21f306c5e817"
+  }
+]

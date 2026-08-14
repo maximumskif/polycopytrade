@@ -7,27 +7,87 @@ and every research command that API access permitted. This document is the
 source of truth for what in the repo is currently trustworthy — do not defer
 to README prose where it conflicts with this audit or with re-run output.
 
+**This document is a point-in-time audit — sections 1-12 below describe the
+repo exactly as it stood on 2026-08-13, before Phase 1 work started.**
+Findings that Phase 1 has since addressed are marked inline
+(`✅ Addressed <date>, see below`) rather than rewritten, so the original
+audit stays intact as a record; see "Phase status" for what's actually true
+today.
+
+## Phase status
+
+- **Phase 0 (2026-08-13): done.** This audit; the `backtestLadder.ts`
+  return-math bug found, fixed, and regression-tested (§4); `backtest-ladder`
+  and `backtest-ladder-narrow` re-run with corrected math (README).
+- **Phase 1 (2026-08-13): done.** SQLite data foundation, replacing the
+  duplicate-prone JSONL tracker (§8) and the dead `POLL_INTERVAL_MS` config
+  (§8) with a real daemon:
+  - `src/storage/`: `db.ts` (node:sqlite — built into Node 22.5+/24, no new
+    native dependency), `migrate.ts` (idempotent migration runner, tested),
+    `migrations/0001_init.ts` (wallets, wallet_activity, positions,
+    api_errors, wallet_polls — deliberately just the Phase 1 tables, not
+    every table the original request listed; markets/events/signals/paper
+    orders/backtest runs belong to the phases that introduce them), and
+    `repository.ts` (typed idempotent reads/writes — `wallet_activity` dedup
+    on transaction hash + market + outcome + side + size + price +
+    timestamp, tested).
+  - `src/api/client.ts` (moved from `src/polymarketClient.ts`): request
+    timeout, bounded exponential-backoff-with-jitter retries (never
+    forever — §10), per-host rate limiting, zod runtime response validation
+    (`src/api/schemas.ts` — caught a real production bug during Phase 1
+    itself: some activity rows are `type: "REWARD"` with an empty `side`,
+    which an overly-strict first draft of the schema rejected), structured
+    `PolymarketApiError`, secret-shaped-query-param redaction in logs, and a
+    mockable fetch seam for tests.
+  - `src/tracking/`: `trackOnce.ts` and `trackDaemon.ts` (`npm run
+    track:once` / `track:daemon`) replace the old `walletTracker.ts`, which
+    ran once despite `POLL_INTERVAL_MS` implying otherwise (§8) — the daemon
+    actually loops, handles SIGINT/SIGTERM gracefully (finishes the current
+    cycle, never killed mid-write), never overlaps polls, and re-reads its
+    wallet list from storage every cycle. `wallets:add`/`wallets:health` give
+    a configurable list and basic freshness/health without requiring
+    `wallets.ts` edits or building the full dashboard (Phase 4).
+  - `tests/`: 18 tests total (5 pre-existing + 13 new — schema validation
+    against real captured payloads, bounded-retry/fast-fail/pagination-cap
+    behavior against a mocked fetch, migration idempotency, activity dedup),
+    all passing, no network access required.
+  - Verified end-to-end against the live API: `track:once` twice in a row
+    (4799 rows inserted, then 14 — the difference being genuine new activity
+    in the few seconds between runs, not a dedup failure) and a daemon
+    SIGINT mid-cycle (finished the in-flight cycle, then stopped cleanly).
+  - **Not done in Phase 1, by design** (see "don't build everything at
+    once"): markets/events/price-snapshot/order-book/signal/paper-order/
+    backtest-run tables, the reusable backtest engine, position
+    reconstruction, wallet scoring, paper trading, risk engine, dashboard,
+    CI. These are Phase 2-4.
+- **Phase 2-5: not started.**
+
 ## 1. Existing commands and responsibilities
 
 | Command | File | Responsibility |
 |---|---|---|
 | `npm start` / `npm run dev` | `src/index.ts` | Runs `walletTracker` then `ladderScanner` once, sequentially. `dev` adds `tsx watch` (re-runs on file save, not a scheduler). |
-| `npm run track-wallets` | `src/walletTracker.ts` | Pulls current positions + up to 200 recent activity rows per tracked wallet, appends to `data/positions.jsonl` / `data/activity.jsonl`. Runs once and exits. |
+| `npm run track-wallets` | `src/walletTracker.ts` | Pulls current positions + up to 200 recent activity rows per tracked wallet, appends to `data/positions.jsonl` / `data/activity.jsonl`. Runs once and exits. **✅ Replaced 2026-08-13 by `npm run track:once` / `track:daemon` (`src/tracking/`), writing to SQLite — see "Phase status" above.** |
 | `npm run scan-ladders` | `src/ladderScanner.ts` | Scans currently-open BTC/WTI monthly ladder events for rungs priced 5-45c. Read-only, prints candidates, no persistence. |
 | `npm run backtest-ladder` | `src/backtestLadder.ts` | Backtests a "$1 stake at first touch into 5-45c, hold to expiry" rule against closed historical BTC/WTI ladder events. **Contained the return-calculation bug — see §4.** |
 | `npm run backtest-ladder-narrow` | `src/backtestLadderNarrow.ts` | New this session: same methodology, narrowed to 15-30c / HIGH-side rungs only, restricted to events closing after 2026-05-17, to out-of-sample-test a pattern found in one wallet's trades. |
 | `npm run wallet-stats` | `src/walletStats.ts` | Clusters raw activity fills into synthetic orders (same market/outcome/side, gaps ≤120s) and reports category/order-size behavior per tracked wallet. No P&L. |
 | `npm run wallet-backtest` | `src/walletBacktest.ts` | Backtests "copy every real BUY fill, hold to resolution" for each tracked wallet, using the wallet's actual historical trades pulled from genesis. This is the project's main research tool; **not** affected by the §4 bug (uses real fill share counts, not synthetic $1 stakes). Accepts an optional CLI address/label filter. |
 | `npm run wallet-breakdown` | `src/walletBreakdown.ts` | New this session: slices one wallet's `walletBacktest` trial set by category, entry-price band, ladder side, and week-of-lifetime; caches the trial set to `data/<address>-trials.json`. |
-| `npm test` | `tests/` | New this session: `node:test` via `tsx --test`, currently 5 regression tests for the §4 bug fix only. |
+| `npm test` | `tests/` | 18 regression tests: §4's ladder-return math, plus (Phase 1) API client reliability, schema validation, storage/dedup/migrations. |
+| `npm run migrate` | `src/storage/migrate.ts` | **Phase 1.** Idempotent SQLite migration runner. |
+| `npm run track:once` | `src/tracking/trackOnce.ts` | **Phase 1.** Replaces `track-wallets`: polls every tracked wallet once, writes idempotently to SQLite instead of appending to JSONL. |
+| `npm run track:daemon` | `src/tracking/trackDaemon.ts` | **Phase 1.** Actually loops (unlike the old `POLL_INTERVAL_MS`, which was never read) — polls continuously, graceful SIGINT/SIGTERM shutdown, no overlapping cycles. |
+| `npm run wallets:health` | `src/tracking/health.ts` | **Phase 1.** Per-wallet freshness/health from storage. |
+| `npm run wallets:add` | `src/tracking/addWallet.ts` | **Phase 1.** Adds a wallet to the tracking daemon's list without editing `wallets.ts`. |
 
 ## 2. Data sources and API assumptions
 
-- `data-api.polymarket.com/positions?user=<address>` and `/activity?user=<address>` — public, unauthenticated, real trade/position data. Rate-limited aggressively; `polymarketClient.ts` throttles every call to ≥1.1s apart with a blind 5s-and-retry backoff on 429 (no cap on retries — see §10).
+- `data-api.polymarket.com/positions?user=<address>` and `/activity?user=<address>` — public, unauthenticated, real trade/position data. Rate-limited aggressively; `src/api/client.ts` (moved from `polymarketClient.ts`) throttles every call to ≥1.1s apart per host, with a bounded exponential-backoff-with-jitter retry on 429s (✅ addressed — see §10).
 - `gamma-api.polymarket.com/public-search?q=<query>` — real full-text search over events/markets/profiles. `/markets?search=` is a known dead end (confirmed by prior testing, documented in code comments — silently returns unrelated results).
 - `gamma-api.polymarket.com/markets?condition_ids=<id>&closed=<bool>` — direct market lookup; `closed` must be passed explicitly, not tri-state.
 - `clob.polymarket.com/prices-history` — per-outcome-token price history, used only by `backtestLadder.ts`. Confirmed by testing to reject any single `startTs`/`endTs` span past ~1 week; the code chunks into ≤6-day slices.
-- **No response validation anywhere.** Every API call trusts the JSON shape completely (`res.json()` cast directly to a TypeScript interface with no runtime check). A malformed or changed API response would either crash deep in calling code with a confusing error, or — worse — silently produce wrong numbers if a field is renamed/units change and the value still type-checks (e.g. a string that parses as a different-scale number).
+- **No response validation anywhere.** Every API call trusts the JSON shape completely (`res.json()` cast directly to a TypeScript interface with no runtime check). A malformed or changed API response would either crash deep in calling code with a confusing error, or — worse — silently produce wrong numbers if a field is renamed/units change and the value still type-checks (e.g. a string that parses as a different-scale number). **✅ Addressed 2026-08-13** — `src/api/schemas.ts` (zod), applied to every typed endpoint in `src/api/client.ts`. Caught a real bug on first production use: an over-strict draft schema rejected genuine `REWARD`-type activity rows with empty `side`/`conditionId` fields, exactly the "renamed/reshaped field silently breaks things" failure mode this was meant to catch, except caught loudly instead of silently.
 - **No caching.** Every script re-fetches from scratch; re-running the same analysis twice re-issues every API call. `walletBreakdown.ts`'s trial-cache-to-JSON (added this session) is the only exception, and it's a one-off convenience, not a system.
 - Offset-based pagination on `/activity` is capped by the API at ~5000 (confirmed by testing: offset=5000 succeeds, offset=5500 400s). `getActivityFromStart` in `polymarketClient.ts` works around this by advancing a `start` timestamp filter and resetting offset — undocumented API behavior being relied on, not a documented contract, and could change without notice.
 
@@ -78,27 +138,26 @@ No other summation/aggregation bugs of this shape were found elsewhere in the co
 
 ## 8. Data-quality problems
 
-- `data/activity.jsonl` and `data/positions.jsonl` are plain append-only JSONL with **no deduplication logic in `walletTracker.ts`'s `appendJsonl`** — it blindly concatenates every poll's rows. The current files (1000 / 1018 rows, from 5 poll runs on 2026-08-11) happen to show zero duplicate rows under a reasonable dedup key (transactionHash + conditionId + outcome + side + size + price), most likely because those 5 runs were spaced far enough apart and pulled from low-frequency-enough wallets that the "most recent 200" windows didn't overlap — this is incidental, not a property of the code. Any sustained polling (which `POLL_INTERVAL_MS` implies is the intended use) against a high-frequency wallet **would** produce duplicate rows with the current code.
-- `POLL_INTERVAL_MS` is defined in `.env.example` and documented in comments as "how often to poll" but is **never read anywhere in `src/`** (confirmed by grep) — there is no polling loop; `track-wallets` runs once and exits. The setting is dead configuration.
+- `data/activity.jsonl` and `data/positions.jsonl` are plain append-only JSONL with **no deduplication logic in `walletTracker.ts`'s `appendJsonl`** — it blindly concatenates every poll's rows. The current files (1000 / 1018 rows, from 5 poll runs on 2026-08-11) happen to show zero duplicate rows under a reasonable dedup key (transactionHash + conditionId + outcome + side + size + price), most likely because those 5 runs were spaced far enough apart and pulled from low-frequency-enough wallets that the "most recent 200" windows didn't overlap — this is incidental, not a property of the code. Any sustained polling (which `POLL_INTERVAL_MS` implies is the intended use) against a high-frequency wallet **would** produce duplicate rows with the current code. **✅ Addressed 2026-08-13** — `wallet_activity` now has a real UNIQUE constraint and `INSERT OR IGNORE` (`src/storage/repository.ts`), tested against exact-duplicate and near-duplicate (different price) fills.
+- `POLL_INTERVAL_MS` is defined in `.env.example` and documented in comments as "how often to poll" but is **never read anywhere in `src/`** (confirmed by grep) — there is no polling loop; `track-wallets` runs once and exits. The setting is dead configuration. **✅ Addressed 2026-08-13** — `src/config/env.ts` reads it, and `npm run track:daemon` (`src/tracking/trackDaemon.ts`) actually loops on it.
 - No schema/format versioning on the JSONL files — a future field rename in `polymarketClient.ts`'s types would silently produce mixed-shape rows in the same file with no way to detect it downstream.
 - No raw-payload retention — only the typed/narrowed fields are stored; if a future bug is found in how a field was interpreted, the original API response is not recoverable from historical data, only from a fresh API call (which may no longer return the same historical state for time-sensitive fields like live prices).
 
 ## 9. Missing tests
 
-Before this session: **zero tests existed**, no test runner was installed, and `package.json` had no `test` script. This session added `tests/backtestLadder.test.ts` (5 tests covering exactly the §4 bug) using Node's built-in `node:test` via `tsx --test` (no new dependency). Everything else is untested:
+Before Phase 0: **zero tests existed**, no test runner was installed, and `package.json` had no `test` script. Phase 0 added `tests/backtestLadder.test.ts` (5 tests covering exactly the §4 bug). Phase 1 added 13 more (18 total, `npm test`, still just Node's built-in `node:test` via `tsx --test` — no new test-framework dependency): `tests/apiClient.test.ts` (bounded 429 retry, fast-fail on non-429, the offset-cap pagination-window-reopen/dedup logic — all three of which were explicitly called out below as untested, now fixed), `tests/storage.test.ts` (migration idempotency, activity dedup, wallet upsert), `tests/schemas.test.ts` (validates real captured payloads, including the `REWARD`-row edge case). `tests/fixtures/activity.sample.json` is real, captured API output — the first fixture in the project (✅ "no test fixtures exist" below, addressed). Remaining gaps, still real:
 
-- `polymarketClient.ts`: pagination logic (including the newly-added offset-cap workaround), 429 backoff, dedup-on-window-reopen — all logic with real edge cases and zero coverage.
 - `walletStats.ts`: fill-clustering logic — has real edge cases (fills exactly 120s apart, fills across a clustering boundary) with no test.
 - `walletBacktest.ts` / `walletBreakdown.ts`: market resolution, category classification, price-band bucketing — no test.
 - `categorize.ts`: a pure function with obvious, cheap-to-test cases — no test.
-- No test fixtures/mocks exist for any Polymarket API response shape, so no test can run without live network access today.
+- Nothing in `src/tracking/` (daemon loop timing, no-overlap behavior, signal handling) is unit-tested — it was verified manually against the live API and a real SIGINT this session (see "Phase status"), which is real evidence but not a regression test; a future session should add one, likely by injecting a fake clock/wallet-poll function rather than actually sleeping.
 
 ## 10. Live-trading risks
 
 Live execution is not implemented (confirmed — no CLOB order-placement code exists anywhere in `src/`), but several things are worth flagging before it ever is:
 
 - `.env.example` already stubs `CLOB_SIGNER_PRIVATE_KEY` as a commented-out env var — i.e., the **documented default deployment shape for a future live mode is "put a raw private key in a `.env` file."** This is a real risk to flag now, before any execution code is written: a `.env`-resident raw signer key is a common source of real fund loss (accidental commits, shell history, process-list exposure, backup exfiltration). See `docs/LIVE_READINESS.md` (to be written before any live-mode work) for safer alternatives to evaluate (a dedicated low-balance hot wallet with hard on-chain limits, a hardware/HSM-backed signer, a broker/relayer API that never exposes the raw key to this process, etc.) before committing to the `.env` approach.
-- `polymarketClient.ts`'s retry-on-429 has **no retry limit** — `throttledFetch` recurses on every 429 indefinitely. This is a minor reliability risk today (a research script could hang forever against a persistently-limited endpoint) and would be a much more serious risk in any future live-order-placement path (an order-status-check stuck in an infinite retry loop during a live position is a real operational hazard).
+- `polymarketClient.ts`'s retry-on-429 has **no retry limit** — `throttledFetch` recurses on every 429 indefinitely. This is a minor reliability risk today (a research script could hang forever against a persistently-limited endpoint) and would be a much more serious risk in any future live-order-placement path (an order-status-check stuck in an infinite retry loop during a live position is a real operational hazard). **✅ Addressed 2026-08-13** — `src/api/client.ts` bounds every retry loop to `config.apiMaxRetries` (default 5) with exponential backoff + jitter, tested against a mock that always returns 429 (asserts exactly N attempts, not N+1 or infinite).
 - No kill switch, no position-size limit, no exposure limit exists anywhere in the code today — appropriate for a read-only research tool, but flagged here as a hard gate for Phase 3+ (see `docs/LIVE_READINESS.md` requirement in the roadmap below).
 - No `.env`-vs-`.env.production`-style separation between read-only/paper/live configuration exists yet — today there's only one `.env`, which is fine while nothing writes orders, but should be split before paper trading adds any state that live mode could accidentally inherit.
 

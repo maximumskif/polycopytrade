@@ -10,7 +10,7 @@
 // display identifier. The real address (`proxyWallet`, the one that actually
 // holds funds/positions) has to be resolved via
 // gamma-api.polymarket.com/public-search?q=<slug-or-username>&search_profiles=true.
-// See resolveProxyWallet() in polymarketClient.ts.
+// See resolveProxyWallet() in src/api/client.ts.
 
 export interface TrackedWallet {
   address: string;
