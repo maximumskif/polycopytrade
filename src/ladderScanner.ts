@@ -38,11 +38,12 @@ function candidatesFromMarket(eventTitle: string, market: GammaMarket): Candidat
   // Some markets returned by search (e.g. negRisk/grouped sub-markets) don't
   // carry standalone outcomes/outcomePrices/volume — skip those rather than
   // guessing at their shape.
-  if (!market.outcomes || !market.outcomePrices || market.volume == null) return [];
+  if (!market.outcomes || !market.outcomePrices || market.volume == null || !market.endDate) return [];
 
   const outcomes: string[] = JSON.parse(market.outcomes);
   const prices: number[] = JSON.parse(market.outcomePrices).map(Number);
   const volume = Number(market.volume);
+  const endDate = market.endDate;
   if (!(volume >= MIN_VOLUME)) return [];
 
   const out: Candidate[] = [];
@@ -56,7 +57,7 @@ function candidatesFromMarket(eventTitle: string, market: GammaMarket): Candidat
         price,
         impliedPayoutMultiple: 1 / price,
         volume,
-        endDate: market.endDate,
+        endDate,
       });
     }
   });

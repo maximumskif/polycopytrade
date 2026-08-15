@@ -74,7 +74,13 @@ export const GammaMarketSchema = z.object({
   outcomePrices: z.string().optional(),
   clobTokenIds: z.string().optional(),
   startDate: z.string().optional(),
-  endDate: z.string(),
+  // Optional, like the other fields above: confirmed against real /markets
+  // responses (Phase 2 follow-up, 2026-08-14) that some markets — seen on
+  // wallets sourced from the monthly leaderboard — omit endDate entirely.
+  // Nothing in src/backtesting/ reads GammaMarket.endDate (resolution uses
+  // outcomePrices), so making it required here only broke validation for
+  // no downstream benefit.
+  endDate: z.string().optional(),
   closed: z.boolean(),
   volume: z.string().optional(),
   liquidity: z.string().optional(),

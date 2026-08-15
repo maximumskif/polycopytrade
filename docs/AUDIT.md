@@ -203,9 +203,64 @@ today.
     going forward. Revisit only if `walletBacktest.ts`/
     `walletBreakdown.ts` need a bug fix or new feature; don't refactor
     them proactively.
-- **Phase 3-5: not started. Phase 3 (paper trading) is next if/when new
-  wallet candidates are found — nothing in the current wallet list is a
-  paper-trading candidate as of this session (see "Net result" above).**
+- **Wallet-sourcing follow-up (2026-08-14, same day as Phase 2 close-out):
+  monthly leaderboard swept, one live candidate found.** **Target hit rate
+  formalized: the user specified 53-55% win rate as the bar for a wallet
+  worth building the bot around** — tighter than the ">50%" this project
+  had been using loosely. Applying it retroactively doesn't change any
+  prior ruled-out wallet's status (all were well below 50% or disqualified
+  on other grounds), but it now governs how new candidates are judged.
+  - **Rationale for the monthly (not all-time) leaderboard**: the all-time
+    board is dominated by one-shot 2024-election bettors who've been
+    dormant for a year+ (17/24 originally tracked, confirmed above);
+    "profitable in the last 30 days" screens for wallets that are still
+    actually trading. Pulled `polymarket.com/leaderboard/overall/monthly/profit`
+    top 20 via `WebFetch` (same method as the original all-time pull);
+    ranks 1/2/3/8/10 were wallets already tracked (`unnamed #12`,
+    `0xE30E7`, `swisstony`, `SDTrading`, `RN1`), so only ranks 4-20 (15
+    wallets) were newly added to `wallets.ts` and scored.
+  - **Found and fixed a real bug while scoring**: `GammaMarketSchema`
+    required `endDate` as a non-optional string; 4 of the 15 new wallets
+    have at least one settled market whose `/markets` response omits it
+    entirely, which threw and blocked scoring. Made `endDate` optional
+    (nothing in `src/backtesting/` reads it — resolution uses
+    `outcomePrices`) and added a guard at the two legacy call sites that do
+    use it (`backtestLadder.ts`, `ladderScanner.ts`) so a market missing
+    `endDate` is skipped there rather than crashing. Two new regression
+    tests in `tests/schemas.test.ts` (70 tests total now). Re-ran all 4
+    previously-failing wallets successfully after the fix.
+  - **Result — exactly one wallet clears every bar**:
+    `0x1b20a00709dfe648afd26b326394b5e031f83ab0` (monthly rank #15,
+    unlabeled/no public username found) — **53.1% win rate (inside the
+    target 53-55% range), zero disqualifying flags** (not dormant, not
+    concentrated, not election-only, not high-frequency), still active
+    (last trade 3.8 days before this session), 51 real independent events,
+    +35.7% ROI, $881K net on the shallow default 5000-fill pull. **This is
+    the first wallet in the entire project's history to hit the target hit
+    rate with a clean flag set.** Three more wallets clear the win-rate bar
+    but get excluded by `uncopyable-high-frequency` (`theowalcott` 59.7%
+    win/active, `Weaseloftheweek` 61.4% win/active, `wr0ngw4yb3tt0r` 55.1%
+    win/dormant) — worth a second look at whether the <5s-median-gap
+    threshold is calibrated for a human follower or could be relaxed for
+    an automated bot follower (see next steps). Two wallets (`Mysaria`,
+    `donthackme`) show 85%+ win rates that are economically meaningless —
+    ROI near 0% — a reminder that win rate alone, without ROI, describes a
+    tiny-edge grinding pattern (e.g. buying at 90c+), not a real signal.
+    Full per-wallet breakdown recorded in each wallet's `label` in
+    `wallets.ts` — check there before re-running anything.
+  - **Not yet done, and the clear next step**: `0x1b20a0...`'s read above
+    is from the *default* 10-page/5000-fill pull, which is exactly the
+    kind of early/shallow slice this project has already been burned by
+    twice (0x_exit's 12-day snapshot overstated its edge 5x; see Phase 1e).
+    **Before treating this wallet as a real candidate, it needs
+    `historyPages` raised in `wallets.ts` and to be re-scored, plus a
+    `--rolling-window` decay check (`npm run backtest`) to look for the
+    same kind of within-window decay Phase 1f found in 0x_exit's wallet.**
+    Nothing here should be treated as confirmed, and no Phase 3
+    paper-trading code should be written, until that's done.
+- **Phase 3-5: not started. Phase 3 (paper trading) is next if the
+  full-history/decay re-check on `0x1b20a0...` above confirms its edge —
+  see "Wallet-sourcing follow-up" for exactly what that check is.**
 
 ## 1. Existing commands and responsibilities
 

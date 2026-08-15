@@ -73,6 +73,7 @@ export async function backtestMarket(
   const outcomes: string[] = JSON.parse(market.outcomes ?? "[]");
   const finalPrices: number[] = JSON.parse(market.outcomePrices ?? "[]").map(Number);
   if (tokenIds.length !== 2 || outcomes.length !== 2) return null;
+  if (!market.endDate) return null;
 
   const startTs = Math.floor(new Date(market.startDate ?? market.endDate).getTime() / 1000);
   const endTs = Math.floor(new Date(market.endDate).getTime() / 1000);

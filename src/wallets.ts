@@ -205,4 +205,108 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/profit",
   },
+
+  // Added 2026-08-14: after all 24 above were ruled out or dormant (Phase
+  // 2 wallet-scoring, see docs/AUDIT.md), pivoted from the ALL-TIME
+  // leaderboard (dominated by one-shot 2024-election bettors sitting
+  // dormant for a year+) to the MONTHLY leaderboard instead, on the theory
+  // that "profitable in the last 30 days" is a much better filter for
+  // CURRENTLY-active traders than "profitable ever." Ranks 1,2,3,8,10 were
+  // already tracked (unnamed #12, 0xE30E7, swisstony, SDTrading, RN1) —
+  // only new ranks 4-20 added below. All scored the same day against the
+  // project's target hit rate (user-specified: 53-55% win rate, not just
+  // ">50%") — see each label for the result. Numbers below are from the
+  // default 10-page (5000-fill) shallow pull; per this project's
+  // established "early-slice bias" lesson (0x_exit, README Phase 1e), none
+  // of these are confirmed until re-checked on deeper history.
+  {
+    address: "0xfe787d2da716d60e8acff57fb87eb13cd4d10319",
+    label: "ferrariChampions2026 (monthly #4 — scored: 45.9% win, dormant+high-freq, ROI 4.9% — below hit-rate bar, RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x224a89dbe0db0d6124b335edabd15b3f877da3d5",
+    label: "wr0ngw4yb3tt0r (monthly #5 — scored: 55.1% win (in target range) but dormant+uncopyable-high-freq, ROI 6.6% — RULED OUT on copyability)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
+    label: "theowalcott (monthly #6 — scored: 59.7% win, ACTIVE (7.9d), but uncopyable-high-freq, ROI 5.5% — win rate clears bar, RULED OUT on copyability; revisit if high-freq threshold gets reassessed)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x5268527977f700f9bf9b6d5cd843859e4e70135d",
+    label: "HomeRunHazard (monthly #7 — scored: 45.5% win, dormant+high-freq, ROI 0.7% — below hit-rate bar, RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x13fa4ce1b8a27dd0b7a72db6205a50ee6ff0954c",
+    label: "betterfasterstronger (monthly #9 — scored: insufficient-sample, events=0 (all activity unresolved/non-trade in the default pull window) — INCONCLUSIVE, not a pass or fail)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x5dab5ed9691fab220535891d9c7f5c28eed322e1",
+    label: "Weaseloftheweek (monthly #11 — scored: 61.4% win, ACTIVE (1.0d — traded today), but uncopyable-high-freq, ROI 9.6%, $535K net — win rate clears bar, RULED OUT on copyability; revisit if high-freq threshold gets reassessed)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x6ac5bb06a9eb05641fd5e82640268b92f3ab4b6e",
+    label: "Lakersfan111 (monthly #12 — scored: 48.8% win, dormant, ROI 21% — below hit-rate bar despite large 339-event sample, RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0xcd30f4698c6f5f3829893e68e183a8e5ea18f316",
+    label: "111111111115 (monthly #13 — scored: 38.9% win, dormant+high-freq, ROI -36.3% — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x79ae097215202b5d01f98e4479fb219102469a4a",
+    label: "CORGI8 (monthly #14 — scored: 44.1% win, no flags, ACTIVE (0.7d), 312 events, ROI 8.4% — clean/active/large sample but win rate below hit-rate bar, RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x1b20a00709dfe648afd26b326394b5e031f83ab0",
+    label: "unnamed monthly #15 (+$335,860 — scored: 53.1% win (IN TARGET RANGE), NO FLAGS, ACTIVE (3.8d), 51 events, ROI 35.7%, $881K net — BEST CANDIDATE IN THE PROJECT, only wallet ever to clear the hit-rate bar with zero disqualifying flags. Shallow 5000-fill read only — needs a deeper historyPages pull + rolling-window decay check before treating as confirmed, per the 0x_exit early-slice lesson.)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x4bff30af91642dc7d2b19a8664378fe55c45fc26",
+    label: "Sassy-Bucket (monthly #16 — scored: 26.5% win, dormant+high-freq, ROI -36.9% — RULED OUT, badly negative)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x43372356634781eea88d61bbdd7824cdce958882",
+    label: "Anjun (monthly #17 — scored: 59.1% win but dormant 1044 DAYS (~2.9yr) — ancient/irrelevant, RULED OUT despite win rate)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0xe40aaa5ce1dac0b7dc24c9d0284f27e17c3fe4a2",
+    label: "Mysaria (monthly #18 — scored: 85.4% win but ROI ~0.0% ($-10 net) — extreme win rate is a near-certain-odds tiny-edge grinding pattern, not real profit; also uncopyable-high-freq. RULED OUT on economics despite the win-rate number)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0x03805a13a0b3e058f55f6c6af95389d4f431073d",
+    label: "donthackme (monthly #19 — scored: 85.3% win but ROI 0.3% ($426 net) — same near-zero-profit-despite-high-win-rate pattern as Mysaria; also dormant+high-freq. RULED OUT on economics)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
+  {
+    address: "0xbca08c1bc204a34f2fddbe47b438b9bd42ac9705",
+    label: "1winstreak1 (monthly #20 — scored: 59.2% win but dormant 93.7 days, ROI 19.3%, $181K net, 222 events — win rate clears bar but stopped trading 3+ months ago, RULED OUT on dormancy)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+  },
 ];
