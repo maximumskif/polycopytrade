@@ -52,7 +52,9 @@ export interface FollowerFillEstimate {
 // Picks the clobTokenId for a fill's outcome side out of a market's
 // [Yes, No]-ordered clobTokenIds/outcomes arrays -- same JSON-array
 // decoding backtestLadder.ts already relies on.
-function tokenIdForOutcome(market: GammaMarket, outcome: string): string | null {
+// Exported for reuse by src/paperTrading/engine.ts, which needs the exact
+// same "which CLOB token does this outcome trade as" lookup.
+export function tokenIdForOutcome(market: GammaMarket, outcome: string): string | null {
   const tokenIds: string[] = JSON.parse(market.clobTokenIds ?? "[]");
   const outcomes: string[] = JSON.parse(market.outcomes ?? "[]");
   const idx = outcomes.findIndex((o) => o.toLowerCase() === outcome.toLowerCase());
@@ -62,7 +64,8 @@ function tokenIdForOutcome(market: GammaMarket, outcome: string): string | null 
 // Nearest price point AT OR AFTER `ts` -- a follower can only react to
 // information that has already happened, so an earlier tick is never a
 // valid stand-in for "the observed price `delay` seconds later."
-function priceAtOrAfter(history: { t: number; p: number }[], ts: number): number | null {
+// Exported for the same reason as tokenIdForOutcome above.
+export function priceAtOrAfter(history: { t: number; p: number }[], ts: number): number | null {
   let best: { t: number; p: number } | null = null;
   for (const pt of history) {
     if (pt.t >= ts && (best === null || pt.t < best.t)) best = pt;

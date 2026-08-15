@@ -55,7 +55,7 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
 test("running migrations twice is a no-op the second time", () => {
   const first = runMigrations(db);
   const second = runMigrations(db);
-  assert.deepEqual(first.applied, ["0001_init"]);
+  assert.deepEqual(first.applied, ["0001_init", "0002_paper_trading"]);
   assert.deepEqual(second.applied, []);
 });
 
@@ -65,7 +65,7 @@ test("migrations create the expected tables", () => {
     .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     .all()
     .map((r: any) => r.name);
-  for (const expected of ["wallets", "wallet_activity", "positions", "api_errors", "wallet_polls"]) {
+  for (const expected of ["wallets", "wallet_activity", "positions", "api_errors", "wallet_polls", "paper_orders"]) {
     assert.ok(tables.includes(expected), `expected table ${expected} to exist`);
   }
 });

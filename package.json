@@ -21,7 +21,8 @@
     "wallet-breakdown": "tsx src/walletBreakdown.ts",
     "backtest": "tsx src/cli/backtest.ts",
     "wallet-score": "tsx src/cli/walletScore.ts",
-    "follower-delay-demo": "tsx src/cli/followerDelayDemo.ts"
+    "follower-delay-demo": "tsx src/cli/followerDelayDemo.ts",
+    "paper:report": "tsx src/cli/paperReport.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

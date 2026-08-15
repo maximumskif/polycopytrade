@@ -277,17 +277,67 @@ today.
     — both are bot-speed execution no realistic follower latency could
     match, a definitive rule-out rather than a threshold-calibration
     question. No change made to `HIGH_FREQUENCY_MEDIAN_GAP_SECONDS`.
-- **Phase 3 (paper trading): open decision, not yet started.**
-  `0x1b20a0...` is the project's first wallet to survive every check this
-  project knows how to run — win rate, ROI, flags, full-history stability,
-  time-decay, copyability. The honest read given the wide ROI confidence
-  interval and the wallet's short (5-6 week) real-world track record is
-  "promising and structurally sound, not proven" — which is exactly the
-  situation Phase 3 (paper trade with no capital, log hypothetical fills
-  going forward) was designed for. Starting to build the paper-trading
-  engine is a "supported strategies" decision per this project's original
-  ground rules, so it needs an explicit go-ahead before code gets written,
-  not an assumption.
+- **Phase 3 (paper trading): built and running as of 2026-08-15.** User
+  approved starting Phase 3 for `0x1b20a0...` (the only wallet to survive
+  every check this project runs), with three scope decisions confirmed
+  up front: **$100 fixed stake per copied fill** (isolates the
+  follow-strategy from the leader's own much larger bankroll), **sports-
+  category fills only** (categorize.ts — the confirmed edge is
+  concentrated there, 55.4% win vs a much weaker 51.9% "other" bucket),
+  **30-second assumed follower delay** (a realistic bot-reaction
+  assumption, one of the four delays `followerExecution.ts` already
+  models).
+  - **New table**: `paper_orders` (migration `0002_paper_trading`, one row
+    per copied leader fill, `UNIQUE(source_activity_id)` for idempotent
+    re-processing — see `src/storage/migrations/0002_paper_trading.ts`).
+  - **New engine**: `src/paperTrading/engine.ts` —
+    `processNewFills(target)` turns a wallet's newly-seen, category-
+    filtered BUY fills into paper orders at the real observed follower
+    price 30s later (or `unresolvable` if no CLOB price point exists at
+    that instant — never silently dropped or retried); `resolveOpenOrders()`
+    books P&L once the underlying market closes. Deliberately reuses
+    `resolveMarket`/`outcomeWon` (now exported from
+    `src/backtesting/engine.ts`) and `tokenIdForOutcome`/`priceAtOrAfter`
+    (now exported from `followerExecution.ts`) rather than re-deriving
+    resolution/price-lookup math a third time.
+  - **Real bug found and fixed while building this**: `resolveMarket`'s
+    module-level cache used to cache ANY lookup result, including "still
+    open." That's harmless for Phase 2's short-lived batch CLIs (each
+    conditionId is only queried once per run), but would have silently
+    broken Phase 3 in production — a market seen as open during
+    `processNewFills` would stay cached as open for the rest of the
+    daemon's uptime, so `resolveOpenOrders` could never detect it
+    settling days later. Fixed to only cache `closed: true` results;
+    caught by writing the resolve-P&L test, not by inspection.
+  - **Daemon integration**: `runPaperTradingCycle()` runs after every
+    `trackDaemon` poll cycle, wrapped in try/catch so a paper-trading
+    failure can never take down wallet tracking. No second long-running
+    process.
+  - **Reporting**: `npm run paper:report` — shows open/closed/unresolvable
+    counts, win rate, net P&L, ROI. Also surfaces `distinctEvents` behind
+    the closed count and refuses to present winRate/ROI as meaningful
+    when that's under 20 — see the note below on why this matters.
+  - **Verified end-to-end against the live API** (2026-08-15): `track:once`
+    against all 39 tracked wallets (ok), then `processNewFills` +
+    `resolveOpenOrders` against `0x1b20a0...`'s real activity — 46 real
+    sports-category fills correctly turned into paper orders and
+    resolved. A full `track:daemon` cycle (39 wallets + the paper-trading
+    step) completed and shut down cleanly on SIGTERM with no errors.
+  - **Important caveat about the first batch, so a future session doesn't
+    misread it**: those 46 fills backfilled on the very first run are
+    **already-resolved HISTORICAL fills** sitting in `wallet_activity`
+    from before Phase 3 started, not genuinely forward/live paper trades —
+    "new" here means "not yet copied," which is backward-looking on the
+    very first cycle by construction. They also collapse to only **3
+    distinct real markets** (one win, two losses — the wallet split each
+    bet into many small fills), giving a noisy 15.2% win / -70.7% ROI
+    read that means nothing on a 3-event sample (`paper:report`'s new
+    `distinctEvents` warning exists specifically to prevent this being
+    mistaken for a real result). **Real, meaningful evidence starts
+    accumulating from genuinely new fills going forward** — check
+    `distinctEvents` before trusting any `paper:report` number, and
+    expect it to take a while (this wallet trades at a real but not
+    extreme pace) before the sample is large enough to mean anything.
 
 ## 1. Existing commands and responsibilities
 

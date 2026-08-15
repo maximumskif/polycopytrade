@@ -598,8 +598,10 @@ cp .env.example .env
 npm run migrate         # create/update the local SQLite database
 npm run track:once      # poll tracked wallets once -> SQLite (data/polycopytrade.db)
 npm run track:daemon    # or: poll continuously at POLL_INTERVAL_MS, Ctrl-C to stop
+                         # (also runs Phase 3 paper trading each cycle -- see src/paperTrading/)
 npm run wallets:health  # per-wallet freshness/health
 npm run wallets:add -- <address> <label>  # track a wallet without editing wallets.ts
+npm run paper:report    # Phase 3 paper-trading portfolio: open/closed/unresolvable, win rate, ROI
 npm run scan-ladders    # scan current BTC/WTI ladders for harvest-zone rungs
 npm test                # regression tests (no network access needed)
 ```

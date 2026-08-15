@@ -36,16 +36,30 @@ function applyCosts(usdcStaked: number, entryPrice: number, config: BacktestConf
   return { shares, effectivePrice };
 }
 
-const marketCache = new Map<string, GammaMarket | null>();
-async function resolveMarket(conditionId: string): Promise<GammaMarket | null> {
-  if (marketCache.has(conditionId)) return marketCache.get(conditionId)!;
+// Only ever caches a CLOSED market — a closed market's outcome is
+// immutable, but an open (or not-yet-found) result can change on the very
+// next poll. Phase 2's batch backtest CLIs only ever queried each
+// conditionId once per run anyway, so this was never load-bearing there;
+// it matters now that src/paperTrading/engine.ts reuses this function from
+// a long-running daemon process, where caching a market as "still open"
+// forever would mean a paper order could never be detected as resolved for
+// the rest of the process's uptime.
+const marketCache = new Map<string, GammaMarket>();
+// Exported for reuse by src/paperTrading/engine.ts, which needs the exact
+// same "resolved, closed market, or null" lookup this file already does —
+// see docs/AUDIT.md's lesson about not re-implementing the same resolution
+// math in two places (the Phase 0 return-calculation bug).
+export async function resolveMarket(conditionId: string): Promise<GammaMarket | null> {
+  const cached = marketCache.get(conditionId);
+  if (cached) return cached;
   let market = await getMarketByConditionId(conditionId, true);
   if (!market) market = await getMarketByConditionId(conditionId, false);
-  marketCache.set(conditionId, market);
+  if (market?.closed) marketCache.set(conditionId, market);
   return market;
 }
 
-function outcomeWon(market: GammaMarket, outcome: string): boolean | null {
+// Exported for the same reason as resolveMarket above.
+export function outcomeWon(market: GammaMarket, outcome: string): boolean | null {
   const outcomes: string[] = JSON.parse(market.outcomes ?? "[]");
   const finalPrices: number[] = JSON.parse(market.outcomePrices ?? "[]").map(Number);
   const idx = outcomes.indexOf(outcome);

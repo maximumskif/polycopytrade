@@ -19,6 +19,7 @@ import { upsertWallet, listTrackedWallets } from "../storage/repository";
 import { TRACKED_WALLETS } from "../wallets";
 import { pollAllWallets } from "./pollWallet";
 import { wireApiErrorsToStorage } from "./wireApiErrors";
+import { runPaperTradingCycle } from "../paperTrading/engine";
 
 async function sleepInterruptible(ms: number, isStopping: () => boolean): Promise<void> {
   const step = 500;
@@ -55,6 +56,15 @@ export async function main() {
     const results = await pollAllWallets(wallets);
     const failed = results.filter((r) => r.outcome !== "ok").length;
     if (failed > 0) console.warn(`[daemon] cycle ${cycle}: ${failed}/${results.length} wallets failed this cycle`);
+
+    // A paper-trading failure must never take down wallet tracking — this
+    // is a downstream consumer of the data this loop's real job is to
+    // collect, not the other way around.
+    try {
+      await runPaperTradingCycle();
+    } catch (err) {
+      console.warn(`[daemon] cycle ${cycle}: paper-trading step failed: ${(err as Error).message}`);
+    }
 
     if (stopping) break;
     await sleepInterruptible(config.pollIntervalMs, () => stopping);

@@ -5,7 +5,7 @@
 
 import { getDb } from "./db";
 import type { Activity, Position } from "../api/schemas";
-import type { ApiErrorRecord, WalletPollResult, WalletHealth, Trackable } from "../domain/types";
+import type { ApiErrorRecord, WalletPollResult, WalletHealth, Trackable, StoredActivity, NewPaperOrder, PaperOrder, PaperOrderStatus } from "../domain/types";
 import type { TrackedWallet } from "../wallets";
 
 function nowSeconds(): number {
@@ -170,4 +170,104 @@ export function listWalletHealth(): WalletHealth[] {
   const db = getDb();
   const addresses = db.prepare(`SELECT address FROM wallets ORDER BY label`).all() as { address: string }[];
   return addresses.map((w) => getWalletHealth(w.address)).filter((h): h is WalletHealth => h !== null);
+}
+
+// ---------------------------------------------------------------------
+// Phase 3: paper trading
+// ---------------------------------------------------------------------
+
+// Every stored BUY/TRADE fill for a wallet that doesn't have a paper_orders
+// row yet — the paper-trading engine's "what's new since last cycle" query.
+// A LEFT JOIN...IS NULL rather than NOT IN, so it stays index-friendly as
+// paper_orders grows.
+export function listUncopiedBuyFills(walletAddress: string): StoredActivity[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT wa.id, wa.wallet_address as walletAddress, wa.condition_id as conditionId, wa.outcome, wa.side,
+              wa.usdc_size as usdcSize, wa.price, wa.type, wa.title, wa.slug, wa.timestamp
+       FROM wallet_activity wa
+       LEFT JOIN paper_orders po ON po.source_activity_id = wa.id
+       WHERE wa.wallet_address = ? AND wa.type = 'TRADE' AND wa.side = 'BUY' AND po.id IS NULL
+       ORDER BY wa.timestamp ASC`
+    )
+    .all(walletAddress);
+  return rows as unknown as StoredActivity[];
+}
+
+// INSERT OR IGNORE on the UNIQUE(source_activity_id) constraint — same
+// idempotency pattern as insertActivity: re-scanning a fill that already
+// became a paper order is a no-op, not a duplicate.
+export function insertPaperOrder(order: NewPaperOrder): void {
+  const db = getDb();
+  db.prepare(
+    `INSERT OR IGNORE INTO paper_orders
+       (wallet_address, source_activity_id, condition_id, outcome, category, leader_price, leader_timestamp,
+        stake_usdc, delay_seconds, follower_entry_price, filled_at, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    order.walletAddress,
+    order.sourceActivityId,
+    order.conditionId,
+    order.outcome,
+    order.category,
+    order.leaderPrice,
+    order.leaderTimestamp,
+    order.stakeUsdc,
+    order.delaySeconds,
+    order.followerEntryPrice,
+    order.filledAt,
+    order.status,
+    nowSeconds()
+  );
+}
+
+function mapPaperOrderRow(r: any): PaperOrder {
+  return {
+    id: r.id,
+    walletAddress: r.walletAddress,
+    sourceActivityId: r.sourceActivityId,
+    conditionId: r.conditionId,
+    outcome: r.outcome,
+    category: r.category,
+    leaderPrice: r.leaderPrice,
+    leaderTimestamp: r.leaderTimestamp,
+    stakeUsdc: r.stakeUsdc,
+    delaySeconds: r.delaySeconds,
+    followerEntryPrice: r.followerEntryPrice,
+    filledAt: r.filledAt,
+    status: r.status,
+    resolvedAt: r.resolvedAt,
+    payoutUsdc: r.payoutUsdc,
+    pnlUsdc: r.pnlUsdc,
+    createdAt: r.createdAt,
+  };
+}
+
+const PAPER_ORDER_COLUMNS = `id, wallet_address as walletAddress, source_activity_id as sourceActivityId, condition_id as conditionId,
+       outcome, category, leader_price as leaderPrice, leader_timestamp as leaderTimestamp, stake_usdc as stakeUsdc,
+       delay_seconds as delaySeconds, follower_entry_price as followerEntryPrice, filled_at as filledAt, status,
+       resolved_at as resolvedAt, payout_usdc as payoutUsdc, pnl_usdc as pnlUsdc, created_at as createdAt`;
+
+// Orders awaiting resolution — status 'filled' (a follower price was
+// observed but the market hasn't settled yet). 'unresolvable' orders are
+// deliberately excluded: there's no price to resolve a P&L against, ever.
+export function listOpenPaperOrders(): PaperOrder[] {
+  const rows = getDb()
+    .prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders WHERE status = 'filled' ORDER BY leader_timestamp ASC`)
+    .all();
+  return rows.map(mapPaperOrderRow);
+}
+
+export function resolvePaperOrder(id: number, status: PaperOrderStatus, payoutUsdc: number, pnlUsdc: number): void {
+  getDb()
+    .prepare(`UPDATE paper_orders SET status = ?, payout_usdc = ?, pnl_usdc = ?, resolved_at = ? WHERE id = ?`)
+    .run(status, payoutUsdc, pnlUsdc, nowSeconds(), id);
+}
+
+export function listPaperOrders(walletAddress?: string): PaperOrder[] {
+  const db = getDb();
+  const rows = walletAddress
+    ? db.prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders WHERE wallet_address = ? ORDER BY leader_timestamp ASC`).all(walletAddress)
+    : db.prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders ORDER BY leader_timestamp ASC`).all();
+  return rows.map(mapPaperOrderRow);
 }

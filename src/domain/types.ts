@@ -176,3 +176,49 @@ export interface WalletScore {
   winRate: number;
   strategyResult: StrategyResult;
 }
+
+// ---------------------------------------------------------------------
+// Phase 3: paper trading (docs/AUDIT.md — "Phase 3 (paper trading)")
+// ---------------------------------------------------------------------
+
+// A wallet_activity row as read back from storage — distinct from the API's
+// Activity type (src/api/schemas.ts) because it carries the DB row's own
+// `id`, which paper_orders.source_activity_id references.
+export interface StoredActivity {
+  id: number;
+  walletAddress: string;
+  conditionId: string;
+  outcome: string;
+  side: string;
+  usdcSize: number;
+  price: number;
+  type: string;
+  title: string;
+  slug: string;
+  timestamp: number;
+}
+
+export type PaperOrderStatus = "filled" | "unresolvable" | "won" | "lost";
+
+export interface NewPaperOrder {
+  walletAddress: string;
+  sourceActivityId: number;
+  conditionId: string;
+  outcome: string;
+  category: string;
+  leaderPrice: number;
+  leaderTimestamp: number;
+  stakeUsdc: number;
+  delaySeconds: number;
+  followerEntryPrice: number | null;
+  filledAt: number | null;
+  status: PaperOrderStatus;
+}
+
+export interface PaperOrder extends NewPaperOrder {
+  id: number;
+  resolvedAt: number | null;
+  payoutUsdc: number | null;
+  pnlUsdc: number | null;
+  createdAt: number;
+}
