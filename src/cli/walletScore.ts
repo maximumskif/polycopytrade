@@ -40,6 +40,7 @@ export async function main() {
       console.log(
         `  topEventShare=${pct(score.concentrationTopEventShare)}  electionShare=${pct(score.electionShare)}  winRate=${pct(score.winRate)}  netPnl=$${score.netPnl.toFixed(2)}  roi=${pct(score.roi)}`
       );
+      console.log(`  medianGapSeconds=${Number.isFinite(score.medianGapSeconds) ? score.medianGapSeconds.toFixed(1) : "n/a"}`);
     } catch (err) {
       console.error(`  [${wallet.label}] scoring failed: ${(err as Error).message}`);
     }

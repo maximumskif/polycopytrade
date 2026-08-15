@@ -170,6 +170,7 @@ export interface WalletScore {
   daysSinceLastActivity: number;
   concentrationTopEventShare: number; // fraction of total stake in the single largest event
   electionShare: number; // fraction of resolved trials in the "politics" category
+  medianGapSeconds: number; // median time between consecutive TRADE fills — basis for the uncopyable-high-frequency flag
   netPnl: number;
   roi: number;
   winRate: number;

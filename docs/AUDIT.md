@@ -248,19 +248,46 @@ today.
     tiny-edge grinding pattern (e.g. buying at 90c+), not a real signal.
     Full per-wallet breakdown recorded in each wallet's `label` in
     `wallets.ts` — check there before re-running anything.
-  - **Not yet done, and the clear next step**: `0x1b20a0...`'s read above
-    is from the *default* 10-page/5000-fill pull, which is exactly the
-    kind of early/shallow slice this project has already been burned by
-    twice (0x_exit's 12-day snapshot overstated its edge 5x; see Phase 1e).
-    **Before treating this wallet as a real candidate, it needs
-    `historyPages` raised in `wallets.ts` and to be re-scored, plus a
-    `--rolling-window` decay check (`npm run backtest`) to look for the
-    same kind of within-window decay Phase 1f found in 0x_exit's wallet.**
-    Nothing here should be treated as confirmed, and no Phase 3
-    paper-trading code should be written, until that's done.
-- **Phase 3-5: not started. Phase 3 (paper trading) is next if the
-  full-history/decay re-check on `0x1b20a0...` above confirms its edge —
-  see "Wallet-sourcing follow-up" for exactly what that check is.**
+  - **Deep re-check done (2026-08-14, same day): `0x1b20a0...`'s edge is
+    real, not an early-slice artifact.** Raised `historyPages` to 20 in
+    `wallets.ts` and re-ran `wallet-score` — returned byte-identical
+    numbers to the shallow 10-page pull (51 events, 53.1% win, +35.7% ROI,
+    $881K net). Unlike 0x_exit, this wallet's entire ~14-day lifetime
+    already fit under the old 5000-fill cap, so the original read already
+    *was* full history. `npm run backtest -- 0x1b20a0... --rolling-window=7`
+    found no decay — the opposite of 0x_exit's warning sign: wk0 (2026-07-27)
+    52.1% win/31.6% ROI, wk1 (2026-08-03) 68.3% win/81.7% ROI (small sample,
+    n=142, but trending up not down). Category breakdown shows the edge is
+    concentrated in **sports** (55.4% win/$668K net/790 trials) vs a much
+    weaker "other" bucket (51.9% win/$213K net/1483 trials) — this reads as
+    a sports-specific skill, not a blanket signal; re-labeled
+    `sports-systematic` in `wallets.ts` (was `unclassified`).
+    **Real, unresolved caveat**: the bootstrap 95% ROI CI is wide (-11.1%
+    to +76.9%) — still can't rule out a negative true edge — and the
+    wallet only joined Polymarket in July 2026 (confirmed via its profile
+    page), so this 2-week window *is* its entire track record, not a
+    slice of a longer one. There is no more backtestable history to pull;
+    further validation can only come from watching it forward.
+  - **`theowalcott`/`Weaseloftheweek` re-checked with a new
+    `medianGapSeconds` field** (added to `WalletScore` this session,
+    printed by `wallet-score`) to see whether their
+    `uncopyable-high-frequency` flag was a borderline threshold call worth
+    reassessing. It wasn't: `theowalcott` medianGapSeconds=0.0 (effectively
+    same-block/simultaneous fills) and `Weaseloftheweek` medianGapSeconds=1.0
+    — both are bot-speed execution no realistic follower latency could
+    match, a definitive rule-out rather than a threshold-calibration
+    question. No change made to `HIGH_FREQUENCY_MEDIAN_GAP_SECONDS`.
+- **Phase 3 (paper trading): open decision, not yet started.**
+  `0x1b20a0...` is the project's first wallet to survive every check this
+  project knows how to run — win rate, ROI, flags, full-history stability,
+  time-decay, copyability. The honest read given the wide ROI confidence
+  interval and the wallet's short (5-6 week) real-world track record is
+  "promising and structurally sound, not proven" — which is exactly the
+  situation Phase 3 (paper trade with no capital, log hypothetical fills
+  going forward) was designed for. Starting to build the paper-trading
+  engine is a "supported strategies" decision per this project's original
+  ground rules, so it needs an explicit go-ahead before code gets written,
+  not an assumption.
 
 ## 1. Existing commands and responsibilities
 

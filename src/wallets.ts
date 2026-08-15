@@ -233,7 +233,7 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
-    label: "theowalcott (monthly #6 — scored: 59.7% win, ACTIVE (7.9d), but uncopyable-high-freq, ROI 5.5% — win rate clears bar, RULED OUT on copyability; revisit if high-freq threshold gets reassessed)",
+    label: "theowalcott (monthly #6 — scored: 59.7% win, ACTIVE (7.9d), ROI 5.5% — RULED OUT DEFINITIVELY on copyability: medianGapSeconds=0.0, i.e. near-simultaneous/same-block fills, not a borderline high-freq-threshold call)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
@@ -251,7 +251,7 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x5dab5ed9691fab220535891d9c7f5c28eed322e1",
-    label: "Weaseloftheweek (monthly #11 — scored: 61.4% win, ACTIVE (1.0d — traded today), but uncopyable-high-freq, ROI 9.6%, $535K net — win rate clears bar, RULED OUT on copyability; revisit if high-freq threshold gets reassessed)",
+    label: "Weaseloftheweek (monthly #11 — scored: 61.4% win, ACTIVE (1.0d), ROI 9.6%, $535K net — RULED OUT on copyability: medianGapSeconds=1.0, bot-speed execution no realistic follower latency can match, not a borderline call)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
@@ -275,9 +275,10 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x1b20a00709dfe648afd26b326394b5e031f83ab0",
-    label: "unnamed monthly #15 (+$335,860 — scored: 53.1% win (IN TARGET RANGE), NO FLAGS, ACTIVE (3.8d), 51 events, ROI 35.7%, $881K net — BEST CANDIDATE IN THE PROJECT, only wallet ever to clear the hit-rate bar with zero disqualifying flags. Shallow 5000-fill read only — needs a deeper historyPages pull + rolling-window decay check before treating as confirmed, per the 0x_exit early-slice lesson.)",
-    archetype: "unclassified",
+    label: "unnamed monthly #15 (+$335,860 — CONFIRMED on deeper history, 2026-08-14: historyPages=20 returned IDENTICAL numbers to the shallow pull — 53.1% win, no flags, 51 events, +35.7% ROI, $881K net — this wallet's entire ~14-day lifetime already fit under the old 5000-fill cap, so unlike 0x_exit this is NOT an early-slice artifact. No decay across its two active weeks (wk0 52.1% win/31.6% ROI -> wk1 68.3% win/81.7% ROI, improving not fading). Edge is concentrated in SPORTS (55.4% win/$668K net/790 trials) vs a much weaker 'other' category (51.9% win/$213K net/1483 trials) — treat as a sports-specific signal. Caveat: bootstrap 95% ROI CI is wide, -11.1% to +76.9%, still can't rule out a negative true edge; wallet joined Polymarket July 2026 so this IS its full track record, not a slice of a longer one. BEST CANDIDATE IN THE PROJECT — first Phase 3 paper-trading candidate, pending a go/no-go decision.)",
+    archetype: "sports-systematic",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
+    historyPages: 20,
   },
   {
     address: "0x4bff30af91642dc7d2b19a8664378fe55c45fc26",

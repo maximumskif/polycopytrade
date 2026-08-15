@@ -78,6 +78,7 @@ export function computeWalletScore(
     daysSinceLastActivity,
     concentrationTopEventShare,
     electionShare,
+    medianGapSeconds,
     netPnl: strategyResult.netPnl,
     roi: strategyResult.roi,
     winRate: strategyResult.winRate,
