@@ -418,6 +418,23 @@ today.
     sizing or a minimum-stake copy threshold — a real strategy-shape
     decision, not a mechanical fix like the UFC exclusion above).
 
+- **Weekly-leaderboard sourcing pass (2026-08-16): 0 new qualified
+  candidates, 1 watch item.** Third leaderboard window tried (after
+  all-time and monthly) — `polymarket.com/leaderboard/overall/weekly/profit`,
+  the currently-hottest-traders view. 10 of the top 20 were already
+  tracked; the 10 new wallets all scored below the bar or got
+  disqualified, repeating the pattern this project now expects: a wallet
+  with a high win rate is very often either a one-shot lucky bet (n=1-2
+  events) or bot-speed execution (`medianGapSeconds` 0-3s,
+  `uncopyable-high-frequency`) — see `g42gh6524h5h5` (60.7% win, active,
+  but 1.0s median gap) and `WTSA` (56.0% win, same pattern) for two more
+  confirmations of that specific correlation. **`TennisLove`** is the one
+  exception worth a note: 100% win, zero disqualifying flags, active —
+  but only 4 real independent events, too thin to trust yet. Not added as
+  a second paper-trading target; worth a re-score in a future session if
+  it keeps trading and its sample grows, the same way `0x1b20a0...` itself
+  started thin before its edge was confirmed.
+
 - **Unbounded `positions` table growth found and fixed (2026-08-15/16) —
   a real operational risk to Phase 3's "run for weeks" plan, found while
   checking the live database's size.** `positions` (0001_init schema) was
