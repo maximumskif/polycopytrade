@@ -9,10 +9,18 @@ export function categorize(title: string): string {
   if (["president", "election", "senate", "governor", "congress", "parliament", "prime minister"].some((k) => t.includes(k)))
     return "politics";
   if (
-    [" vs ", "spread:", "o/u", "moneyline", "exact score", "inning", "win on 20", "advance to", "clinch"].some((k) =>
+    [" vs ", "vs.", "spread:", "o/u", "moneyline", "exact score", "inning", "win on 20", "advance to", "clinch"].some((k) =>
       t.includes(k)
     )
   )
-    return "sports"; // "win on 20" catches "Will <team> win on 2026-06-15?" (World Cup-style match markets)
+    // "win on 20" catches "Will <team> win on 2026-06-15?" (World Cup-style
+    // match markets). "vs." (not just " vs ") added 2026-08-15 — found by
+    // auditing 0x1b20a0...'s "other" bucket: real MLB/UFC moneyline titles
+    // are phrased "Team A vs. Team B" (period, no trailing space before
+    // it), which " vs " alone never matched, silently misfiling most of
+    // this wallet's non-O/U baseball bets as "other" instead of "sports" —
+    // including in the LIVE paper-trading category filter
+    // (src/paperTrading/engine.ts), not just backtest reporting.
+    return "sports";
   return "other";
 }

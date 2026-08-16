@@ -6,3 +6,4 @@ data/*.jsonl
 data/*.json
 data/*.db
 data/*.db-*
+data/*.pid

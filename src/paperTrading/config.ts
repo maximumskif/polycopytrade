@@ -19,9 +19,15 @@ export const PAPER_TRADE_TARGETS: PaperTradeTarget[] = [
   {
     // "unnamed monthly #15" in wallets.ts — confirmed on full history
     // 2026-08-14 (docs/AUDIT.md): 53.1% win rate, +35.7% ROI, no
-    // disqualifying flags, edge concentrated in sports (55.4% win/$668K
-    // net) vs a much weaker "other" bucket (51.9% win) — hence the sports
-    // category filter here, not a blanket copy of every fill.
+    // disqualifying flags. The sports filter was originally set because
+    // "sports" looked like it outperformed a weaker "other" bucket; a
+    // 2026-08-15 categorize.ts bug fix (see docs/AUDIT.md) found that
+    // split was mostly a mis-categorization artifact -- this wallet is
+    // essentially a pure baseball/UFC bettor (2273/2274 trials are
+    // "sports" post-fix), so the filter is now close to a no-op rather
+    // than a meaningful sub-strategy. Left in place since it's still
+    // correct (not wrong, just no longer very selective) and removing it
+    // wouldn't change what gets copied.
     address: "0x1b20a00709dfe648afd26b326394b5e031f83ab0",
     label: "unnamed monthly #15 (sports-systematic)",
     categoryFilter: "sports",

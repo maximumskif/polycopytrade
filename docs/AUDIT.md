@@ -339,6 +339,75 @@ today.
     expect it to take a while (this wallet trades at a real but not
     extreme pace) before the sample is large enough to mean anything.
 
+- **`categorize.ts` sports-detection bug found and fixed (2026-08-15),
+  with a real live impact.** Auditing `0x1b20a0...`'s trade breakdown
+  (`npm run wallet-breakdown -- 0x1b20a0`) to look for a finer
+  high-conviction slice (the same exercise Phase 1f did for 0x_exit's
+  ladder rungs) surfaced something bigger than a slice: the "other"
+  category (1,483 of 2,274 trials — MORE volume than "sports" itself) was
+  dominated by real MLB/UFC moneyline titles like "New York Yankees vs.
+  Chicago White Sox." `categorize.ts`'s sports keyword was `" vs "`
+  (space-vs-space); real titles are phrased `"vs."` (period, no space
+  before it) — `" vs "` never matches, so every non-O/U-suffixed
+  moneyline title silently fell through to "other." Fixed by adding
+  `"vs."` to the keyword list; regression-tested in the new
+  `tests/categorize.test.ts` (78 tests total now).
+  - **Corrected picture**: with the fix, 2,273 of 2,274 of this wallet's
+    trials (66 of 72 markets) categorize as sports — this wallet is
+    essentially a pure baseball/UFC bettor, not a wallet with a
+    meaningfully differentiated "sports edge vs weaker other bucket."
+    That earlier framing (55.4% sports win vs 51.9% other) was largely a
+    categorization artifact, not a real behavioral distinction — the
+    wallet's already-cited full-history number (53.1% win / +35.7% ROI)
+    already essentially **is** its sports performance, since sports is
+    now ~100% of the wallet.
+  - **Real production impact, not just a reporting correction**: this bug
+    was silently active in `src/paperTrading/engine.ts`'s live
+    `categoryFilter: "sports"` — the daemon has been copying only the
+    ~35% of this wallet's real fills that happened to be O/U-suffixed
+    titles, missing the majority of its real activity since Phase 3
+    started. Fixed by restarting `track:daemon` with the corrected code;
+    the daemon will now backfill the ~2,200 previously-missed historical
+    fills as "new" (they were never copied, so they still show up as
+    uncopied) before catching up to genuinely-live fills — this will take
+    a while under the project's ~1 req/sec throttle (one price-history
+    call per fill). This backfill is still historical, not live evidence,
+    same caveat as above, but with far better coverage (66 markets, not
+    3) it will make `paper:report`'s numbers immediately much more
+    representative of the real backtest once it completes.
+  - **Price-band observation, noted but NOT acted on (too small a sample
+    to trust)**: the wallet's edge concentrates in the 30-70c entry-price
+    range (2,169 of 2,274 trials, strongly profitable); the 15-30c and
+    70-85c bands were both 100% losses, but each is a single real market
+    (n=1) — exactly the kind of small/concentrated sample this project has
+    repeatedly learned not to treat as a rule (README's one-shot-bet
+    lesson). Worth re-checking once more tail-price bets accumulate, not
+    worth filtering on yet.
+
+- **Unbounded `positions` table growth found and fixed (2026-08-15/16) —
+  a real operational risk to Phase 3's "run for weeks" plan, found while
+  checking the live database's size.** `positions` (0001_init schema) was
+  a full, un-deduped snapshot of every wallet's current positions,
+  re-inserted every single 60s poll cycle for all 39 tracked wallets, with
+  no retention policy. In under 24 hours of `track:daemon` running, this
+  reached **1.6 million rows, 1.85GB** — left running for the "weeks" Phase
+  3 calls for, this would have filled the disk and likely crashed the
+  process. **Nothing in the codebase has ever read the `positions`
+  table** — confirmed by grep before touching anything; it was pure
+  write-only dead weight from Phase 1, not load-bearing for the tracking
+  daemon's health checks (those use `wallet_polls`/`wallet_activity`) or
+  anything in Phase 2/3. Fixed by removing the `getPositions`/
+  `insertPositionsSnapshot` calls from `src/tracking/pollWallet.ts`
+  entirely (also saves one API call per wallet per cycle, not just
+  storage) — the `positions` table, `insertPositionsSnapshot`, and
+  `getPositions` are left in the codebase, unused, for Phase 4 to
+  deliberately pick back up with real retention design if a future
+  dashboard needs current-position data, rather than guessing at a
+  retention policy for data nothing consumes today. Pruned the existing
+  1.6M rows and ran `VACUUM` on the live database: **1.85GB → 84MB.**
+  `track:daemon` restarted with the fix; `positions` should now stay at 0
+  rows indefinitely.
+
 ## 1. Existing commands and responsibilities
 
 | Command | File | Responsibility |
