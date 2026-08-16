@@ -384,6 +384,40 @@ today.
     lesson). Worth re-checking once more tail-price bets accumulate, not
     worth filtering on yet.
 
+- **Deeper breakdown of `0x1b20a0...` by bet type, league, and stake size
+  (2026-08-16)** — a further slice past category, at the user's request to
+  find ways to improve the strategy. Cached trial data
+  (`data/0x1b20a0...-trials.json`, gitignored) analyzed by bet-type regex,
+  league keyword match, and stake-size bucket:
+  - **League: MLB carries the edge, UFC is a clear loser.** MLB: 2,009
+    fills / 57 markets, 54.1% win, +49.6% net. UFC: 196 fills / 4 markets,
+    46.4% win, **-59.9% net** — well-sampled enough (4 real distinct
+    events, not n=1) to act on. **Excluded via a new
+    `excludeTitleKeywords: ["UFC"]` field on `PaperTradeTarget`**
+    (`src/paperTrading/config.ts`/`engine.ts`) — applied after
+    `categoryFilter`, case-insensitive title substring match. No UFC
+    fills had been copied into `paper_orders` yet when this was added
+    (checked before deciding whether a cleanup pass was needed), so
+    nothing to purge — the exclusion is clean from here on.
+  - **Bet type: O/U (totals) meaningfully outperforms moneyline.** O/U:
+    790 fills / 36 markets, 55.4% win, +63.7% net. Moneyline: 1,483 fills
+    / 30 markets, 51.9% win, +14.6% net.
+  - **Within O/U, a striking Over/Under split — flagged as worth watching,
+    NOT yet filtered on (12 markets is still a thin sample for a hard
+    exclusion rule).** "Over" bets: 269 fills / 12 markets, **96.7% win**,
+    +111.6% net. "Under" bets: 521 fills / 25 markets, 34.2% win, +54.0%
+    net (net-positive despite the low win rate — favorable payout odds on
+    a live-underdog-style price, not a losing pattern, just a much weaker
+    one than Over). If this holds up as more O/U bets accumulate, a
+    Over-only sub-filter would be the natural next refinement.
+  - **Stake size correlates with the wallet's own win rate** — a genuine,
+    not-yet-exploited signal: $0-500 bets win 53.2%; $20K+ bets win
+    67.7% (31 fills / 19 markets). The wallet's own position sizing seems
+    to encode real confidence. Not acted on yet (would mean moving off
+    the current flat $100/fill design towards leader-stake-informed
+    sizing or a minimum-stake copy threshold — a real strategy-shape
+    decision, not a mechanical fix like the UFC exclusion above).
+
 - **Unbounded `positions` table growth found and fixed (2026-08-15/16) —
   a real operational risk to Phase 3's "run for weeks" plan, found while
   checking the live database's size.** `positions` (0001_init schema) was

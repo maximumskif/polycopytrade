@@ -76,6 +76,18 @@ function fakeMarket(overrides: Record<string, unknown> = {}) {
   };
 }
 
+test("a fill matching excludeTitleKeywords is never turned into a paper order, even if the category matches", async () => {
+  upsertWallet(wallet);
+  insertActivity(wallet.address, [makeActivity({ title: "UFC Fight Night: A vs. B" })]); // categorize() -> "sports"
+  __setFetchImplForTests(async () => {
+    throw new Error("should never call the API for an excluded fill");
+  });
+
+  const result = await processNewFills({ ...target, excludeTitleKeywords: ["UFC"] });
+  assert.deepEqual(result, { examined: 0, filled: 0, unresolvable: 0 });
+  assert.equal(listPaperOrders(wallet.address).length, 0);
+});
+
 test("a fill outside the category filter is never turned into a paper order", async () => {
   upsertWallet(wallet);
   insertActivity(wallet.address, [makeActivity({ title: "Will X happen?" })]); // categorize() -> "other", not "sports"

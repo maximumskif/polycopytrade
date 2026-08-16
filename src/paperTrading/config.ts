@@ -11,6 +11,12 @@ export interface PaperTradeTarget {
   // undefined copies every BUY fill regardless of category. See
   // src/categorize.ts.
   categoryFilter?: string;
+  // Case-insensitive substrings that disqualify a fill's title from being
+  // copied, even if categoryFilter matches — for a real, sampled pattern
+  // within one category that's worth excluding specifically (not a
+  // guessed rule; see the wallet-breakdown analysis this config's comment
+  // cites before adding one).
+  excludeTitleKeywords?: string[];
   stakeUsdc: number;
   delaySeconds: number;
 }
@@ -24,13 +30,23 @@ export const PAPER_TRADE_TARGETS: PaperTradeTarget[] = [
     // 2026-08-15 categorize.ts bug fix (see docs/AUDIT.md) found that
     // split was mostly a mis-categorization artifact -- this wallet is
     // essentially a pure baseball/UFC bettor (2273/2274 trials are
-    // "sports" post-fix), so the filter is now close to a no-op rather
-    // than a meaningful sub-strategy. Left in place since it's still
-    // correct (not wrong, just no longer very selective) and removing it
-    // wouldn't change what gets copied.
+    // "sports" post-fix), so the category filter alone is now close to a
+    // no-op. Left in place (harmless, still correct) but no longer doing
+    // the real selective work.
+    //
+    // 2026-08-16: a finer wallet-breakdown by sport found UFC is a clear,
+    // reasonably-sampled LOSER for this wallet (196 fills / 4 real
+    // markets, 46.4% win, -59.9% net) dragging down an otherwise strong
+    // MLB-driven edge (2009 fills / 57 markets, 54.1% win, +49.6% net) --
+    // excluded here. (A second finding, not yet acted on: within MLB
+    // over/under markets specifically, "Over" bets hit 96.7% win across 12
+    // markets vs "Under"'s 34.2% -- promising, but 12 markets is still a
+    // thin sample for a hard exclusion rule; watch, don't filter on it
+    // yet.)
     address: "0x1b20a00709dfe648afd26b326394b5e031f83ab0",
     label: "unnamed monthly #15 (sports-systematic)",
     categoryFilter: "sports",
+    excludeTitleKeywords: ["UFC"],
     stakeUsdc: 100,
     delaySeconds: 30,
   },
