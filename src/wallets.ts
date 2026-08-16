@@ -310,4 +310,72 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
+
+  // Added 2026-08-16: pulled the WEEKLY leaderboard (currently-hottest
+  // traders, an even shorter/fresher window than monthly) for a third
+  // sourcing pass after 0x1b20a0... — 10 of the top 20 were already
+  // tracked (unnamed #12, 0xE30E7, Sassy-Bucket, wr0ngw4yb3tt0r,
+  // 111111111115, Lakersfan111, ferrariChampions2026, RN1, Mysaria,
+  // swisstony — all previously ruled out), only the 10 new ones below.
+  // Unscored, archetype unknown.
+  {
+    address: "0x9319a045cdd0c2180e5eb7ad44374383db9a6410",
+    label: "sainttroplay (weekly #2, +$998,508)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0x983eedfbd75803602e4a6e6ea9aab6dc6b9c6748",
+    label: "3edmond.dantes (weekly #7, +$527,634)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0x3eb095d871501a1d7a3cb086a22d174b52356a68",
+    label: "predictionlegend (weekly #11, +$218,421)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0x4b341d4612437b6e5b5fbcf98e5b675dbacf48a8",
+    label: "musholius722 (weekly #12, +$217,134)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0x2f44fa076c8d2976ac6bea0ddfd9502bad2b93c2",
+    label: "TennisLove (weekly #13, +$211,586)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0xee00ba338c59557141789b127927a55f5cc5cea1",
+    label: "S-Works (weekly #16, +$180,484)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0x7bc14171ccb0d3e6bac219ec6a76211826e28db4",
+    label: "coali10 (weekly #17, +$176,285)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0xf23c5bc7b547867eb6532920144562718aa49f81",
+    label: "g42gh6524h5h5 (weekly #18, +$174,973)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0xa4b7b1814b0da33f2b61be4939976898aa476008",
+    label: "midwicket72 (weekly #19, +$172,176)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
+  {
+    address: "0x04d5524a0a5af2eca6e39e03defc261d42fe66d8",
+    label: "WTSA (weekly #20, +$168,338)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/weekly/profit",
+  },
 ];
