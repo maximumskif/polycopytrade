@@ -15,6 +15,14 @@ export function getDb(): DatabaseSync {
   db = new DatabaseSync(config.dbPath);
   db.exec("PRAGMA foreign_keys = ON");
   db.exec("PRAGMA journal_mode = WAL");
+  // WAL still serializes writers -- without a busy_timeout, a writer that
+  // finds the db locked by another process's in-flight write fails
+  // immediately with SQLITE_BUSY instead of waiting. Found live 2026-08-17:
+  // running track:daemon and depth:collector as two separate processes
+  // against the same db file crashed track:daemon with "database is
+  // locked" within the hour. 5s is comfortably longer than any single
+  // write this project does.
+  db.exec("PRAGMA busy_timeout = 5000");
   return db;
 }
 
