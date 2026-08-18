@@ -25,7 +25,8 @@
     "paper:report": "tsx src/cli/paperReport.ts",
     "ou-over-bias": "tsx src/ouOverBias.ts",
     "depth:collector": "tsx src/depthShift/snapshotCollector.ts",
-    "consensus-signal": "tsx src/consensusSignal.ts"
+    "consensus-signal": "tsx src/consensusSignal.ts",
+    "sport-segmentation": "tsx src/sportSegmentation.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

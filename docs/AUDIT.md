@@ -595,6 +595,37 @@ today.
   `orderbook_snapshots`/`wallet_polls` before assuming accumulation has
   been continuous.**
 
+- **League/sport segmentation for `0x1b20a0...` (2026-08-18): re-confirms
+  the existing MLB-driven/UFC-excluded config with proper rigor, no live
+  change made.** New angle: does the wallet's sports edge concentrate in a
+  specific league the way it concentrates in bet type (O/U vs moneyline,
+  found earlier)? Built `src/sportSegmentation.ts` (`npm run
+  sport-segmentation`) — reuses `buildTrials`/`computeStrategyResult`
+  (not reimplemented), grouping by league read directly off `eventKey`'s
+  `{league}-{team}-{team}-{date}` prefix (the same slug convention
+  confirmed while building `ouOverBias.ts`). Result on the wallet's full
+  history (2273 sports trials / 50 real independent events): **MLB
+  dominates and is solid — 2009 trials, 42 events (well above
+  `MIN_SAMPLE_SIZE=20`), 54.1% win, +50.2% ROI, 95% CI [-0.7%, +90.6%]**
+  (CI barely excludes zero — a strong point estimate, still not airtight
+  at 95% confidence, consistent with the wallet's own wide overall CI).
+  **UFC is a clear, confirmed loser — 196 trials but only 4 events, 46.4%
+  win, -59.7% ROI** — already excluded in `src/paperTrading/config.ts`
+  since 2026-08-16; this reconfirms that decision with a real bootstrap CI
+  instead of the original hand-rolled numbers. **New: a previously
+  uncounted third bucket, WNBA — 68 trials, 4 events, 42.6% win, +45.2%
+  ROI** (net-positive despite a losing record, the same favorable-underdog-
+  payout pattern seen in the O/U "Under" bucket) — too thin (4 events,
+  below `MIN_SAMPLE_SIZE`) to act on either way; watch, don't filter.
+  **Also corrected a minor methodology gap in the original 2026-08-16
+  finding**: it cited "57 markets" for MLB from a hand-rolled market count;
+  the real event-grouped count is 42 — several O/U lines + a moneyline
+  market on one game were being counted as separate markets instead of one
+  real event, the same sample-inflation pattern flagged in §7. **No config
+  change made** — the existing sports+UFC-excluded filter already captures
+  the right shape; this closes the "segment by league" thread with a
+  confirmation, not a new lever.
+
 ## 1. Existing commands and responsibilities
 
 | Command | File | Responsibility |
