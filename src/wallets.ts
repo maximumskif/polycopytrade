@@ -489,4 +489,19 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
+  // User-sourced (2026-08-17): X post (@sopersone) claiming $313 -> $565,115
+  // trading Bitcoin/Ethereum Up-or-Down 15-minute markets via order-book
+  // depth-shift detection, "never guessed direction," 87,559 trades. Raw
+  // /activity confirms this is a real, currently-active wallet — but early
+  // inspection already shows two fills at the EXACT SAME timestamp with
+  // different tx hashes, tiny $0.008 sizes, on 15-minute markets — the same
+  // bot-speed shape this project has repeatedly ruled out on copyability
+  // (theowalcott, Weaseloftheweek, unnamed all-time-volume #17).
+  {
+    address: "0xce25e214d5cfe4f459cf67f08df581885aae7fdc",
+    label: "sopersone-sourced wallet (X post claim: $313->$565,115, Bitcoin/ETH Up-or-Down 15m markets, 87,559 trades — scored on EARLIEST 5000-fill slice only, historyPages too shallow for an 87K-trade wallet: 47.0% win (below bar), ROI 3.0%, uncopyable-high-freq (medianGapSeconds=0.0, same-timestamp fills confirmed) — RULED OUT on copyability regardless; 'dormant 109.1d' flag is a slice artifact, wallet is confirmed live-trading as of 2026-08-17, not actually dormant)",
+    archetype: "unclassified",
+    source: "https://x.com/sopersone/status/2089410888373776758",
+    historyPages: 10,
+  },
 ];
