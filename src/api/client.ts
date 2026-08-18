@@ -14,6 +14,7 @@ import {
   PublicSearchResponseSchema,
   MarketsLookupResponseSchema,
   PricesHistoryResponseSchema,
+  GammaEventsResponseSchema,
   type Position,
   type Activity,
   type GammaMarket,
@@ -254,6 +255,29 @@ export async function searchEvents(query: string, limitPerType = 20, status: "ac
   const qs = new URLSearchParams({ q: query, events_status: status, limit_per_type: String(limitPerType) });
   const res = validate(PublicSearchResponseSchema, await requestJson(`${GAMMA_API}/public-search?${qs.toString()}`), "GET /public-search (events)");
   return res.events ?? [];
+}
+
+// Lists events for a sport/category tag directly (gamma-api's /events
+// endpoint), unlike searchEvents' /public-search which is full-text and
+// biases toward whatever's "popular" — a tag listing is what lets us pull
+// a broad, independent sample of e.g. every individual MLB game event
+// rather than only the ones a search ranker surfaces (confirmed by
+// testing: searching "MLB" via /public-search returns season-long prop
+// events like "MLB: Home Runs Leader", never individual games).
+export async function getEventsByTag(
+  tagSlug: string,
+  opts: { closed?: boolean; limit?: number; offset?: number } = {}
+): Promise<GammaEvent[]> {
+  const qs = new URLSearchParams({
+    tag_slug: tagSlug,
+    limit: String(opts.limit ?? 100),
+    offset: String(opts.offset ?? 0),
+    order: "endDate",
+    ascending: "false",
+  });
+  if (opts.closed !== undefined) qs.set("closed", String(opts.closed));
+  const res = await requestJson(`${GAMMA_API}/events?${qs.toString()}`);
+  return validate(GammaEventsResponseSchema, res, "GET /events");
 }
 
 // Direct market lookup by conditionId — needed to resolve what a historical

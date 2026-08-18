@@ -36,9 +36,9 @@ const OUT_OF_SAMPLE_CUTOFF = new Date("2026-05-17T00:00:00Z").getTime();
 async function getOutOfSampleLadderEvents(query: string, monthSlugFragment: string): Promise<GammaEvent[]> {
   const events = await searchEvents(query, 30, "closed");
   return events
-    .filter((e) => e.slug.includes(monthSlugFragment) && e.slug.match(/-in-[a-z]+-2026$/))
-    .filter((e) => new Date(e.endDate).getTime() > OUT_OF_SAMPLE_CUTOFF)
-    .sort((a, b) => (a.endDate < b.endDate ? 1 : -1));
+    .filter((e) => e.slug.includes(monthSlugFragment) && e.slug.match(/-in-[a-z]+-2026$/) && e.endDate)
+    .filter((e) => new Date(e.endDate!).getTime() > OUT_OF_SAMPLE_CUTOFF)
+    .sort((a, b) => (a.endDate! < b.endDate! ? 1 : -1));
 }
 
 const isHighRung = (m: GammaMarket) => /\(HIGH\)/.test(m.question);

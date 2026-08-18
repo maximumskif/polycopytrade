@@ -52,8 +52,8 @@ export async function getClosedLadderEvents(query: string, monthSlugFragment: st
   // Keep only the monthly-ladder shape ("what-price-will-<asset>-hit-in-<month>-<year>"),
   // not the daily/weekly variants which have far fewer, noisier rungs.
   return events
-    .filter((e) => e.slug.includes(monthSlugFragment) && e.slug.match(/-in-[a-z]+-2026$/))
-    .sort((a, b) => (a.endDate < b.endDate ? 1 : -1))
+    .filter((e) => e.slug.includes(monthSlugFragment) && e.slug.match(/-in-[a-z]+-2026$/) && e.endDate)
+    .sort((a, b) => (a.endDate! < b.endDate! ? 1 : -1))
     .slice(0, EVENTS_PER_ASSET);
 }
 

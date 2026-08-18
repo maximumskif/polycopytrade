@@ -378,4 +378,115 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/weekly/profit",
   },
+  // Round 4 sourcing (2026-08-17): all-time/volume and weekly/volume boards
+  // (a different sort metric than the profit boards already exhausted
+  // above) — surfaces high-volume traders, not just high-profit ones.
+  {
+    address: "0xf201a19b43471261a3c1ba9247335d55270e527e",
+    label: "unnamed (weekly-volume #18 — scored: 56.8% win, 116 events, ROI 13.2%, $106K net — clears hit-rate bar but dormant 170.6 days — RULED OUT on dormancy)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/week/volume",
+  },
+  {
+    address: "0x5a218c7ad04135830a45c41aaed7294df7809318",
+    label: "balthazar (weekly-volume #19 — scored: 57.3% win but dormant 234.5 days + uncopyable-high-freq (medianGapSeconds=0.0, bot-speed) — RULED OUT on both dormancy and copyability)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/week/volume",
+  },
+  {
+    address: "0x6480542954b70a674a74bd1a6015dec362dc8dc5",
+    label: "tripping (all-time-volume #5 — scored: 1.8% win, dormant, ROI -53.0%, -$12.5K net — RULED OUT, badly negative)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xa61ef8773ec2e821962306ca87d4b57e39ff0abd",
+    label: "risk-manager (all-time-volume #6 — scored: 3.2% win, dormant+uncopyable-high-freq, ROI -34.0%, -$6.7K net — RULED OUT, badly negative)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
+    label: "suntori (all-time-volume #7 — scored: 34.4% win, ROI -16.7% (-$12.6K net), 1379 events (largest sample this project has seen), dormant 145.5 days — RULED OUT, badly negative despite the huge sample)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xd218e474776403a330142299f7796e8ba32eb5c9",
+    label: "cigarettes (all-time-volume #8 — scored: 84.2% win but ROI 0.2% ($945 net) — near-zero-profit-despite-high-win-rate pattern (same as Mysaria/donthackme); also dormant+uncopyable-high-freq — RULED OUT on economics)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xe90bec87d9ef430f27f9dcfe72c34b76967d5da2",
+    label: "gmanas (all-time-volume #9 — scored: 53.3% win (clears bar), ROI 16.5%, $860K net, 128 events — but dormant 269.9 days + uncopyable-high-freq (medianGapSeconds=4.0) — RULED OUT on dormancy/copyability despite the win rate)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x24c8cf69a0e0a17eee21f69d29752bfa32e823e1",
+    label: "debased (all-time-volume #10 — scored: 54.4% win (clears bar) but ROI -6.0% (-$29.2K net), 263 events, dormant 869 days, medianGapSeconds=802 (human-speed, not bot) — RULED OUT on economics despite the win rate, another confirmation that win rate alone isn't sufficient)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xc8ab97a9089a9ff7e6ef0688e6e591a066946418",
+    label: "ArmageddonRewardsBilly (all-time-volume #11 — scored: 53.8% win (clears bar), ROI 6.1%, $23K net, 316 events — but dormant 559.3 days — RULED OUT on dormancy)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xbddf61af533ff524d27154e589d2d7a81510c684",
+    label: "Countryside (all-time-volume #12 — scored: 36.5% win (below hit-rate bar), ROI 6.4% net-positive despite low win rate ($161K net, longshot-payout pattern), 86 events, dormant 260.1 days — RULED OUT on win rate)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x492442eab586f242b53bda933fd5de859c8a3782",
+    label: "unnamed (all-time-volume #13 — scored: 49.5% win (below bar), ROI -5.8%, -$5.33M net, 381 events, dormant 208.0 days — RULED OUT, badly negative on a huge sample)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x9d84ce0306f8551e02efef1680475fc0f1dc1344",
+    label: "ImJustKen (all-time-volume #14 — scored: 56.6% win (clears bar), ROI 7.3%, $65.9K net, 66 events — but dormant 1154.4 DAYS (~3.2yr, ancient) — RULED OUT on dormancy)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x2663daca3cecf3767ca1c3b126002a8578a8ed1f",
+    label: "Q96s3kwozynxpau (all-time-volume #15 — scored: 24.8% win (well below bar), ROI 1.5% (near-breakeven, longshot-payout pattern), $581 net, 37 events, dormant 575.0 days — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x9c667a1d1c1337c6dca9d93241d386e4ed346b66",
+    label: "InfiniteCrypt0 (all-time-volume #16 — scored: 0.4% win, ROI -79.6%, dormant, 12 events — RULED OUT, badly negative)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x2a2c53bd278c04da9962fcf96490e17f3dfb9bc1",
+    label: "unnamed (all-time-volume #17 — scored: 64.5% win (strongly clears bar), ROI 11.3%, $1.30M net, 115 events — but dormant + uncopyable-high-freq (medianGapSeconds=2.0, bot-speed) — RULED OUT on copyability despite the strong numbers, same pattern as theowalcott/Weaseloftheweek)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x507e52ef684ca2dd91f90a9d26d149dd3288beae",
+    label: "GamblingIsAllYouNeed (all-time-volume #18 — scored: 49.7% win (below bar), ROI 3.9%, dormant+uncopyable-high-freq, 135 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0x2d27e4d20f3b8a2ee3bc861d9b83752f338676d8",
+    label: "interstellaar (all-time-volume #19 — scored: 0.6% win, ROI -47.3%, dormant+highly-concentrated+uncopyable-high-freq, 12 events — RULED OUT, badly negative)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
+  {
+    address: "0xfc25f141ed27bb1787338d2c4e7f51e3a15e1f7f",
+    label: "-Malfunction (all-time-volume #20 — scored: 35.9% win (below bar), ROI -0.9% (near-breakeven negative), dormant, 174 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/overall/all/volume",
+  },
 ];

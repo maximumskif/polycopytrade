@@ -92,9 +92,12 @@ export const GammaEventSchema = z.object({
   id: z.string(),
   title: z.string(),
   slug: z.string(),
-  endDate: z.string(),
-  volume: z.number(),
-  liquidity: z.number(),
+  // Optional for the same reason as GammaMarket.endDate above: confirmed
+  // against real /public-search responses (strategy-fork sourcing round,
+  // 2026-08-17) that some events omit endDate/liquidity entirely.
+  endDate: z.string().optional(),
+  volume: z.number().optional(),
+  liquidity: z.number().optional(),
   markets: z.array(GammaMarketSchema).nullable().optional(),
 });
 export type GammaEvent = z.infer<typeof GammaEventSchema>;
@@ -108,6 +111,8 @@ export const PublicSearchResponseSchema = z.object({
   events: z.array(GammaEventSchema).nullable().optional(),
   profiles: z.array(ProfileSchema).nullable().optional(),
 });
+
+export const GammaEventsResponseSchema = z.array(GammaEventSchema);
 
 export const PricesHistoryResponseSchema = z.object({
   history: z.array(z.object({ t: z.number(), p: z.number() })).optional(),

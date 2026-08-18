@@ -459,6 +459,76 @@ today.
   `track:daemon` restarted with the fix; `positions` should now stay at 0
   rows indefinitely.
 
+- **Round 4 sourcing pass (2026-08-17, COMPLETE): a 4th leaderboard window
+  (volume-sorted, not profit-sorted) — 0 of 18 qualify.** All-time/weekly/
+  monthly *profit* boards were exhausted; tried `overall/all/volume` and
+  `overall/week/volume` instead — a different sort surfaces different
+  traders (high-turnover, not just high-lifetime-profit). 18 new wallets
+  added to `wallets.ts` and fully scored. Found+fixed two more real schema
+  gaps in the same family as the `GammaMarket.endDate` bug (Phase 2):
+  `GammaEvent.endDate`, `.liquidity`, and `.volume` are also sometimes
+  absent on real `/public-search` and `/events` responses — all three
+  loosened to optional, regression risk contained by null-guarding the two
+  call sites in `backtestLadder.ts`/`backtestLadderNarrow.ts` that read
+  event-level `endDate`. **Final result: 0 of 18 qualify, but the round
+  produced the strongest near-misses of the whole project** — five
+  wallets clear the 53-55% hit-rate bar outright (`gmanas` 53.3%/
+  ROI 16.5%, `debased` 54.4%/ROI -6.0%, `ArmageddonRewardsBilly` 53.8%/
+  ROI 6.1%, `ImJustKen` 56.6%/ROI 7.3%, and an unnamed all-time-volume #17
+  wallet at **64.5% win / +$1.30M net**, the single best win-rate/net-P&L
+  combination this project has ever scored) — and every one of the five is
+  still ruled out, on dormancy (`gmanas`, `ArmageddonRewardsBilly`,
+  `ImJustKen`), negative ROI despite the win rate (`debased`, another
+  confirmation win rate alone isn't sufficient), or bot-speed execution
+  (`unnamed #17`, `medianGapSeconds=2.0`). The rest split between badly
+  negative (`tripping` -53.0%, `risk-manager` -34.0%, `suntori` -16.7% on
+  the largest sample this project has seen at 1,379 events, `InfiniteCrypt0`
+  -79.6%, `interstellaar` -47.3%, all dormant) and below-bar-but-positive
+  (`Countryside`, `Q96s3kwozynxpau`, `-Malfunction`, `cigarettes` — the last
+  three all near-zero-ROI-despite-decent-win-rate, the same pattern flagged
+  for `Mysaria`/`donthackme` in Phase 2). **`0x1b20a0...` remains the only
+  wallet in the project's entire history (67 tracked, 4 leaderboard windows
+  exhausted) that clears the bar AND survives dormancy AND survives
+  copyability.** See `wallets.ts` for every individual verdict.
+
+- **Strategy-fork test started (2026-08-17): is "buy Over in MLB O/U
+  markets" a market-wide inefficiency, or just `0x1b20a0...`'s own
+  game-selection skill?** That wallet's real Over fills hit 96.7% (269
+  fills / **only 12 distinct games** — small-sample, its own picks, not an
+  independent test). Built `src/ouOverBias.ts` (`npm run ou-over-bias`) to
+  test this the same way Phase 1g tested the ladder-harvester's narrow
+  rule: pull a broad, wallet-agnostic sample of real MLB O/U lines (every
+  line on every closed game from `gamma-api`'s `/events?tag_slug=mlb`
+  listing — NOT `/public-search`, which for a generic "MLB" query only
+  surfaces season-long prop markets, never individual games, confirmed by
+  testing) and check whether buying Over indiscriminately at its real
+  CLOB closing price would have been profitable, bucketed by entry-price
+  band (including specifically the 30-56c band this wallet's own bets
+  fell in). Uses `computeStrategyResult` (reused, not reimplemented) so
+  the correlated-lines-on-one-game problem (a single final score resolves
+  every O/U line on that game at once — 5 lines per game are ~1 real data
+  point, not 5) is handled by the same `eventKey`-grouped
+  `effectiveIndependentSampleCount`/bootstrap-CI machinery as everywhere
+  else in the project, not a fourth hand-rolled sample-size story.
+  **Result: does NOT replicate — same verdict as Phase 1g's out-of-sample
+  test of the ladder-harvester's narrow rule.** 493 real O/U lines across
+  163 distinct closed games (164 pulled, one had no observable pre-game
+  price). Unconditional (buy Over on every line, any price): 47.1% win,
+  -0.4% ROI, 95% CI [-16.1%, +15.8%] — a coin flip, not underpriced.
+  **The wallet's own 30-56c band specifically — 401 trials, 162 real
+  independent games, a well-powered sample**: 43.9% win, -0.4% ROI, 95% CI
+  [-17.5%, +16.6%] — flat, CI straddling zero, no edge. The only band that
+  looks good (70c+, 100% win) is 2 independent games, meaningless. **Verdict:
+  MLB O/U markets are efficiently priced on average; `0x1b20a0...`'s 96.7%
+  Over win rate is this wallet's own game-selection skill (or luck, on a
+  thin 12-event sample) applied to a well-calibrated market, not a
+  structural mispricing an indiscriminate "buy Over" rule can harvest.**
+  Do not add an Over-only filter to the live paper-trading engine on the
+  strength of this signal — it does not generalize. This closes the
+  "fork an original strategy" thread from 2026-08-16 with a clean negative,
+  consistent with this project's other over-fit-to-one-wallet cautionary
+  tale (Phase 1g).
+
 ## 1. Existing commands and responsibilities
 
 | Command | File | Responsibility |
