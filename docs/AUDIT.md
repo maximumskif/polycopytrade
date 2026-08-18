@@ -580,6 +580,21 @@ today.
   consistent with this project's other over-fit-to-one-wallet cautionary
   tale (Phase 1g).
 
+- **Both background processes found dead and restarted (2026-08-18).**
+  Picking up a new session, `track:daemon` and `depth:collector` were both
+  found dead — last order-book snapshot 06:58 UTC, last wallet poll around
+  the same time, roughly 13.5 hours before the check. No error in either
+  log; this looks like the underlying host/shell session ending, not a
+  code-level crash (unlike the earlier real SQLite `busy_timeout` bug).
+  Restarted both cleanly; verified both writing fresh rows within a minute
+  of restart. No data corruption, just a ~13.5h gap in both datasets.
+  **Takeaway for future sessions: a background process started in one
+  session does not reliably survive into a new one — always verify both
+  PIDs (`ps -p $(cat data/daemon.pid)`, same for
+  `data/depth-collector.pid`) and check the latest timestamp in
+  `orderbook_snapshots`/`wallet_polls` before assuming accumulation has
+  been continuous.**
+
 ## 1. Existing commands and responsibilities
 
 | Command | File | Responsibility |
