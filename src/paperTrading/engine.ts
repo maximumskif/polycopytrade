@@ -36,6 +36,9 @@ export async function processNewFills(target: PaperTradeTarget): Promise<Process
     const excluded = target.excludeTitleKeywords.map((k) => k.toLowerCase());
     candidates = candidates.filter((f) => !excluded.some((k) => f.title.toLowerCase().includes(k)));
   }
+  if (target.minLeaderStakeUsdc != null) {
+    candidates = candidates.filter((f) => f.usdcSize >= target.minLeaderStakeUsdc!);
+  }
 
   let filled = 0;
   let unresolvable = 0;

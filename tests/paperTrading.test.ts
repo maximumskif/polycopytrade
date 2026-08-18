@@ -88,6 +88,33 @@ test("a fill matching excludeTitleKeywords is never turned into a paper order, e
   assert.equal(listPaperOrders(wallet.address).length, 0);
 });
 
+test("a fill below minLeaderStakeUsdc is never turned into a paper order, even if category/keywords pass", async () => {
+  upsertWallet(wallet);
+  insertActivity(wallet.address, [makeActivity({ usdcSize: 100 })]); // categorize() -> "sports", below the $5000 threshold
+  __setFetchImplForTests(async () => {
+    throw new Error("should never call the API for a below-threshold fill");
+  });
+
+  const result = await processNewFills({ ...target, minLeaderStakeUsdc: 5000 });
+  assert.deepEqual(result, { examined: 0, filled: 0, unresolvable: 0 });
+  assert.equal(listPaperOrders(wallet.address).length, 0);
+});
+
+test("a fill at or above minLeaderStakeUsdc is still copied normally", async () => {
+  upsertWallet(wallet);
+  insertActivity(wallet.address, [makeActivity({ usdcSize: 5000 })]);
+  __setFetchImplForTests(async (url) => {
+    const s = url.toString();
+    if (s.includes("/markets")) return fakeResponse([fakeMarket({ closed: false })]);
+    if (s.includes("prices-history")) return fakeResponse({ history: [{ t: 1035, p: 0.55 }] });
+    throw new Error(`unexpected URL: ${s}`);
+  });
+
+  const result = await processNewFills({ ...target, minLeaderStakeUsdc: 5000 });
+  assert.equal(result.filled, 1);
+  assert.equal(listPaperOrders(wallet.address).length, 1);
+});
+
 test("a fill outside the category filter is never turned into a paper order", async () => {
   upsertWallet(wallet);
   insertActivity(wallet.address, [makeActivity({ title: "Will X happen?" })]); // categorize() -> "other", not "sports"

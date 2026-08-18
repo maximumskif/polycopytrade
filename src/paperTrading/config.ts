@@ -17,6 +17,12 @@ export interface PaperTradeTarget {
   // guessed rule; see the wallet-breakdown analysis this config's comment
   // cites before adding one).
   excludeTitleKeywords?: string[];
+  // Only copy a fill if the LEADER staked at least this much on it — a
+  // real, sampled signal (see the 2026-08-17 stake-bucket analysis this
+  // config's comment cites below), not a guessed threshold: bigger leader
+  // stakes correlate with this wallet's own higher win rate, monotonically
+  // across every bucket checked.
+  minLeaderStakeUsdc?: number;
   stakeUsdc: number;
   delaySeconds: number;
 }
@@ -43,10 +49,23 @@ export const PAPER_TRADE_TARGETS: PaperTradeTarget[] = [
     // markets vs "Under"'s 34.2% -- promising, but 12 markets is still a
     // thin sample for a hard exclusion rule; watch, don't filter on it
     // yet.)
+    // 2026-08-17: leader-stake-informed threshold added. On the
+    // UFC-excluded sports sample (2077 fills / 67 real events), win rate
+    // and ROI rise monotonically with the leader's own stake size at
+    // every bucket checked ($0-1K: 53.7%/50.1% ROI -> $20K+: 71.4%/66.6%
+    // ROI). $5,000 was picked as the threshold: meaningfully better point
+    // estimate (63.0% win / 55.6% ROI) while keeping 37 real independent
+    // events (comfortably above the project's MIN_SAMPLE_SIZE=20) --
+    // higher thresholds ($10K/$20K) look even better but the event count
+    // drops to 25/16, the latter below the reliable-sample floor. Existing
+    // paper orders copied before this change (under the old no-threshold
+    // rule) are left as-is, not retroactively removed -- this only changes
+    // which NEW fills get copied going forward.
     address: "0x1b20a00709dfe648afd26b326394b5e031f83ab0",
     label: "unnamed monthly #15 (sports-systematic)",
     categoryFilter: "sports",
     excludeTitleKeywords: ["UFC"],
+    minLeaderStakeUsdc: 5000,
     stakeUsdc: 100,
     delaySeconds: 30,
   },

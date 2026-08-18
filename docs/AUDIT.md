@@ -410,13 +410,22 @@ today.
     a live-underdog-style price, not a losing pattern, just a much weaker
     one than Over). If this holds up as more O/U bets accumulate, a
     Over-only sub-filter would be the natural next refinement.
-  - **Stake size correlates with the wallet's own win rate** — a genuine,
-    not-yet-exploited signal: $0-500 bets win 53.2%; $20K+ bets win
-    67.7% (31 fills / 19 markets). The wallet's own position sizing seems
-    to encode real confidence. Not acted on yet (would mean moving off
-    the current flat $100/fill design towards leader-stake-informed
-    sizing or a minimum-stake copy threshold — a real strategy-shape
-    decision, not a mechanical fix like the UFC exclusion above).
+  - **Stake size correlates with the wallet's own win rate — ACTED ON
+    2026-08-17.** Re-checked properly (regenerated the stale trials cache,
+    which still had the pre-`categorize.ts`-fix moneyline-as-"other" bug;
+    used `computeStrategyResult` for a real bootstrap CI/independent-event
+    count instead of a hand-rolled bucket count). On the UFC-excluded
+    sports sample (2077 fills / 67 real events): win rate and ROI rise
+    monotonically with the leader's own stake at every bucket, from
+    $0-1K (53.7% win / 50.1% ROI) up to $20K+ (71.4% win / 66.6% ROI).
+    **Added `minLeaderStakeUsdc: 5000` to `0x1b20a0...`'s paper-trading
+    config** — 63.0% win / 55.6% ROI at that threshold, on 37 real
+    independent events (comfortably above `MIN_SAMPLE_SIZE=20`; higher
+    thresholds look even better in point-estimate terms but drop to
+    16-25 events, too thin to trust as a standalone claim). Only affects
+    fills copied going forward — the 182 paper orders already copied
+    under the old no-threshold rule are left as historical record, not
+    retroactively removed.
 
 - **Weekly-leaderboard sourcing pass (2026-08-16): 0 new qualified
   candidates, 1 watch item.** Third leaderboard window tried (after
