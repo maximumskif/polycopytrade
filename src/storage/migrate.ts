@@ -8,13 +8,14 @@ import type { DatabaseSync } from "node:sqlite";
 import { getDb } from "./db";
 import * as m0001 from "./migrations/0001_init";
 import * as m0002 from "./migrations/0002_paper_trading";
+import * as m0003 from "./migrations/0003_orderbook_snapshots";
 
 interface Migration {
   id: string;
   sql: string;
 }
 
-const MIGRATIONS: Migration[] = [m0001, m0002];
+const MIGRATIONS: Migration[] = [m0001, m0002, m0003];
 
 function ensureMigrationsTable(db: DatabaseSync) {
   db.exec(`

@@ -106,3 +106,28 @@ or committing to WebSocket-vs-polling before the research task in §2 is
 done. This is a bigger, different kind of build than anything else in
 this project so far — worth doing deliberately in its own session, not
 folded into the existing copy-trading work.
+
+## 5. Status: collector built and running (2026-08-17)
+
+Built `src/depthShift/snapshotCollector.ts` (`npm run depth:collector`) —
+exactly the §4 scope, nothing more. Polls the currently-open BTC and ETH
+"Up or Down" 15-minute market's "Up" outcome token's order book every 5
+seconds and stores raw bid/ask snapshots to a new `orderbook_snapshots`
+table (migration `0003_orderbook_snapshots`). The current market for each
+asset is found deterministically by slug (`{asset}-updown-15m-{slotStart}`,
+`slotStart = floor(now/900)*900` — these markets run on a fixed
+back-to-back 15-minute schedule, confirmed live, no search needed), cached
+until the slug rolls over so only the order-book call repeats every cycle.
+Verified end-to-end against the live API: a 20-second smoke test captured
+6 real snapshots (3 cycles × 2 assets) with the best bid/ask genuinely
+moving between captures, not a static read.
+
+Running as its own persistent background process (`data/depth-collector.pid`/
+`.log`, same pattern as `track:daemon`), separate from wallet tracking
+since its poll cadence is ~1000x faster. **This is pure data capture —
+no strategy logic exists yet.** The §2 WebSocket research question is
+still open; the REST-polling collector is what's actually running today.
+Do not build any entry/exit rule against this data until there's a
+meaningful accumulated window (at minimum, enough 15-minute cycles across
+enough real price moves to see what a depth shift actually looks like) —
+there is currently ~0 minutes of history.

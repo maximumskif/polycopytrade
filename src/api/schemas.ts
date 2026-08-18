@@ -117,3 +117,12 @@ export const GammaEventsResponseSchema = z.array(GammaEventSchema);
 export const PricesHistoryResponseSchema = z.object({
   history: z.array(z.object({ t: z.number(), p: z.number() })).optional(),
 });
+
+const OrderBookLevelSchema = z.object({ price: z.string(), size: z.string() });
+export const OrderBookSchema = z.object({
+  market: z.string(),
+  asset_id: z.string(),
+  bids: z.array(OrderBookLevelSchema).optional(),
+  asks: z.array(OrderBookLevelSchema).optional(),
+});
+export type OrderBook = z.infer<typeof OrderBookSchema>;

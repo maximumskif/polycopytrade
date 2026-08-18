@@ -222,3 +222,18 @@ export interface PaperOrder extends NewPaperOrder {
   pnlUsdc: number | null;
   createdAt: number;
 }
+
+// Raw depth-shift data capture (docs/DEPTH_SHIFT_STRATEGY_SCOPE.md) — one
+// row per polled order-book snapshot. No strategy logic reads this yet.
+export interface NewOrderbookSnapshot {
+  marketSlug: string;
+  conditionId: string;
+  tokenId: string;
+  capturedAt: number;
+  bestBidPrice: number | null;
+  bestBidSize: number | null;
+  bestAskPrice: number | null;
+  bestAskSize: number | null;
+  bidsJson: string;
+  asksJson: string;
+}

@@ -5,7 +5,17 @@
 
 import { getDb } from "./db";
 import type { Activity, Position } from "../api/schemas";
-import type { ApiErrorRecord, WalletPollResult, WalletHealth, Trackable, StoredActivity, NewPaperOrder, PaperOrder, PaperOrderStatus } from "../domain/types";
+import type {
+  ApiErrorRecord,
+  WalletPollResult,
+  WalletHealth,
+  Trackable,
+  StoredActivity,
+  NewPaperOrder,
+  PaperOrder,
+  PaperOrderStatus,
+  NewOrderbookSnapshot,
+} from "../domain/types";
 import type { TrackedWallet } from "../wallets";
 
 function nowSeconds(): number {
@@ -270,4 +280,28 @@ export function listPaperOrders(walletAddress?: string): PaperOrder[] {
     ? db.prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders WHERE wallet_address = ? ORDER BY leader_timestamp ASC`).all(walletAddress)
     : db.prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders ORDER BY leader_timestamp ASC`).all();
   return rows.map(mapPaperOrderRow);
+}
+
+// Pure raw capture for the depth-shift scoping work (docs/DEPTH_SHIFT_STRATEGY_SCOPE.md)
+// -- no dedup/idempotency needed, every call is a genuinely new point in
+// time, unlike insertActivity's re-fetched-fill problem.
+export function insertOrderbookSnapshot(snapshot: NewOrderbookSnapshot): void {
+  getDb()
+    .prepare(
+      `INSERT INTO orderbook_snapshots
+         (market_slug, condition_id, token_id, captured_at, best_bid_price, best_bid_size, best_ask_price, best_ask_size, bids_json, asks_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      snapshot.marketSlug,
+      snapshot.conditionId,
+      snapshot.tokenId,
+      snapshot.capturedAt,
+      snapshot.bestBidPrice,
+      snapshot.bestBidSize,
+      snapshot.bestAskPrice,
+      snapshot.bestAskSize,
+      snapshot.bidsJson,
+      snapshot.asksJson
+    );
 }

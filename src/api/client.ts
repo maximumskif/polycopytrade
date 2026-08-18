@@ -15,10 +15,12 @@ import {
   MarketsLookupResponseSchema,
   PricesHistoryResponseSchema,
   GammaEventsResponseSchema,
+  OrderBookSchema,
   type Position,
   type Activity,
   type GammaMarket,
   type GammaEvent,
+  type OrderBook,
 } from "./schemas";
 
 export type { Position, Activity, GammaMarket, GammaEvent };
@@ -156,6 +158,15 @@ export const fetchRaw = requestJson;
 export async function getPricesHistory(clobTokenId: string, startTs: number, endTs: number, fidelity: number) {
   const url = `https://clob.polymarket.com/prices-history?market=${clobTokenId}&startTs=${startTs}&endTs=${endTs}&fidelity=${fidelity}`;
   return validate(PricesHistoryResponseSchema, await requestJson(url), "GET clob/prices-history");
+}
+
+// Live order-book depth for one outcome token -- current state only, no
+// history (see docs/DEPTH_SHIFT_STRATEGY_SCOPE.md: this is the whole
+// reason a depth-shift strategy can only be evaluated by collecting
+// snapshots forward in time, never backtested).
+export async function getOrderBook(tokenId: string): Promise<OrderBook> {
+  const url = `https://clob.polymarket.com/book?token_id=${tokenId}`;
+  return validate(OrderBookSchema, await requestJson(url), "GET clob/book");
 }
 
 export async function getPositions(address: string): Promise<Position[]> {
