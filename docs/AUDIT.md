@@ -446,6 +446,29 @@ today.
     relative to its edge size, that delay simply isn't where the money
     is — no code change made, 30s stays as-is.
 
+- **Cross-wallet consensus signal tested (2026-08-17): clean negative, same shape as the O/U strategy-fork.** A third, genuinely different
+  idea (not single-wallet copy-trading, not a market-wide price rule):
+  does agreement among the 68 tracked wallets themselves — most of which
+  are known mediocre or already ruled out — carry a signal independent of
+  any one wallet's quality? Built `src/consensusSignal.ts`
+  (`npm run consensus-signal`): found every market where a strict majority
+  of >=3 distinct tracked wallets bought the same outcome (466 candidates
+  from local `wallet_activity`), resolved each against its real settled
+  outcome (reusing `resolveMarket`/`outcomeWon`, not reimplemented), and
+  ran the result through `computeStrategyResult` grouped by real event
+  (`eventSlug`, pulled from the stored `raw_payload`) for the same
+  sample-inflation guard as every other analysis in this project. Result:
+  **380 resolved trials / 179 real independent events, 50.8% win, -5.0%
+  ROI, 95% CI [-15.9%, +6.7%] — a coin flip with a slight negative drag,
+  not a signal.** A breakdown by agreement strength shows a real trend
+  (>=3 wallets: 50.8%/-5.0% -> >=4: 53.5%/-2.7% -> >=6: 57.7%/+2.0%) but
+  it never clears breakeven convincingly, and the top bucket is only 32
+  independent events — too thin to trust as a standalone claim. **Verdict:
+  the tracked wallet pool isn't collectively "smart money" — most of it is
+  known-mediocre-to-bad, so its aggregate agreement doesn't beat an
+  efficient market.** Not pursued further; would need a pool curated for
+  quality (not just tracked) to be worth revisiting.
+
 - **Weekly-leaderboard sourcing pass (2026-08-16): 0 new qualified
   candidates, 1 watch item.** Third leaderboard window tried (after
   all-time and monthly) — `polymarket.com/leaderboard/overall/weekly/profit`,
