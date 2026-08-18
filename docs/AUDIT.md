@@ -427,6 +427,25 @@ today.
     under the old no-threshold rule are left as historical record, not
     retroactively removed.
 
+- **Checked two more improvement levers for `0x1b20a0...` (2026-08-17): both come back clean negatives — genuinely useful confirmations, not missed
+  opportunities.**
+  - **Exit-mirroring (§6's known BUY-only gap): not applicable to this
+    wallet.** Checked directly against real `wallet_activity`: 182/182
+    fills are `BUY`, zero `SELL`, ever. This wallet holds every position
+    to resolution — there is no exit behavior to mirror, so the project's
+    general BUY-only simplification costs nothing here specifically.
+  - **Follower delay (currently fixed at 30s): not a meaningful lever,
+    in either direction.** Ran `follower-delay-demo` against 40 real
+    resolved fills at 5/15/30/60s: slippage and follower ROI are nearly
+    identical across the entire range (slippage 0.004-0.005, followerROI
+    31.1-31.3%). Cross-checked against the LIVE paper-trading data itself
+    (182 real orders already copied at 30s): avg absolute slippage only
+    0.0057, max 0.045 on any single order, **zero orders ever came back
+    `unresolvable`** (i.e. 30s never once failed to find an observable
+    follower price). Conclusion: this wallet's markets are liquid enough,
+    relative to its edge size, that delay simply isn't where the money
+    is — no code change made, 30s stays as-is.
+
 - **Weekly-leaderboard sourcing pass (2026-08-16): 0 new qualified
   candidates, 1 watch item.** Third leaderboard window tried (after
   all-time and monthly) — `polymarket.com/leaderboard/overall/weekly/profit`,
