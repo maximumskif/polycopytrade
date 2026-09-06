@@ -147,3 +147,46 @@ continuation doesn't block on live-readiness docs, and vice versa) —
 everything in A-D is low-risk hygiene with no behavior change, worth
 clearing before spending effort on the higher-uncertainty research/live
 tracks.
+
+## Track G — Profit-directed tooling (added 2026-09-06, mid-session)
+
+Prompted by a user-supplied blueprint written for a Solana/EVM DEX
+smart-wallet-sniping bot (originally intended, on investigation, for the
+`meteorabot` sibling project — see chat, not this doc — which turned out to
+itself have none of the wallet-intelligence machinery the blueprint
+describes; it's a narrow, dormant cross-DEX arb bot). Decision: translate
+the *applicable* ~25-30% of that blueprint onto polycopytrade's existing
+Polymarket data rather than adopting it wholesale or chasing meteorabot.
+
+18. ✅ **Done 2026-09-06.** **Composite Wallet Quality Score.** See the
+    commit "Add composite Wallet Quality Score, keep existing flags as hard
+    vetoes." `computeProfitConcentration()` (profit-based "lucky wallet"
+    detection, distinct from the existing stake-based
+    `concentrationTopEventShare`), `computeConsistencyScore()` (wires
+    `rollingWindow.ts` into wallet-score for the first time), and
+    `computeQualityScore()` (0-100 composite: 30% ROI via bootstrap-CI lower
+    bound / 20% risk-adjusted return / 15% consistency / 15% profit
+    concentration / 10% drawdown / 10% sample size). Existing veto flags
+    kept as hard gates, NOT replaced — validated live against `Theo4` (a
+    known one-shot election wallet), which scores 71/100 on raw numbers
+    (higher than `0x1b20a0`'s 67) but is correctly caught by the
+    `dormant`/`election-only`/`uncopyable-high-frequency` flags. The score
+    alone would have missed it. Weights/scales are starting points, not
+    tuned against the full 68-wallet pool yet.
+19. **Strategy-translation pass** (not started) — of the blueprint's ~20
+    strategies, prioritized order agreed in chat: (1) re-run
+    `consensusSignal.ts`'s smart-money-convergence test restricted to
+    wallets that clear a quality-score threshold instead of the full
+    68-mostly-mediocre pool (a genuinely different test from the existing
+    clean-negative result, not a repeat); (2) smart-money
+    accumulation/divergence (wallet activity building while price is flat/
+    falling) — no new data needed; (3) volatility compression→expansion on
+    the ladder markets' existing price-history pulls. Explicitly ruled out
+    as non-transferable: cross-DEX/CEX/triangular arb, token-security/LP/
+    dev-rug filters, perps/funding/liquidation strategies (no tokens,
+    pools, or perps on Polymarket).
+20. Not planned yet, flagged from the blueprint as a real idea: **funding-
+    source wallet clustering** (are two "independently smart" wallets
+    actually the same entity?) — would need a new Polygon-chain data source
+    (e.g. Polygonscan) this project doesn't use today, bigger lift than
+    18-19, deliberately deferred rather than started speculatively.
