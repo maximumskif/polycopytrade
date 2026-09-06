@@ -95,11 +95,20 @@ begins.
 
 ## Track E — Research continuation (the actual "find a strategy" work)
 
-12. **Resume tracking `0x1b20a0...`'s paper trading.** It's the only
-    candidate that has ever cleared every bar; restart the daemon (once
-    Track A.3 is decided) and let real forward evidence accumulate — the
-    `distinctEvents` counter needs to grow well past the current sample
-    before `paper:report`'s win-rate/ROI numbers mean anything.
+12. ✅ **Started 2026-09-05, ongoing.** **Resume tracking `0x1b20a0...`'s
+    paper trading.** `track:daemon` started via systemd (`loginctl
+    enable-linger` also set so it survives session end, per
+    `docs/OPERATIONS.md`). Found+fixed a real bug getting it running: the
+    unit files' `ExecStart` gave npm's absolute nvm path, but npm's own
+    `#!/usr/bin/env node` shebang still needs `node` resolvable via PATH,
+    which systemd doesn't inherit from an interactive shell — added
+    `Environment=PATH=...` to both units. Verified live: completed a full
+    68-wallet poll cycle + paper-trading step cleanly (8 fills copied, 8
+    resolved, correctly flagged by `paper:report`'s own
+    too-few-distinct-events warning as not yet meaningful). `npm run status`
+    confirms `systemd=active`. `depth:collector` left stopped — not part of
+    this item's scope. **This will take a while to accumulate real evidence
+    — check `npm run status` in future sessions, don't re-trigger this.**
 13. **New wallet sourcing.** Four leaderboard windows (all-time/monthly/
     weekly profit + volume) are exhausted with nothing new. Needs a
     different channel: per-market "top holders," a curated/social source
