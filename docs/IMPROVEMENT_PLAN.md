@@ -60,8 +60,21 @@ begins.
    `src/research/` directory per the layout `docs/AUDIT.md` §11 agreed on
    but never finished — pure file moves, verified by typecheck+tests passing
    unchanged.
-8. **Finish extracting domain types** out of any remaining inline interfaces
-   into `src/domain/` (§11 point 1 — partially done already).
+8. ✅ **Reviewed 2026-09-05 — no further action.** Audited every remaining
+   inline interface outside `src/domain/` and `src/legacy/` (16 found).
+   Conclusion: the real cross-cutting domain types (`Trackable`,
+   `WalletHealth`, `BacktestTrial`, position/paper-order types) already live
+   in `src/domain/types.ts`; everything left is either a genuine
+   implementation-local shape (`LoopDeps`, `Migration`, `BackoffOptions`,
+   script-internal intermediates) or tightly coupled to the one config/data
+   file it types (`TrackedWallet`/`wallets.ts`, `PaperTradeTarget`/
+   `paperTrading/config.ts`). Confirmed `domain/types.ts` already deliberately
+   avoids importing `TrackedWallet` — its `Trackable` interface exists
+   specifically so the domain layer doesn't depend on the `wallets.ts` data
+   file — so moving `TrackedWallet` there would invert an intentional
+   dependency direction, not fix one. Moving these would be relocation for
+   its own sake, not a real coupling fix — skipped per "don't refactor
+   beyond what's needed."
 9. Optional: add lint/format tooling (none exists today) — only if you want
    it; not blocking anything.
 
