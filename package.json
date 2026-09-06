@@ -15,6 +15,7 @@
     "track:once": "tsx src/tracking/trackOnce.ts",
     "track:daemon": "tsx src/tracking/trackDaemon.ts",
     "wallets:health": "tsx src/tracking/health.ts",
+    "status": "tsx src/cli/status.ts",
     "wallets:add": "tsx src/tracking/addWallet.ts",
     "scan-ladders": "tsx src/research/ladderScanner.ts",
     "backtest-ladder": "tsx src/legacy/backtestLadder.ts",

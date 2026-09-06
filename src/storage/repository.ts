@@ -274,3 +274,15 @@ export function insertOrderbookSnapshot(snapshot: NewOrderbookSnapshot): void {
       snapshot.asksJson
     );
 }
+
+// Track D (docs/IMPROVEMENT_PLAN.md): status-view support -- depth:collector
+// has no per-wallet health row like wallet_polls, so its liveness is read
+// straight off its own output table instead.
+export function getDepthCollectorHealth(): { lastCapturedAt: number | null; totalSnapshots: number } {
+  const db = getDb();
+  const row = db.prepare(`SELECT MAX(captured_at) as lastCapturedAt, COUNT(*) as totalSnapshots FROM orderbook_snapshots`).get() as {
+    lastCapturedAt: number | null;
+    totalSnapshots: number;
+  };
+  return row;
+}
