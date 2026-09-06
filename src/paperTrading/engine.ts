@@ -16,7 +16,7 @@
 // implementations of the same math drifting apart.
 
 import { getPricesHistory } from "../api/client";
-import { categorize } from "../categorize";
+import { categorize } from "../research/categorize";
 import { resolveMarket, outcomeWon } from "../backtesting/engine";
 import { tokenIdForOutcome, priceAtOrAfter } from "../backtesting/followerExecution";
 import { listUncopiedBuyFills, insertPaperOrder, listOpenPaperOrders, resolvePaperOrder } from "../storage/repository";

@@ -7,7 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { categorize } from "../src/categorize";
+import { categorize } from "../src/research/categorize";
 
 test("a 'Team A vs. Team B' moneyline title (period, no trailing space) is categorized as sports", () => {
   assert.equal(categorize("New York Yankees vs. Chicago White Sox"), "sports");

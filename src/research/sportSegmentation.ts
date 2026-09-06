@@ -23,11 +23,11 @@
 // less rigorous pass gave an unreliable number.
 
 import "dotenv/config";
-import { getActivityFromStart } from "./api/client";
-import { TRACKED_WALLETS } from "./wallets";
-import { buildTrials, defaultBacktestConfig } from "./backtesting/engine";
-import { computeStrategyResult, MIN_SAMPLE_SIZE } from "./backtesting/statistics";
-import type { BacktestTrial } from "./domain/types";
+import { getActivityFromStart } from "../api/client";
+import { TRACKED_WALLETS } from "../wallets";
+import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
+import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../backtesting/statistics";
+import type { BacktestTrial } from "../domain/types";
 
 const TARGET_WALLET_FILTER = "0x1b20a0";
 

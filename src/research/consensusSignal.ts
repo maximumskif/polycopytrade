@@ -14,10 +14,10 @@
 // eventKey-grouped sample-inflation guard as every other analysis in this
 // project (multiple O/U lines on one game are one real event, not many).
 
-import { getDb } from "./storage/db";
-import { resolveMarket, outcomeWon } from "./backtesting/engine";
-import { computeStrategyResult } from "./backtesting/statistics";
-import type { BacktestTrial, BacktestConfig } from "./domain/types";
+import { getDb } from "../storage/db";
+import { resolveMarket, outcomeWon } from "../backtesting/engine";
+import { computeStrategyResult } from "../backtesting/statistics";
+import type { BacktestTrial, BacktestConfig } from "../domain/types";
 
 const MIN_MAJORITY_WALLETS = 3;
 

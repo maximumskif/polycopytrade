@@ -29,7 +29,7 @@
 
 import { getActivityFromStart, getMarketByConditionId, type Activity, type GammaMarket } from "../api/client";
 import { TRACKED_WALLETS } from "../wallets";
-import { categorize } from "../categorize";
+import { categorize } from "../research/categorize";
 
 export interface ResolvedTrial {
   conditionId: string;

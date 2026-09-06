@@ -23,9 +23,9 @@
 // correctly treats "5 lines on one game" as ~1 real data point, not 5 —
 // same sample-inflation guard as everywhere else in this project.
 
-import { getEventsByTag, getPricesHistory, type GammaEvent, type GammaMarket } from "./api/client";
-import { computeStrategyResult } from "./backtesting/statistics";
-import type { BacktestConfig, BacktestTrial } from "./domain/types";
+import { getEventsByTag, getPricesHistory, type GammaEvent, type GammaMarket } from "../api/client";
+import { computeStrategyResult } from "../backtesting/statistics";
+import type { BacktestConfig, BacktestTrial } from "../domain/types";
 
 const GAME_EVENT_SLUG = /^mlb-[a-z0-9]+-[a-z0-9]+-\d{4}-\d{2}-\d{2}$/;
 // Main full-game O/U line only — excludes "1st 5 Innings O/U", spreads,

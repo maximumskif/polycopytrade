@@ -7,7 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clusterFills } from "../src/walletStats";
+import { clusterFills } from "../src/research/walletStats";
 import type { Activity } from "../src/api/client";
 
 let seq = 0;

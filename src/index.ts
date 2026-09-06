@@ -6,7 +6,7 @@
 
 import "dotenv/config";
 import { main as trackOnce } from "./tracking/trackOnce";
-import { main as scanLadders } from "./ladderScanner";
+import { main as scanLadders } from "./research/ladderScanner";
 
 async function main() {
   console.log("=== wallet tracker (once) ===");

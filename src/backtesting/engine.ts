@@ -16,7 +16,7 @@
 //   market is excluded — there's no resolved P&L to report yet.
 
 import { getMarketByConditionId, type Activity, type GammaMarket } from "../api/client";
-import { categorize } from "../categorize";
+import { categorize } from "../research/categorize";
 import { reconstructPositions } from "./positionReconstruction";
 import type { BacktestConfig, BacktestTrial } from "../domain/types";
 
