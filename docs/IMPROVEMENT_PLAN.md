@@ -81,13 +81,17 @@ begins.
 
 ## Track D — Observability
 
-10. **Expand `wallets:health` into a real status view**: daemon liveness
-    (PID + last-write-timestamp for both `wallet_polls` and
-    `orderbook_snapshots`), paper-trading P&L summary, wallet-score status
-    — so this doesn't require grepping logs or querying SQLite by hand.
-11. **Heartbeat alerting** for the two daemons (ties into Track A.3) — a
-    cron-checked script that flags/pages when either table goes stale
-    beyond a threshold, since silent death has already happened once.
+10. ✅ **Done 2026-09-05.** **Expand `wallets:health` into a real status
+    view**: added `npm run status` (`src/cli/status.ts`) — daemon liveness
+    (`systemctl --user is-active` + last-write freshness for both
+    `wallet_polls` and `orderbook_snapshots`), unhealthy-wallets rollup,
+    paper-trading P&L summary (reuses `paper:report`). `wallets:health`
+    kept as the separate detailed per-wallet command. wallet-score
+    deliberately NOT included (costs live API calls per wallet).
+11. ✅ **Done 2026-09-05, folded into D.10.** **Heartbeat alerting** — user
+    chose "status command, no push notifications" over cron+desktop-notify;
+    `npm run status` above is the deliverable, no separate alerting channel
+    built.
 
 ## Track E — Research continuation (the actual "find a strategy" work)
 
@@ -115,14 +119,17 @@ begins.
 
 ## Track F — Live-readiness (documentation only)
 
-16. **Write `docs/LIVE_READINESS.md`**: signer custody options (raw `.env`
-    key was flagged as a real risk — evaluate a low-balance hot wallet with
-    on-chain limits, HSM/hardware signer, or a relayer that never exposes
-    the raw key), kill-switch design, position/exposure limits,
-    `.env`/`.env.production` separation.
-17. **No execution code** (CLOB order placement) gets written until a
-    separate, explicit go-ahead after Track F.16 exists — this repeats the
-    project's own existing rule, not a new one.
+16. ✅ **Done 2026-09-05.** **Write `docs/LIVE_READINESS.md`**: signer
+    custody options (comparison table, no single choice forced), kill-switch
+    design (halt-new-positions vs. force-exit-everything kept distinct),
+    position/exposure limits (reusing the existing `MIN_SAMPLE_SIZE`/
+    `effectiveIndependentSampleCount` discipline rather than a fresh guess),
+    `.env`/`.env.production` separation, and an explicit gate for what must
+    be true before any execution code is written.
+17. **Standing rule, not a one-time task.** No execution code (CLOB order
+    placement) gets written until a separate, explicit go-ahead — writing
+    F.16 is scoping, not that go-ahead. Repeats the project's own existing
+    rule.
 
 ---
 
