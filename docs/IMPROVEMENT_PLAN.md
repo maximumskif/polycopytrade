@@ -53,13 +53,12 @@ begins.
 
 ## Track C — Architecture cleanup (medium risk, no behavior change)
 
-7. **Move the remaining flat research scripts** (`categorize.ts`,
-   `consensusSignal.ts`, `ouOverBias.ts`, `sportSegmentation.ts`,
-   `ladderScanner.ts`, `indicators.ts`, `walletStats.ts` — the legacy
-   backtest scripts already moved to `src/legacy/` per B.6 above) into a
-   `src/research/` directory per the layout `docs/AUDIT.md` §11 agreed on
-   but never finished — pure file moves, verified by typecheck+tests passing
-   unchanged.
+7. ✅ **Done 2026-09-05.** **Move the remaining flat research scripts**
+   (`categorize.ts`, `consensusSignal.ts`, `ouOverBias.ts`,
+   `sportSegmentation.ts`, `ladderScanner.ts`, `indicators.ts`,
+   `walletStats.ts`) into `src/research/`. Pure move + import-path fixes;
+   `indicators.ts` noted as having zero importers anywhere (left as-is, not
+   deleted — that's a separate call).
 8. ✅ **Reviewed 2026-09-05 — no further action.** Audited every remaining
    inline interface outside `src/domain/` and `src/legacy/` (16 found).
    Conclusion: the real cross-cutting domain types (`Trackable`,
@@ -75,8 +74,10 @@ begins.
    dependency direction, not fix one. Moving these would be relocation for
    its own sake, not a real coupling fix — skipped per "don't refactor
    beyond what's needed."
-9. Optional: add lint/format tooling (none exists today) — only if you want
-   it; not blocking anything.
+9. ✅ **Done 2026-09-05.** **Add lint/format tooling.** ESLint (flat config,
+   typescript-eslint recommended) + Prettier, wired into CI. Two real bugs
+   fixed along the way (missing `Error.cause` on two rethrows), two dead
+   imports removed.
 
 ## Track D — Observability
 
