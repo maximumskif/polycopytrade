@@ -12,6 +12,12 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/mnt/c/Users/mdeff/polycopytrade
+# npm's own shebang is `#!/usr/bin/env node` -- giving ExecStart npm's
+# absolute path isn't enough on its own, `node` itself still has to resolve
+# via PATH, which systemd does not inherit from an interactive nvm-sourced
+# shell. Confirmed live 2026-09-05: without this, ExecStart failed with
+# exit 127 (command not found) on every restart attempt.
+Environment=PATH=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
 ExecStartPre=/bin/mkdir -p /mnt/c/Users/mdeff/polycopytrade/data
 ExecStart=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin/npm run track:daemon
 Restart=always

@@ -11,6 +11,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/mnt/c/Users/mdeff/polycopytrade
+# See polycopytrade-track.service's comment -- npm's shebang needs `node`
+# resolvable via PATH, which systemd doesn't inherit from an interactive
+# nvm-sourced shell.
+Environment=PATH=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
 ExecStartPre=/bin/mkdir -p /mnt/c/Users/mdeff/polycopytrade/data
 ExecStart=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin/npm run depth:collector
 Restart=always
