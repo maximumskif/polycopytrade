@@ -15,48 +15,51 @@ begins.
 
 ## Track A — Safety net (do first, low risk)
 
-1. **Add CI.** Zero CI exists today despite 83 passing tests and clean
-   typecheck/build — a GitHub Actions workflow running `npm ci`,
-   `npm run typecheck`, `npm run build`, `npm test` on push/PR is pure
-   upside with no behavior change.
-2. **Document the Node version requirement in `README.md` setup**, not just
-   `docs/AUDIT.md` — `node:sqlite` needs Node 22.5+/24; this WSL box had no
-   Node at all until nvm+22 was installed for this session. A fresh clone
-   should not have to reverse-engineer the version from the audit doc.
-3. **Decide the fate of the two long-running background daemons
-   (`track:daemon`, `depth:collector`).** `docs/AUDIT.md` already recorded
-   them dying silently once with no supervisor and no alerting. Options:
-   a lightweight process manager (pm2) vs. systemd user units vs. a thin
-   wrapper script + heartbeat check. Needs a decision before Track E
-   (resuming research) restarts them, so it doesn't just die silently again.
+1. ✅ **Done 2026-09-05.** **Add CI.** Zero CI exists today despite 83 passing
+   tests and clean typecheck/build — a GitHub Actions workflow running
+   `npm ci`, `npm run typecheck`, `npm run build`, `npm test` on push/PR is
+   pure upside with no behavior change.
+2. ✅ **Done 2026-09-05.** **Document the Node version requirement in
+   `README.md` setup**, not just `docs/AUDIT.md` — `node:sqlite` needs Node
+   22.5+/24; this WSL box had no Node at all until nvm+22 was installed for
+   this session. A fresh clone should not have to reverse-engineer the
+   version from the audit doc.
+3. ✅ **Done 2026-09-05.** **Decide the fate of the two long-running
+   background daemons (`track:daemon`, `depth:collector`).** Chose systemd
+   user services (systemd is actually running on this box) over pm2/a custom
+   script — `Restart=always`, installed+enabled via `ops/systemd/`, see
+   `docs/OPERATIONS.md`. Left **stopped**, not started — actually starting
+   them resumes live tracking, a Track E decision, not a side effect of
+   supervision infrastructure.
 
 ## Track B — Close self-identified gaps (low risk, no new features)
 
-4. **Add the tests `docs/AUDIT.md` §9 flags as still missing**:
-   `walletStats.ts` fill-clustering edge cases (fills exactly 120s apart,
-   across a clustering boundary), and `src/tracking/` daemon loop/signal
-   handling (inject a fake clock instead of real sleeps).
-5. **Resolve the `positions` table's status.** Confirmed dead/unused
-   (write-only, nothing reads it) and already stopped being written to
-   — the audit left the table and its dead code in place on purpose for a
-   future Track D dashboard. Revisit: either commit to that plan explicitly
-   or remove the dead code now if no dashboard work is imminent.
-6. **Decide on the legacy/engine duplication.** `walletBacktest.ts`/
-   `walletBreakdown.ts`/`backtestLadder(Narrow).ts` still hand-roll their own
-   trial loops alongside the proper `src/backtesting/` engine, deliberately
-   not merged (to avoid silently changing cited README numbers). Worth an
-   explicit one-time decision: keep both permanently (rename for clarity,
-   e.g. `legacy/`) vs. do the migration now while the diff is still
-   traceable, rather than leaving it an open question indefinitely.
+4. ✅ **Done 2026-09-05.** **Add the tests `docs/AUDIT.md` §9 flags as still
+   missing**: `walletStats.ts` fill-clustering edge cases (9 tests, incl. the
+   120s boundary) and `src/tracking/` daemon loop/signal handling (6 tests,
+   via an extracted `runLoop()` + injectable-step `sleepInterruptible()`
+   instead of a real fake-clock library).
+5. ✅ **Done 2026-09-05.** **Resolve the `positions` table's status.**
+   Decided: remove now rather than keep for a hypothetical dashboard.
+   Removed `getPositions`/`insertPositionsSnapshot`/`PositionSchema`
+   entirely; new migration `0004_drop_positions` drops the table.
+   `wallet_polls.positions_fetched` (small, bounded, harmlessly-always-0)
+   left alone — only the actually-dead write path was removed.
+6. ✅ **Done 2026-09-05.** **Decide on the legacy/engine duplication.** Chose
+   "keep both, rename for clarity" over migrating. `walletBacktest.ts`,
+   `walletBreakdown.ts`, `backtestLadder.ts`, `backtestLadderNarrow.ts`
+   moved to `src/legacy/` with a header note each; `npm run` script names
+   unchanged. No logic touched.
 
 ## Track C — Architecture cleanup (medium risk, no behavior change)
 
-7. **Move the flat research scripts** (`categorize.ts`, `consensusSignal.ts`,
-   `ouOverBias.ts`, `sportSegmentation.ts`, `ladderScanner.ts`,
-   `indicators.ts`, `walletStats.ts`, and the legacy backtest scripts above)
-   into a `src/research/` (or `src/strategies/`) directory per the layout
-   `docs/AUDIT.md` §11 already agreed on but never finished — pure file
-   moves, verified by typecheck+tests passing unchanged.
+7. **Move the remaining flat research scripts** (`categorize.ts`,
+   `consensusSignal.ts`, `ouOverBias.ts`, `sportSegmentation.ts`,
+   `ladderScanner.ts`, `indicators.ts`, `walletStats.ts` — the legacy
+   backtest scripts already moved to `src/legacy/` per B.6 above) into a
+   `src/research/` directory per the layout `docs/AUDIT.md` §11 agreed on
+   but never finished — pure file moves, verified by typecheck+tests passing
+   unchanged.
 8. **Finish extracting domain types** out of any remaining inline interfaces
    into `src/domain/` (§11 point 1 — partially done already).
 9. Optional: add lint/format tooling (none exists today) — only if you want
