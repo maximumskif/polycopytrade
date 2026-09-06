@@ -6,9 +6,12 @@
 // rule can be judged instead of treating the wallet as a black box before
 // deciding whether Phase 2 (paper trading) is worth doing.
 
+// Historically-cited original (README Phase 1f) -- see backtestLadder.ts's
+// header note; same "moved to src/legacy/, bug-fix only" status applies.
+
 import { writeFileSync, mkdirSync } from "node:fs";
 import { backtestWallet, summarize, type ResolvedTrial } from "./walletBacktest";
-import { TRACKED_WALLETS } from "./wallets";
+import { TRACKED_WALLETS } from "../wallets";
 
 function pct(n: number) {
   return `${(n * 100).toFixed(1)}%`;

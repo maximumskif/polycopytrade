@@ -29,7 +29,16 @@
 // model order book depth/slippage or re-entry. Good enough to answer: is
 // there edge here at all, and in which price band / which rung shape.
 
-import { getPricesHistory, type GammaEvent, type GammaMarket, searchEvents } from "./api/client";
+// Historically-cited original -- every Phase 1a/1g number in README.md is
+// cited against this exact file's output. Deliberately NOT migrated onto
+// src/backtesting/engine.ts (docs/AUDIT.md's Phase 2 section: migrating
+// would risk subtly changing already-cited numbers, as already happened
+// once, benignly, when the engine was cross-checked against
+// walletBacktest.ts). Moved to src/legacy/ 2026-09-05
+// (docs/IMPROVEMENT_PLAN.md Track B.6) to make that status explicit --
+// bug-fix only here, don't refactor.
+
+import { getPricesHistory, type GammaEvent, type GammaMarket, searchEvents } from "../api/client";
 
 const HARVEST_ZONE = { min: 0.05, max: 0.45 };
 const EVENTS_PER_ASSET = 4; // keep API-call volume sane given the ~1req/sec throttle

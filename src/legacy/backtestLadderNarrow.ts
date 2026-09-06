@@ -17,7 +17,10 @@
 // pattern), and both HIGH-side and LOW-side rungs (Phase 1f found HIGH
 // outperformed LOW sharply within the wallet's own trades).
 
-import { searchEvents, type GammaEvent, type GammaMarket } from "./api/client";
+// Historically-cited original (README Phase 1g) -- see backtestLadder.ts's
+// header note; same "moved to src/legacy/, bug-fix only" status applies.
+
+import { searchEvents, type GammaEvent, type GammaMarket } from "../api/client";
 import { backtestMarket, summarize as summarizeLadder, type Trial } from "./backtestLadder";
 
 function summarize(trials: Trial[]) {

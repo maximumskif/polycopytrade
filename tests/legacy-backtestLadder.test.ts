@@ -10,7 +10,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarize, type Trial } from "../src/backtestLadder";
+import { summarize, type Trial } from "../src/legacy/backtestLadder";
 
 function trial(entryPrice: number, won: boolean): Trial {
   const payout = won ? 1 : 0;

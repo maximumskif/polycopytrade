@@ -202,7 +202,11 @@ today.
     `wallet-score`/`backtest`/`follower-delay-demo` actually build on
     going forward. Revisit only if `walletBacktest.ts`/
     `walletBreakdown.ts` need a bug fix or new feature; don't refactor
-    them proactively.
+    them proactively. **✅ Revisited 2026-09-05** (`docs/IMPROVEMENT_PLAN.md`
+    Track B.6) — same decision reaffirmed (still not migrating the logic),
+    but these two plus `backtestLadder.ts`/`backtestLadderNarrow.ts` moved to
+    `src/legacy/` to make the "historically-cited, bug-fix-only" status
+    explicit rather than implicit. `npm run` script names unchanged.
 - **Wallet-sourcing follow-up (2026-08-14, same day as Phase 2 close-out):
   monthly leaderboard swept, one live candidate found.** **Target hit rate
   formalized: the user specified 53-55% win rate as the bar for a wallet

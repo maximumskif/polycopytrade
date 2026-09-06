@@ -21,9 +21,15 @@
 // don't change as new ones come in, so reruns either match exactly or grow
 // (as previously-open markets in the sample resolve) — never jump around.
 
-import { getActivityFromStart, getMarketByConditionId, type Activity, type GammaMarket } from "./api/client";
-import { TRACKED_WALLETS } from "./wallets";
-import { categorize } from "./categorize";
+// Historically-cited original -- every Phase 1b-1f wallet-copy number in
+// README.md is cited against this exact file's output (see
+// backtestLadder.ts's header note for why this isn't migrated onto
+// src/backtesting/engine.ts). Moved to src/legacy/ 2026-09-05
+// (docs/IMPROVEMENT_PLAN.md Track B.6) -- bug-fix only, don't refactor.
+
+import { getActivityFromStart, getMarketByConditionId, type Activity, type GammaMarket } from "../api/client";
+import { TRACKED_WALLETS } from "../wallets";
+import { categorize } from "../categorize";
 
 export interface ResolvedTrial {
   conditionId: string;
