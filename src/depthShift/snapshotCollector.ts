@@ -11,7 +11,7 @@
 // trackDaemon's 60s wallet-tracking cadence, and would blow through that
 // daemon's per-host rate-limit budget if merged in.
 
-import { getMarketByConditionId, getOrderBook, fetchRaw } from "../api/client";
+import { getOrderBook, fetchRaw } from "../api/client";
 import { insertOrderbookSnapshot } from "../storage/repository";
 import { sleep } from "../utils/retry";
 import type { GammaMarket } from "../api/schemas";

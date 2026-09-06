@@ -165,7 +165,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x2c335066fe58fe9237c3d3dc7b275c2a034a0563",
-    label: "unnamed #12 (all-time #12, +$7.94M — Phase 1d: 60% win, 670 markets (largest sample of any wallet), roughly breakeven -1.6% net, not concentrated but not clearly profitable either)",
+    label:
+      "unnamed #12 (all-time #12, +$7.94M — Phase 1d: 60% win, 670 markets (largest sample of any wallet), roughly breakeven -1.6% net, not concentrated but not clearly profitable either)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/profit",
   },
@@ -201,7 +202,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x94f199fb7789f1aef7fff6b758d6b375100f4c7a",
-    label: "KeyTransporter (all-time #20, +$5.71M — Phase 1d: 67.3% win, 15 markets, +45.7% net, reached full 24-day lifetime — borderline, small but not extreme sample)",
+    label:
+      "KeyTransporter (all-time #20, +$5.71M — Phase 1d: 67.3% win, 15 markets, +45.7% net, reached full 24-day lifetime — borderline, small but not extreme sample)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/profit",
   },
@@ -227,13 +229,15 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x224a89dbe0db0d6124b335edabd15b3f877da3d5",
-    label: "wr0ngw4yb3tt0r (monthly #5 — scored: 55.1% win (in target range) but dormant+uncopyable-high-freq, ROI 6.6% — RULED OUT on copyability)",
+    label:
+      "wr0ngw4yb3tt0r (monthly #5 — scored: 55.1% win (in target range) but dormant+uncopyable-high-freq, ROI 6.6% — RULED OUT on copyability)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
     address: "0x7ad71d79a3bb90d0a87a06500fa0fe11663842aa",
-    label: "theowalcott (monthly #6 — scored: 59.7% win, ACTIVE (7.9d), ROI 5.5% — RULED OUT DEFINITIVELY on copyability: medianGapSeconds=0.0, i.e. near-simultaneous/same-block fills, not a borderline high-freq-threshold call)",
+    label:
+      "theowalcott (monthly #6 — scored: 59.7% win, ACTIVE (7.9d), ROI 5.5% — RULED OUT DEFINITIVELY on copyability: medianGapSeconds=0.0, i.e. near-simultaneous/same-block fills, not a borderline high-freq-threshold call)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
@@ -245,19 +249,22 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x13fa4ce1b8a27dd0b7a72db6205a50ee6ff0954c",
-    label: "betterfasterstronger (monthly #9 — scored: insufficient-sample, events=0 (all activity unresolved/non-trade in the default pull window) — INCONCLUSIVE, not a pass or fail)",
+    label:
+      "betterfasterstronger (monthly #9 — scored: insufficient-sample, events=0 (all activity unresolved/non-trade in the default pull window) — INCONCLUSIVE, not a pass or fail)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
     address: "0x5dab5ed9691fab220535891d9c7f5c28eed322e1",
-    label: "Weaseloftheweek (monthly #11 — scored: 61.4% win, ACTIVE (1.0d), ROI 9.6%, $535K net — RULED OUT on copyability: medianGapSeconds=1.0, bot-speed execution no realistic follower latency can match, not a borderline call)",
+    label:
+      "Weaseloftheweek (monthly #11 — scored: 61.4% win, ACTIVE (1.0d), ROI 9.6%, $535K net — RULED OUT on copyability: medianGapSeconds=1.0, bot-speed execution no realistic follower latency can match, not a borderline call)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
     address: "0x6ac5bb06a9eb05641fd5e82640268b92f3ab4b6e",
-    label: "Lakersfan111 (monthly #12 — scored: 48.8% win, dormant, ROI 21% — below hit-rate bar despite large 339-event sample, RULED OUT)",
+    label:
+      "Lakersfan111 (monthly #12 — scored: 48.8% win, dormant, ROI 21% — below hit-rate bar despite large 339-event sample, RULED OUT)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
@@ -269,13 +276,15 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x79ae097215202b5d01f98e4479fb219102469a4a",
-    label: "CORGI8 (monthly #14 — scored: 44.1% win, no flags, ACTIVE (0.7d), 312 events, ROI 8.4% — clean/active/large sample but win rate below hit-rate bar, RULED OUT)",
+    label:
+      "CORGI8 (monthly #14 — scored: 44.1% win, no flags, ACTIVE (0.7d), 312 events, ROI 8.4% — clean/active/large sample but win rate below hit-rate bar, RULED OUT)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
     address: "0x1b20a00709dfe648afd26b326394b5e031f83ab0",
-    label: "unnamed monthly #15 (+$335,860 — CONFIRMED on deeper history, 2026-08-14: historyPages=20 returned IDENTICAL numbers to the shallow pull — 53.1% win, no flags, 51 events, +35.7% ROI, $881K net — this wallet's entire ~14-day lifetime already fit under the old 5000-fill cap, so unlike 0x_exit this is NOT an early-slice artifact. No decay across its two active weeks (wk0 52.1% win/31.6% ROI -> wk1 68.3% win/81.7% ROI, improving not fading). Edge is concentrated in SPORTS (55.4% win/$668K net/790 trials) vs a much weaker 'other' category (51.9% win/$213K net/1483 trials) — treat as a sports-specific signal. Caveat: bootstrap 95% ROI CI is wide, -11.1% to +76.9%, still can't rule out a negative true edge; wallet joined Polymarket July 2026 so this IS its full track record, not a slice of a longer one. BEST CANDIDATE IN THE PROJECT — first Phase 3 paper-trading candidate, pending a go/no-go decision.)",
+    label:
+      "unnamed monthly #15 (+$335,860 — CONFIRMED on deeper history, 2026-08-14: historyPages=20 returned IDENTICAL numbers to the shallow pull — 53.1% win, no flags, 51 events, +35.7% ROI, $881K net — this wallet's entire ~14-day lifetime already fit under the old 5000-fill cap, so unlike 0x_exit this is NOT an early-slice artifact. No decay across its two active weeks (wk0 52.1% win/31.6% ROI -> wk1 68.3% win/81.7% ROI, improving not fading). Edge is concentrated in SPORTS (55.4% win/$668K net/790 trials) vs a much weaker 'other' category (51.9% win/$213K net/1483 trials) — treat as a sports-specific signal. Caveat: bootstrap 95% ROI CI is wide, -11.1% to +76.9%, still can't rule out a negative true edge; wallet joined Polymarket July 2026 so this IS its full track record, not a slice of a longer one. BEST CANDIDATE IN THE PROJECT — first Phase 3 paper-trading candidate, pending a go/no-go decision.)",
     archetype: "sports-systematic",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
     historyPages: 20,
@@ -294,19 +303,22 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0xe40aaa5ce1dac0b7dc24c9d0284f27e17c3fe4a2",
-    label: "Mysaria (monthly #18 — scored: 85.4% win but ROI ~0.0% ($-10 net) — extreme win rate is a near-certain-odds tiny-edge grinding pattern, not real profit; also uncopyable-high-freq. RULED OUT on economics despite the win-rate number)",
+    label:
+      "Mysaria (monthly #18 — scored: 85.4% win but ROI ~0.0% ($-10 net) — extreme win rate is a near-certain-odds tiny-edge grinding pattern, not real profit; also uncopyable-high-freq. RULED OUT on economics despite the win-rate number)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
     address: "0x03805a13a0b3e058f55f6c6af95389d4f431073d",
-    label: "donthackme (monthly #19 — scored: 85.3% win but ROI 0.3% ($426 net) — same near-zero-profit-despite-high-win-rate pattern as Mysaria; also dormant+high-freq. RULED OUT on economics)",
+    label:
+      "donthackme (monthly #19 — scored: 85.3% win but ROI 0.3% ($426 net) — same near-zero-profit-despite-high-win-rate pattern as Mysaria; also dormant+high-freq. RULED OUT on economics)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
     address: "0xbca08c1bc204a34f2fddbe47b438b9bd42ac9705",
-    label: "1winstreak1 (monthly #20 — scored: 59.2% win but dormant 93.7 days, ROI 19.3%, $181K net, 222 events — win rate clears bar but stopped trading 3+ months ago, RULED OUT on dormancy)",
+    label:
+      "1winstreak1 (monthly #20 — scored: 59.2% win but dormant 93.7 days, ROI 19.3%, $181K net, 222 events — win rate clears bar but stopped trading 3+ months ago, RULED OUT on dormancy)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
@@ -326,7 +338,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x983eedfbd75803602e4a6e6ea9aab6dc6b9c6748",
-    label: "3edmond.dantes (weekly #7 — scored: 100% win but one-shot/highly-concentrated/insufficient-sample, 1 event — RULED OUT, pure noise)",
+    label:
+      "3edmond.dantes (weekly #7 — scored: 100% win but one-shot/highly-concentrated/insufficient-sample, 1 event — RULED OUT, pure noise)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/weekly/profit",
   },
@@ -338,13 +351,15 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x4b341d4612437b6e5b5fbcf98e5b675dbacf48a8",
-    label: "musholius722 (weekly #12 — scored: 50% win, one-shot/highly-concentrated/insufficient-sample, 2 events — RULED OUT, pure noise)",
+    label:
+      "musholius722 (weekly #12 — scored: 50% win, one-shot/highly-concentrated/insufficient-sample, 2 events — RULED OUT, pure noise)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/weekly/profit",
   },
   {
     address: "0x2f44fa076c8d2976ac6bea0ddfd9502bad2b93c2",
-    label: "TennisLove (weekly #13 — scored: 100% win, NO FLAGS, ACTIVE, ROI 49.5%, but only 4 real events — too thin to trust despite the clean flag set. WATCH, not a candidate yet: re-score once it has more history)",
+    label:
+      "TennisLove (weekly #13 — scored: 100% win, NO FLAGS, ACTIVE, ROI 49.5%, but only 4 real events — too thin to trust despite the clean flag set. WATCH, not a candidate yet: re-score once it has more history)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/weekly/profit",
   },
@@ -362,7 +377,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0xf23c5bc7b547867eb6532920144562718aa49f81",
-    label: "g42gh6524h5h5 (weekly #18 — scored: 60.7% win, ACTIVE (0.0d), but uncopyable-high-freq (medianGapSeconds=1.0, bot-speed) — win rate clears bar, RULED OUT on copyability, same pattern as theowalcott/Weaseloftheweek)",
+    label:
+      "g42gh6524h5h5 (weekly #18 — scored: 60.7% win, ACTIVE (0.0d), but uncopyable-high-freq (medianGapSeconds=1.0, bot-speed) — win rate clears bar, RULED OUT on copyability, same pattern as theowalcott/Weaseloftheweek)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/weekly/profit",
   },
@@ -374,7 +390,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x04d5524a0a5af2eca6e39e03defc261d42fe66d8",
-    label: "WTSA (weekly #20 — scored: 56.0% win, uncopyable-high-freq (medianGapSeconds=1.0), 17 events — win rate near/above bar but bot-speed execution + thin sample, RULED OUT on copyability)",
+    label:
+      "WTSA (weekly #20 — scored: 56.0% win, uncopyable-high-freq (medianGapSeconds=1.0), 17 events — win rate near/above bar but bot-speed execution + thin sample, RULED OUT on copyability)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/weekly/profit",
   },
@@ -383,13 +400,15 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   // above) — surfaces high-volume traders, not just high-profit ones.
   {
     address: "0xf201a19b43471261a3c1ba9247335d55270e527e",
-    label: "unnamed (weekly-volume #18 — scored: 56.8% win, 116 events, ROI 13.2%, $106K net — clears hit-rate bar but dormant 170.6 days — RULED OUT on dormancy)",
+    label:
+      "unnamed (weekly-volume #18 — scored: 56.8% win, 116 events, ROI 13.2%, $106K net — clears hit-rate bar but dormant 170.6 days — RULED OUT on dormancy)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/week/volume",
   },
   {
     address: "0x5a218c7ad04135830a45c41aaed7294df7809318",
-    label: "balthazar (weekly-volume #19 — scored: 57.3% win but dormant 234.5 days + uncopyable-high-freq (medianGapSeconds=0.0, bot-speed) — RULED OUT on both dormancy and copyability)",
+    label:
+      "balthazar (weekly-volume #19 — scored: 57.3% win but dormant 234.5 days + uncopyable-high-freq (medianGapSeconds=0.0, bot-speed) — RULED OUT on both dormancy and copyability)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/week/volume",
   },
@@ -401,61 +420,71 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0xa61ef8773ec2e821962306ca87d4b57e39ff0abd",
-    label: "risk-manager (all-time-volume #6 — scored: 3.2% win, dormant+uncopyable-high-freq, ROI -34.0%, -$6.7K net — RULED OUT, badly negative)",
+    label:
+      "risk-manager (all-time-volume #6 — scored: 3.2% win, dormant+uncopyable-high-freq, ROI -34.0%, -$6.7K net — RULED OUT, badly negative)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0xe9076a87c5ed90ef16e6fe6529c943baeca0cff6",
-    label: "suntori (all-time-volume #7 — scored: 34.4% win, ROI -16.7% (-$12.6K net), 1379 events (largest sample this project has seen), dormant 145.5 days — RULED OUT, badly negative despite the huge sample)",
+    label:
+      "suntori (all-time-volume #7 — scored: 34.4% win, ROI -16.7% (-$12.6K net), 1379 events (largest sample this project has seen), dormant 145.5 days — RULED OUT, badly negative despite the huge sample)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0xd218e474776403a330142299f7796e8ba32eb5c9",
-    label: "cigarettes (all-time-volume #8 — scored: 84.2% win but ROI 0.2% ($945 net) — near-zero-profit-despite-high-win-rate pattern (same as Mysaria/donthackme); also dormant+uncopyable-high-freq — RULED OUT on economics)",
+    label:
+      "cigarettes (all-time-volume #8 — scored: 84.2% win but ROI 0.2% ($945 net) — near-zero-profit-despite-high-win-rate pattern (same as Mysaria/donthackme); also dormant+uncopyable-high-freq — RULED OUT on economics)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0xe90bec87d9ef430f27f9dcfe72c34b76967d5da2",
-    label: "gmanas (all-time-volume #9 — scored: 53.3% win (clears bar), ROI 16.5%, $860K net, 128 events — but dormant 269.9 days + uncopyable-high-freq (medianGapSeconds=4.0) — RULED OUT on dormancy/copyability despite the win rate)",
+    label:
+      "gmanas (all-time-volume #9 — scored: 53.3% win (clears bar), ROI 16.5%, $860K net, 128 events — but dormant 269.9 days + uncopyable-high-freq (medianGapSeconds=4.0) — RULED OUT on dormancy/copyability despite the win rate)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0x24c8cf69a0e0a17eee21f69d29752bfa32e823e1",
-    label: "debased (all-time-volume #10 — scored: 54.4% win (clears bar) but ROI -6.0% (-$29.2K net), 263 events, dormant 869 days, medianGapSeconds=802 (human-speed, not bot) — RULED OUT on economics despite the win rate, another confirmation that win rate alone isn't sufficient)",
+    label:
+      "debased (all-time-volume #10 — scored: 54.4% win (clears bar) but ROI -6.0% (-$29.2K net), 263 events, dormant 869 days, medianGapSeconds=802 (human-speed, not bot) — RULED OUT on economics despite the win rate, another confirmation that win rate alone isn't sufficient)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0xc8ab97a9089a9ff7e6ef0688e6e591a066946418",
-    label: "ArmageddonRewardsBilly (all-time-volume #11 — scored: 53.8% win (clears bar), ROI 6.1%, $23K net, 316 events — but dormant 559.3 days — RULED OUT on dormancy)",
+    label:
+      "ArmageddonRewardsBilly (all-time-volume #11 — scored: 53.8% win (clears bar), ROI 6.1%, $23K net, 316 events — but dormant 559.3 days — RULED OUT on dormancy)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0xbddf61af533ff524d27154e589d2d7a81510c684",
-    label: "Countryside (all-time-volume #12 — scored: 36.5% win (below hit-rate bar), ROI 6.4% net-positive despite low win rate ($161K net, longshot-payout pattern), 86 events, dormant 260.1 days — RULED OUT on win rate)",
+    label:
+      "Countryside (all-time-volume #12 — scored: 36.5% win (below hit-rate bar), ROI 6.4% net-positive despite low win rate ($161K net, longshot-payout pattern), 86 events, dormant 260.1 days — RULED OUT on win rate)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0x492442eab586f242b53bda933fd5de859c8a3782",
-    label: "unnamed (all-time-volume #13 — scored: 49.5% win (below bar), ROI -5.8%, -$5.33M net, 381 events, dormant 208.0 days — RULED OUT, badly negative on a huge sample)",
+    label:
+      "unnamed (all-time-volume #13 — scored: 49.5% win (below bar), ROI -5.8%, -$5.33M net, 381 events, dormant 208.0 days — RULED OUT, badly negative on a huge sample)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0x9d84ce0306f8551e02efef1680475fc0f1dc1344",
-    label: "ImJustKen (all-time-volume #14 — scored: 56.6% win (clears bar), ROI 7.3%, $65.9K net, 66 events — but dormant 1154.4 DAYS (~3.2yr, ancient) — RULED OUT on dormancy)",
+    label:
+      "ImJustKen (all-time-volume #14 — scored: 56.6% win (clears bar), ROI 7.3%, $65.9K net, 66 events — but dormant 1154.4 DAYS (~3.2yr, ancient) — RULED OUT on dormancy)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0x2663daca3cecf3767ca1c3b126002a8578a8ed1f",
-    label: "Q96s3kwozynxpau (all-time-volume #15 — scored: 24.8% win (well below bar), ROI 1.5% (near-breakeven, longshot-payout pattern), $581 net, 37 events, dormant 575.0 days — RULED OUT)",
+    label:
+      "Q96s3kwozynxpau (all-time-volume #15 — scored: 24.8% win (well below bar), ROI 1.5% (near-breakeven, longshot-payout pattern), $581 net, 37 events, dormant 575.0 days — RULED OUT)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
@@ -467,25 +496,29 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x2a2c53bd278c04da9962fcf96490e17f3dfb9bc1",
-    label: "unnamed (all-time-volume #17 — scored: 64.5% win (strongly clears bar), ROI 11.3%, $1.30M net, 115 events — but dormant + uncopyable-high-freq (medianGapSeconds=2.0, bot-speed) — RULED OUT on copyability despite the strong numbers, same pattern as theowalcott/Weaseloftheweek)",
+    label:
+      "unnamed (all-time-volume #17 — scored: 64.5% win (strongly clears bar), ROI 11.3%, $1.30M net, 115 events — but dormant + uncopyable-high-freq (medianGapSeconds=2.0, bot-speed) — RULED OUT on copyability despite the strong numbers, same pattern as theowalcott/Weaseloftheweek)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0x507e52ef684ca2dd91f90a9d26d149dd3288beae",
-    label: "GamblingIsAllYouNeed (all-time-volume #18 — scored: 49.7% win (below bar), ROI 3.9%, dormant+uncopyable-high-freq, 135 events — RULED OUT)",
+    label:
+      "GamblingIsAllYouNeed (all-time-volume #18 — scored: 49.7% win (below bar), ROI 3.9%, dormant+uncopyable-high-freq, 135 events — RULED OUT)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0x2d27e4d20f3b8a2ee3bc861d9b83752f338676d8",
-    label: "interstellaar (all-time-volume #19 — scored: 0.6% win, ROI -47.3%, dormant+highly-concentrated+uncopyable-high-freq, 12 events — RULED OUT, badly negative)",
+    label:
+      "interstellaar (all-time-volume #19 — scored: 0.6% win, ROI -47.3%, dormant+highly-concentrated+uncopyable-high-freq, 12 events — RULED OUT, badly negative)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
   {
     address: "0xfc25f141ed27bb1787338d2c4e7f51e3a15e1f7f",
-    label: "-Malfunction (all-time-volume #20 — scored: 35.9% win (below bar), ROI -0.9% (near-breakeven negative), dormant, 174 events — RULED OUT)",
+    label:
+      "-Malfunction (all-time-volume #20 — scored: 35.9% win (below bar), ROI -0.9% (near-breakeven negative), dormant, 174 events — RULED OUT)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/overall/all/volume",
   },
@@ -499,7 +532,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   // (theowalcott, Weaseloftheweek, unnamed all-time-volume #17).
   {
     address: "0xce25e214d5cfe4f459cf67f08df581885aae7fdc",
-    label: "sopersone-sourced wallet (X post claim: $313->$565,115, Bitcoin/ETH Up-or-Down 15m markets, 87,559 trades — scored on EARLIEST 5000-fill slice only, historyPages too shallow for an 87K-trade wallet: 47.0% win (below bar), ROI 3.0%, uncopyable-high-freq (medianGapSeconds=0.0, same-timestamp fills confirmed) — RULED OUT on copyability regardless; 'dormant 109.1d' flag is a slice artifact, wallet is confirmed live-trading as of 2026-08-17, not actually dormant)",
+    label:
+      "sopersone-sourced wallet (X post claim: $313->$565,115, Bitcoin/ETH Up-or-Down 15m markets, 87,559 trades — scored on EARLIEST 5000-fill slice only, historyPages too shallow for an 87K-trade wallet: 47.0% win (below bar), ROI 3.0%, uncopyable-high-freq (medianGapSeconds=0.0, same-timestamp fills confirmed) — RULED OUT on copyability regardless; 'dormant 109.1d' flag is a slice artifact, wallet is confirmed live-trading as of 2026-08-17, not actually dormant)",
     archetype: "unclassified",
     source: "https://x.com/sopersone/status/2089410888373776758",
     historyPages: 10,

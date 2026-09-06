@@ -43,7 +43,9 @@ export async function main() {
     walletAddresses: [wallet.address],
     datasetCutoff,
     resolutionTreatment: mirrorExit ? "mirror-exit" : "hold-to-resolution",
-    exitRule: mirrorExit ? "mirror the wallet's actual sells; force-close at settlement if still held when the market closes" : "hold to resolution",
+    exitRule: mirrorExit
+      ? "mirror the wallet's actual sells; force-close at settlement if still held when the market closes"
+      : "hold to resolution",
   });
 
   const trials = await buildTrials(wallet.address, activity, config);

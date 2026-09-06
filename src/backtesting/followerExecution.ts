@@ -122,7 +122,15 @@ export function summarizeDelayDegradation(estimates: FollowerFillEstimate[]): De
     const usable = estimates.filter((e) => e.followerPriceByDelay[delay] != null);
     const n = usable.length;
     if (n === 0) {
-      return { delaySeconds: delay, sampleSize: 0, avgLeaderEntryPrice: 0, avgFollowerEntryPrice: 0, avgPriceSlippage: 0, leaderRoi: 0, followerRoi: 0 };
+      return {
+        delaySeconds: delay,
+        sampleSize: 0,
+        avgLeaderEntryPrice: 0,
+        avgFollowerEntryPrice: 0,
+        avgPriceSlippage: 0,
+        leaderRoi: 0,
+        followerRoi: 0,
+      };
     }
 
     let leaderReturn = 0;

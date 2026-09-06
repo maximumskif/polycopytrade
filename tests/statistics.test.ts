@@ -91,9 +91,7 @@ test("bootstrap CI resamples events, not trials: a handful of correlated events 
   for (let e = 0; e < 4; e++) {
     for (let i = 0; i < 10; i++) {
       const won = i < winsPerEvent[e];
-      clusteredTrials.push(
-        trial({ conditionId: `c${e}-${i}`, eventKey: `event${e}`, usdcStaked: 10, won, netReturn: won ? 8 : -10 })
-      );
+      clusteredTrials.push(trial({ conditionId: `c${e}-${i}`, eventKey: `event${e}`, usdcStaked: 10, won, netReturn: won ? 8 : -10 }));
     }
   }
   const spreadTrials: BacktestTrial[] = clusteredTrials.map((t, i) => ({ ...t, eventKey: `event${i}` }));

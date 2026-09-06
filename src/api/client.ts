@@ -143,7 +143,7 @@ function validate<T>(schema: { parse: (data: unknown) => T }, data: unknown, con
   try {
     return schema.parse(data);
   } catch (err) {
-    throw new Error(`Response validation failed for ${context}: ${(err as Error).message}`);
+    throw new Error(`Response validation failed for ${context}: ${(err as Error).message}`, { cause: err });
   }
 }
 
@@ -257,7 +257,11 @@ export async function getActivityFromStart(address: string, pages = 10): Promise
 // bundling the whole price-ladder of sub-markets ("$56k-58k", "$58k-60k", ...).
 export async function searchEvents(query: string, limitPerType = 20, status: "active" | "closed" = "active"): Promise<GammaEvent[]> {
   const qs = new URLSearchParams({ q: query, events_status: status, limit_per_type: String(limitPerType) });
-  const res = validate(PublicSearchResponseSchema, await requestJson(`${GAMMA_API}/public-search?${qs.toString()}`), "GET /public-search (events)");
+  const res = validate(
+    PublicSearchResponseSchema,
+    await requestJson(`${GAMMA_API}/public-search?${qs.toString()}`),
+    "GET /public-search (events)"
+  );
   return res.events ?? [];
 }
 
@@ -299,6 +303,10 @@ export async function getMarketByConditionId(conditionId: string, closed: boolea
 // polymarket.com/@... profile URL — see wallets.ts for why that matters).
 export async function resolveProxyWallet(usernameOrSlug: string): Promise<string | null> {
   const qs = new URLSearchParams({ q: usernameOrSlug, search_profiles: "true", limit_per_type: "5" });
-  const res = validate(PublicSearchResponseSchema, await requestJson(`${GAMMA_API}/public-search?${qs.toString()}`), "GET /public-search (profiles)");
+  const res = validate(
+    PublicSearchResponseSchema,
+    await requestJson(`${GAMMA_API}/public-search?${qs.toString()}`),
+    "GET /public-search (profiles)"
+  );
   return res.profiles?.[0]?.proxyWallet ?? null;
 }

@@ -44,7 +44,9 @@ test("reproduces a decaying-edge pattern (Phase 1f shape): net P&L declines wind
   // 0x_exit-wallet finding this feature was built to generalize.
   const trials = [
     ...Array.from({ length: 7 }, (_, i) => trial({ conditionId: `w0-${i}`, entryTimestamp: i * DAY, won: true, netReturn: 5 })),
-    ...Array.from({ length: 7 }, (_, i) => trial({ conditionId: `w1-${i}`, entryTimestamp: (7 + i) * DAY, won: i % 2 === 0, netReturn: i % 2 === 0 ? 5 : -10 })),
+    ...Array.from({ length: 7 }, (_, i) =>
+      trial({ conditionId: `w1-${i}`, entryTimestamp: (7 + i) * DAY, won: i % 2 === 0, netReturn: i % 2 === 0 ? 5 : -10 })
+    ),
     ...Array.from({ length: 7 }, (_, i) => trial({ conditionId: `w2-${i}`, entryTimestamp: (14 + i) * DAY, won: false, netReturn: -10 })),
   ];
   const windows = computeRollingWindowResults(trials, config, 7 * DAY);
@@ -56,7 +58,10 @@ test("reproduces a decaying-edge pattern (Phase 1f shape): net P&L declines wind
 });
 
 test("unresolved trials are excluded from every window", () => {
-  const trials = [trial({ entryTimestamp: 0, resolved: true }), trial({ conditionId: "c2", entryTimestamp: 0, resolved: false, won: null, netReturn: 0 })];
+  const trials = [
+    trial({ entryTimestamp: 0, resolved: true }),
+    trial({ conditionId: "c2", entryTimestamp: 0, resolved: false, won: null, netReturn: 0 }),
+  ];
   const windows = computeRollingWindowResults(trials, config, DAY);
   assert.equal(windows.length, 1);
   assert.equal(windows[0].result.trialCount, 1);

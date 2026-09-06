@@ -49,10 +49,7 @@ test("fair-odds pricing at the true win probability nets to ~breakeven, not winR
   // probability). A fairly-priced market should net to ~0%. The old bug
   // would have reported net = winRate - 100% = 50% - 100% = -50% here,
   // which is the exact failure mode this test guards against.
-  const trials = [
-    ...Array.from({ length: 5 }, () => trial(0.5, true)),
-    ...Array.from({ length: 5 }, () => trial(0.5, false)),
-  ];
+  const trials = [...Array.from({ length: 5 }, () => trial(0.5, true)), ...Array.from({ length: 5 }, () => trial(0.5, false))];
   const s = summarize(trials);
   assert.equal(s.winRate, 0.5);
   assert.equal(s.sharesAcquired, 20); // 10 trials * 2 shares each
@@ -64,10 +61,7 @@ test("fair-odds pricing at the true win probability nets to ~breakeven, not winR
 test("cheap longshots need a correspondingly lower win rate to break even", () => {
   // 10 trials at 10c; breakeven win rate is ~10%. Exactly 1 win (10%)
   // should net to ~0%, not net = 10% - 100% = -90% (the old bug).
-  const trials = [
-    ...Array.from({ length: 1 }, () => trial(0.1, true)),
-    ...Array.from({ length: 9 }, () => trial(0.1, false)),
-  ];
+  const trials = [...Array.from({ length: 1 }, () => trial(0.1, true)), ...Array.from({ length: 9 }, () => trial(0.1, false))];
   const s = summarize(trials);
   assert.equal(s.sharesAcquired, 100); // 10 trials * 10 shares each
   assert.equal(s.grossReturned, 10); // 1 winner * 10 shares

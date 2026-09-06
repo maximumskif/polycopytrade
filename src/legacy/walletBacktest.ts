@@ -27,7 +27,7 @@
 // src/backtesting/engine.ts). Moved to src/legacy/ 2026-09-05
 // (docs/IMPROVEMENT_PLAN.md Track B.6) -- bug-fix only, don't refactor.
 
-import { getActivityFromStart, getMarketByConditionId, type Activity, type GammaMarket } from "../api/client";
+import { getActivityFromStart, getMarketByConditionId, type GammaMarket } from "../api/client";
 import { TRACKED_WALLETS } from "../wallets";
 import { categorize } from "../research/categorize";
 
@@ -128,7 +128,9 @@ export async function backtestWallet(wallet: (typeof TRACKED_WALLETS)[number]) {
   console.log(
     `  earliest ${activity.length} fills, spanning ${spanDays.toFixed(0)} days from ` +
       `${oldestTs ? new Date(oldestTs * 1000).toISOString().slice(0, 10) : "n/a"}` +
-      (activity.length >= pages * 500 ? ` (hit ${pages}-page cap — wallet has more history not sampled)` : ` (this is the wallet's full history)`)
+      (activity.length >= pages * 500
+        ? ` (hit ${pages}-page cap — wallet has more history not sampled)`
+        : ` (this is the wallet's full history)`)
   );
   console.log(
     `  ${trials.length} resolved buy fills across ${realOrders} distinct markets ` +
@@ -165,9 +167,7 @@ export async function main() {
   // client's ~1 req/sec throttle.
   const filter = process.argv[2]?.toLowerCase();
   const wallets = filter
-    ? TRACKED_WALLETS.filter(
-        (w) => w.address.toLowerCase().includes(filter) || w.label.toLowerCase().includes(filter)
-      )
+    ? TRACKED_WALLETS.filter((w) => w.address.toLowerCase().includes(filter) || w.label.toLowerCase().includes(filter))
     : TRACKED_WALLETS;
 
   for (const wallet of wallets) {

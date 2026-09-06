@@ -132,7 +132,8 @@ export function computeStrategyResult(trials: BacktestTrial[], config: BacktestC
     maxDrawdownPct: maxDrawdownPct(resolved, totalStaked),
     volatility: stdev(perTrialReturn),
     sharpeLike: stdev(perTrialReturn) > 0 ? mean(perTrialReturn) / stdev(perTrialReturn) : null,
-    sortinoLike: negativePerTrialReturn.length > 1 && stdev(negativePerTrialReturn) > 0 ? mean(perTrialReturn) / stdev(negativePerTrialReturn) : null,
+    sortinoLike:
+      negativePerTrialReturn.length > 1 && stdev(negativePerTrialReturn) > 0 ? mean(perTrialReturn) / stdev(negativePerTrialReturn) : null,
     roiBootstrapCI: bootstrapRoiCI(resolved),
     categoryBreakdown,
     meetsMinimumSample: n >= MIN_SAMPLE_SIZE,

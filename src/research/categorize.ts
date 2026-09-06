@@ -9,9 +9,7 @@ export function categorize(title: string): string {
   if (["president", "election", "senate", "governor", "congress", "parliament", "prime minister"].some((k) => t.includes(k)))
     return "politics";
   if (
-    [" vs ", "vs.", "spread:", "o/u", "moneyline", "exact score", "inning", "win on 20", "advance to", "clinch"].some((k) =>
-      t.includes(k)
-    )
+    [" vs ", "vs.", "spread:", "o/u", "moneyline", "exact score", "inning", "win on 20", "advance to", "clinch"].some((k) => t.includes(k))
   )
     // "win on 20" catches "Will <team> win on 2026-06-15?" (World Cup-style
     // match markets). "vs." (not just " vs ") added 2026-08-15 — found by

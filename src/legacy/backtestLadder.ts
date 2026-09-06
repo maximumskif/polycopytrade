@@ -208,9 +208,7 @@ export async function main() {
   const btcEvents = await getClosedLadderEvents("what price will bitcoin hit", "what-price-will-bitcoin-hit");
   const wtiEvents = await getClosedLadderEvents("what price will wti hit", "what-price-will-wti-hit");
 
-  console.log(
-    `Backtesting ${btcEvents.length} closed BTC monthly ladders + ${wtiEvents.length} closed WTI monthly ladders...`
-  );
+  console.log(`Backtesting ${btcEvents.length} closed BTC monthly ladders + ${wtiEvents.length} closed WTI monthly ladders...`);
 
   for (const [asset, events] of [
     ["BTC", btcEvents],

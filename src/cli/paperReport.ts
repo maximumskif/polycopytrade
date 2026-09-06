@@ -41,7 +41,9 @@ export async function main() {
     // backtest engine). A low distinctEvents count means this number is
     // still mostly noise, whatever the win rate looks like.
     if (distinctEvents < 20) {
-      console.log(`  ⚠ only ${distinctEvents} distinct market(s) behind these ${closed.length} fills — too few to be meaningful yet, do not read winRate/roi above as a real signal`);
+      console.log(
+        `  ⚠ only ${distinctEvents} distinct market(s) behind these ${closed.length} fills — too few to be meaningful yet, do not read winRate/roi above as a real signal`
+      );
     } else {
       console.log(`  distinctEvents=${distinctEvents}`);
     }

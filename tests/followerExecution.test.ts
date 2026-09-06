@@ -1,7 +1,12 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { __setFetchImplForTests, __resetFetchImplForTests } from "../src/api/client";
-import { estimateFollowerFill, summarizeDelayDegradation, type FollowerFillEstimate, type LeaderFill } from "../src/backtesting/followerExecution";
+import {
+  estimateFollowerFill,
+  summarizeDelayDegradation,
+  type FollowerFillEstimate,
+  type LeaderFill,
+} from "../src/backtesting/followerExecution";
 
 afterEach(() => {
   __resetFetchImplForTests();
@@ -109,7 +114,10 @@ test("estimateFollowerFill returns null when the market can't be found (both clo
 });
 
 test("summarizeDelayDegradation excludes trials with no observed follower price at that delay", () => {
-  const estimates = [estimate({ followerPriceByDelay: { 5: 0.22, 15: null, 30: 0.25, 60: 0.28 } }), estimate({ followerPriceByDelay: { 5: 0.24, 15: 0.26, 30: 0.28, 60: 0.3 } })];
+  const estimates = [
+    estimate({ followerPriceByDelay: { 5: 0.22, 15: null, 30: 0.25, 60: 0.28 } }),
+    estimate({ followerPriceByDelay: { 5: 0.24, 15: 0.26, 30: 0.28, 60: 0.3 } }),
+  ];
   const summary = summarizeDelayDegradation(estimates);
   const at15 = summary.find((s) => s.delaySeconds === 15)!;
   assert.equal(at15.sampleSize, 1); // only the second estimate had a real price at 15s

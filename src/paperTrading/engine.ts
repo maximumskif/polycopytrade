@@ -108,7 +108,9 @@ export async function runPaperTradingCycle(): Promise<void> {
   for (const target of PAPER_TRADE_TARGETS) {
     const result = await processNewFills(target);
     if (result.examined > 0) {
-      console.log(`[paper-trading] ${target.label}: ${result.filled} filled, ${result.unresolvable} unresolvable (of ${result.examined} new fills)`);
+      console.log(
+        `[paper-trading] ${target.label}: ${result.filled} filled, ${result.unresolvable} unresolvable (of ${result.examined} new fills)`
+      );
     }
   }
   const { resolved } = await resolveOpenOrders();

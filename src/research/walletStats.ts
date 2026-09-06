@@ -82,9 +82,7 @@ async function statsForWallet(wallet: (typeof TRACKED_WALLETS)[number], pages?: 
   }
 
   const avgOrderUsdc = orders.length ? orders.reduce((s, o) => s + o.usdcSize, 0) / orders.length : 0;
-  const spanDays = trades.length
-    ? (Math.max(...trades.map((t) => t.timestamp)) - Math.min(...trades.map((t) => t.timestamp))) / 86400
-    : 0;
+  const spanDays = trades.length ? (Math.max(...trades.map((t) => t.timestamp)) - Math.min(...trades.map((t) => t.timestamp))) / 86400 : 0;
 
   console.log(`\n[${wallet.label}] (labeled: ${wallet.archetype})`);
   console.log(`  ${trades.length} raw fills -> ${orders.length} synthetic orders over ${spanDays.toFixed(1)} days`);

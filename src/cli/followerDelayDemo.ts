@@ -53,7 +53,9 @@ export async function main() {
     won: t.won === true,
   }));
 
-  console.log(`Sampled ${sample.length} of ${resolved.length} resolved trials. Fetching per-fill price history (rate-limited, ~1 req/sec)...`);
+  console.log(
+    `Sampled ${sample.length} of ${resolved.length} resolved trials. Fetching per-fill price history (rate-limited, ~1 req/sec)...`
+  );
 
   const estimates = [];
   for (const fill of sample) {
@@ -61,7 +63,9 @@ export async function main() {
     if (est) estimates.push(est);
   }
 
-  console.log(`\n[${wallet.label}] follower delay/slippage demo — ${estimates.length}/${sample.length} fills resolved to a market+price lookup`);
+  console.log(
+    `\n[${wallet.label}] follower delay/slippage demo — ${estimates.length}/${sample.length} fills resolved to a market+price lookup`
+  );
   for (const row of summarizeDelayDegradation(estimates)) {
     console.log(
       `  +${String(row.delaySeconds).padStart(2)}s  n=${String(row.sampleSize).padStart(3)}  ` +

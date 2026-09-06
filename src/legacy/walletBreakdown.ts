@@ -40,9 +40,7 @@ const PRICE_BANDS: [number, number][] = [
 
 async function main() {
   const filter = process.argv[2]?.toLowerCase() ?? "0x_exit";
-  const wallet = TRACKED_WALLETS.find(
-    (w) => w.address.toLowerCase().includes(filter) || w.label.toLowerCase().includes(filter)
-  );
+  const wallet = TRACKED_WALLETS.find((w) => w.address.toLowerCase().includes(filter) || w.label.toLowerCase().includes(filter));
   if (!wallet) {
     console.error(`No tracked wallet matches "${filter}"`);
     process.exit(1);
@@ -53,7 +51,10 @@ async function main() {
   console.log(`\nBy category:`);
   const categories = [...new Set(trials.map((t) => t.category))];
   for (const cat of categories) {
-    reportGroup(cat, trials.filter((t) => t.category === cat));
+    reportGroup(
+      cat,
+      trials.filter((t) => t.category === cat)
+    );
   }
 
   console.log(`\nBy entry price band:`);
@@ -85,8 +86,14 @@ async function main() {
 
   console.log(`\n15-30c band, by side:`);
   const sweetSpot = trials.filter((t) => t.entryPrice >= 0.15 && t.entryPrice < 0.3);
-  reportGroup("HIGH", sweetSpot.filter((t) => /\(HIGH\)/.test(t.question)));
-  reportGroup("LOW", sweetSpot.filter((t) => /\(LOW\)/.test(t.question)));
+  reportGroup(
+    "HIGH",
+    sweetSpot.filter((t) => /\(HIGH\)/.test(t.question))
+  );
+  reportGroup(
+    "LOW",
+    sweetSpot.filter((t) => /\(LOW\)/.test(t.question))
+  );
 
   mkdirSync("data", { recursive: true });
   const cachePath = `data/${wallet.address}-trials.json`;

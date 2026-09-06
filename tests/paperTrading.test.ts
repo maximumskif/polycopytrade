@@ -186,8 +186,10 @@ test("resolveOpenOrders books correct P&L for a win (payout = stake / entryPrice
   // Now the markets have settled: c-win resolves Yes, c-loss resolves No.
   __setFetchImplForTests(async (url) => {
     const s = url.toString();
-    if (s.includes("condition_ids=c-win")) return fakeResponse([fakeMarket({ conditionId: "c-win", closed: true, outcomePrices: JSON.stringify(["1", "0"]) })]);
-    if (s.includes("condition_ids=c-loss")) return fakeResponse([fakeMarket({ conditionId: "c-loss", closed: true, outcomePrices: JSON.stringify(["0", "1"]) })]);
+    if (s.includes("condition_ids=c-win"))
+      return fakeResponse([fakeMarket({ conditionId: "c-win", closed: true, outcomePrices: JSON.stringify(["1", "0"]) })]);
+    if (s.includes("condition_ids=c-loss"))
+      return fakeResponse([fakeMarket({ conditionId: "c-loss", closed: true, outcomePrices: JSON.stringify(["0", "1"]) })]);
     throw new Error(`unexpected URL: ${s}`);
   });
   const { resolved } = await resolveOpenOrders();

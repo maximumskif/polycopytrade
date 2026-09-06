@@ -46,12 +46,7 @@ test("two fills 121s apart in the same market/outcome/side stay separate orders"
 });
 
 test("a chain of fills each <=120s from the previous one all merge into a single order", () => {
-  const orders = clusterFills([
-    fill({ timestamp: 1000 }),
-    fill({ timestamp: 1100 }),
-    fill({ timestamp: 1200 }),
-    fill({ timestamp: 1300 }),
-  ]);
+  const orders = clusterFills([fill({ timestamp: 1000 }), fill({ timestamp: 1100 }), fill({ timestamp: 1200 }), fill({ timestamp: 1300 })]);
   assert.equal(orders.length, 1);
   assert.equal(orders[0].fillCount, 4);
   assert.equal(orders[0].firstTs, 1000);
@@ -83,10 +78,7 @@ test("fills on different markets never merge, even at the same timestamp", () =>
 });
 
 test("usdcSize and size accumulate across a merged cluster", () => {
-  const orders = clusterFills([
-    fill({ timestamp: 1000, usdcSize: 5, size: 10 }),
-    fill({ timestamp: 1050, usdcSize: 3, size: 6 }),
-  ]);
+  const orders = clusterFills([fill({ timestamp: 1000, usdcSize: 5, size: 10 }), fill({ timestamp: 1050, usdcSize: 3, size: 6 })]);
   assert.equal(orders.length, 1);
   assert.equal(orders[0].usdcSize, 8);
   assert.equal(orders[0].size, 16);

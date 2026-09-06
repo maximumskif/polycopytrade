@@ -55,9 +55,8 @@ function findConsensusCandidates(): ConsensusCandidate[] {
     const isClearMajority = !second || top.walletCount > second.walletCount;
     if (!isClearMajority || top.walletCount < MIN_MAJORITY_WALLETS) continue;
 
-    const eventRow = db
-      .prepare(`SELECT raw_payload FROM wallet_activity WHERE condition_id = ? LIMIT 1`)
-      .get(conditionId) as { raw_payload: string } | undefined;
+    const eventRow = db.prepare(`SELECT raw_payload FROM wallet_activity WHERE condition_id = ? LIMIT 1`).get(conditionId) as
+      { raw_payload: string } | undefined;
     let eventSlug = conditionId;
     if (eventRow) {
       try {
@@ -136,7 +135,9 @@ async function main() {
   const allTrials = resolved.map((r) => r.trial);
   const r = computeStrategyResult(allTrials, baseConfig());
   console.log(`\n[crowd consensus, >=${MIN_MAJORITY_WALLETS}-wallet majority]`);
-  console.log(`  trials=${r.trialCount}  distinctEvents=${r.distinctEvents}  effectiveIndependentSampleCount=${r.effectiveIndependentSampleCount.toFixed(1)}`);
+  console.log(
+    `  trials=${r.trialCount}  distinctEvents=${r.distinctEvents}  effectiveIndependentSampleCount=${r.effectiveIndependentSampleCount.toFixed(1)}`
+  );
   console.log(`  winRate=${(r.winRate * 100).toFixed(1)}%  netPnl=$${r.netPnl.toFixed(2)}  roi=${(r.roi * 100).toFixed(1)}%`);
   if (r.roiBootstrapCI) {
     console.log(`  95% ROI CI: [${(r.roiBootstrapCI[0] * 100).toFixed(1)}%, ${(r.roiBootstrapCI[1] * 100).toFixed(1)}%]`);

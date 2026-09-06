@@ -32,7 +32,12 @@ function ensureMigrationsTable(db: DatabaseSync) {
 // through one migration's SQL can't leave the schema half-created.
 export function runMigrations(db: DatabaseSync = getDb()): { applied: string[] } {
   ensureMigrationsTable(db);
-  const already = new Set(db.prepare("SELECT id FROM schema_migrations").all().map((r: any) => r.id as string));
+  const already = new Set(
+    db
+      .prepare("SELECT id FROM schema_migrations")
+      .all()
+      .map((r: any) => r.id as string)
+  );
 
   const applied: string[] = [];
   for (const migration of MIGRATIONS) {
@@ -45,7 +50,7 @@ export function runMigrations(db: DatabaseSync = getDb()): { applied: string[] }
       applied.push(migration.id);
     } catch (err) {
       db.exec("ROLLBACK");
-      throw new Error(`Migration ${migration.id} failed: ${(err as Error).message}`);
+      throw new Error(`Migration ${migration.id} failed: ${(err as Error).message}`, { cause: err });
     }
   }
   return { applied };

@@ -59,11 +59,14 @@ test("retries on 429 up to the configured bound, then throws — never retries f
     return fakeResponse(429, {});
   });
 
-  await assert.rejects(() => getActivity("0xabc"), (err: unknown) => {
-    assert.ok(err instanceof PolymarketApiError);
-    assert.equal(err.statusCode, 429);
-    return true;
-  });
+  await assert.rejects(
+    () => getActivity("0xabc"),
+    (err: unknown) => {
+      assert.ok(err instanceof PolymarketApiError);
+      assert.equal(err.statusCode, 429);
+      return true;
+    }
+  );
   assert.equal(calls, config.apiMaxRetries, `expected exactly ${config.apiMaxRetries} attempts, got ${calls}`);
 });
 
@@ -74,11 +77,14 @@ test("a non-429 error status fails immediately without burning the retry budget"
     return fakeResponse(400, { error: "bad request" });
   });
 
-  await assert.rejects(() => getActivity("0xabc"), (err: unknown) => {
-    assert.ok(err instanceof PolymarketApiError);
-    assert.equal((err as PolymarketApiError).statusCode, 400);
-    return true;
-  });
+  await assert.rejects(
+    () => getActivity("0xabc"),
+    (err: unknown) => {
+      assert.ok(err instanceof PolymarketApiError);
+      assert.equal((err as PolymarketApiError).statusCode, 400);
+      return true;
+    }
+  );
   assert.equal(calls, 1, "a 400 should not be retried");
 });
 

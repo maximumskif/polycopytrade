@@ -98,8 +98,7 @@ export function recordWalletPoll(result: WalletPollResult): void {
 export function getWalletHealth(address: string): WalletHealth | null {
   const db = getDb();
   const wallet = db.prepare(`SELECT address, label FROM wallets WHERE address = ?`).get(address) as
-    | { address: string; label: string }
-    | undefined;
+    { address: string; label: string } | undefined;
   if (!wallet) return null;
 
   const lastPoll = db
@@ -245,7 +244,9 @@ export function resolvePaperOrder(id: number, status: PaperOrderStatus, payoutUs
 export function listPaperOrders(walletAddress?: string): PaperOrder[] {
   const db = getDb();
   const rows = walletAddress
-    ? db.prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders WHERE wallet_address = ? ORDER BY leader_timestamp ASC`).all(walletAddress)
+    ? db
+        .prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders WHERE wallet_address = ? ORDER BY leader_timestamp ASC`)
+        .all(walletAddress)
     : db.prepare(`SELECT ${PAPER_ORDER_COLUMNS} FROM paper_orders ORDER BY leader_timestamp ASC`).all();
   return rows.map(mapPaperOrderRow);
 }
