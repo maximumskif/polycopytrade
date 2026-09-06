@@ -21,13 +21,37 @@ import { pollAllWallets } from "./pollWallet";
 import { wireApiErrorsToStorage } from "./wireApiErrors";
 import { runPaperTradingCycle } from "../paperTrading/engine";
 
-async function sleepInterruptible(ms: number, isStopping: () => boolean): Promise<void> {
-  const step = 500;
+// stepMs is only overridden by tests (real callers always use the 500ms
+// default) -- lets the interruptibility behavior be verified quickly with a
+// small step instead of waiting on real 500ms ticks.
+export async function sleepInterruptible(ms: number, isStopping: () => boolean, stepMs = 500): Promise<void> {
   let waited = 0;
   while (waited < ms && !isStopping()) {
-    await new Promise((r) => setTimeout(r, Math.min(step, ms - waited)));
-    waited += step;
+    await new Promise((r) => setTimeout(r, Math.min(stepMs, ms - waited)));
+    waited += stepMs;
   }
+}
+
+export interface LoopDeps {
+  intervalMs: number;
+  isStopping: () => boolean;
+  runCycle: (cycle: number) => Promise<void>;
+  sleep: (ms: number, isStopping: () => boolean) => Promise<void>;
+}
+
+// The daemon's control flow (sequential cycles, never overlapping, stops
+// promptly once isStopping() flips) extracted from main() so it's testable
+// with injected fakes instead of the real DB/API/paper-trading calls. Returns
+// the number of cycles actually run.
+export async function runLoop(deps: LoopDeps): Promise<number> {
+  let cycle = 0;
+  while (!deps.isStopping()) {
+    cycle++;
+    await deps.runCycle(cycle);
+    if (deps.isStopping()) break;
+    await deps.sleep(deps.intervalMs, deps.isStopping);
+  }
+  return cycle;
 }
 
 export async function main() {
@@ -48,27 +72,27 @@ export async function main() {
 
   console.log(`[daemon] starting — poll interval ${config.pollIntervalMs}ms, db ${config.dbPath}`);
 
-  let cycle = 0;
-  while (!stopping) {
-    cycle++;
-    const wallets = listTrackedWallets();
-    console.log(`\n[daemon] cycle ${cycle} — polling ${wallets.length} wallets`);
-    const results = await pollAllWallets(wallets);
-    const failed = results.filter((r) => r.outcome !== "ok").length;
-    if (failed > 0) console.warn(`[daemon] cycle ${cycle}: ${failed}/${results.length} wallets failed this cycle`);
+  await runLoop({
+    intervalMs: config.pollIntervalMs,
+    isStopping: () => stopping,
+    sleep: sleepInterruptible,
+    runCycle: async (cycle) => {
+      const wallets = listTrackedWallets();
+      console.log(`\n[daemon] cycle ${cycle} — polling ${wallets.length} wallets`);
+      const results = await pollAllWallets(wallets);
+      const failed = results.filter((r) => r.outcome !== "ok").length;
+      if (failed > 0) console.warn(`[daemon] cycle ${cycle}: ${failed}/${results.length} wallets failed this cycle`);
 
-    // A paper-trading failure must never take down wallet tracking — this
-    // is a downstream consumer of the data this loop's real job is to
-    // collect, not the other way around.
-    try {
-      await runPaperTradingCycle();
-    } catch (err) {
-      console.warn(`[daemon] cycle ${cycle}: paper-trading step failed: ${(err as Error).message}`);
-    }
-
-    if (stopping) break;
-    await sleepInterruptible(config.pollIntervalMs, () => stopping);
-  }
+      // A paper-trading failure must never take down wallet tracking — this
+      // is a downstream consumer of the data this loop's real job is to
+      // collect, not the other way around.
+      try {
+        await runPaperTradingCycle();
+      } catch (err) {
+        console.warn(`[daemon] cycle ${cycle}: paper-trading step failed: ${(err as Error).message}`);
+      }
+    },
+  });
 
   console.log("[daemon] stopped.");
 }

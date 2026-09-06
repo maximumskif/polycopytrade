@@ -13,7 +13,7 @@ import { getActivity, type Activity } from "./api/client";
 import { TRACKED_WALLETS } from "./wallets";
 import { categorize } from "./categorize";
 
-interface SyntheticOrder {
+export interface SyntheticOrder {
   conditionId: string;
   outcome: string;
   side: string;
@@ -24,7 +24,7 @@ interface SyntheticOrder {
   fillCount: number;
 }
 
-function clusterFills(trades: Activity[]): SyntheticOrder[] {
+export function clusterFills(trades: Activity[]): SyntheticOrder[] {
   const sorted = [...trades].sort((a, b) =>
     a.conditionId === b.conditionId
       ? a.outcome === b.outcome
