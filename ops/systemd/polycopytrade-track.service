@@ -1,0 +1,23 @@
+# systemd user service for `npm run track:daemon` (wallet polling + Phase 3
+# paper trading). Machine-specific paths (this box's nvm-installed Node and
+# the repo's location under /mnt/c, outside $HOME because of how WSL mounts
+# the Windows filesystem) -- regenerate with updated paths if either moves.
+# See docs/OPERATIONS.md for install/enable/start instructions.
+
+[Unit]
+Description=polycopytrade wallet-tracking daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/c/Users/mdeff/polycopytrade
+ExecStartPre=/bin/mkdir -p /mnt/c/Users/mdeff/polycopytrade/data
+ExecStart=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin/npm run track:daemon
+Restart=always
+RestartSec=5
+StandardOutput=append:/mnt/c/Users/mdeff/polycopytrade/data/track-daemon.systemd.log
+StandardError=append:/mnt/c/Users/mdeff/polycopytrade/data/track-daemon.systemd.log
+
+[Install]
+WantedBy=default.target
