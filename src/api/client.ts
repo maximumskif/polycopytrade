@@ -9,21 +9,19 @@ import { config } from "../config/env";
 import { RateLimiter } from "../utils/rateLimiter";
 import { backoffDelayMs, sleep } from "../utils/retry";
 import {
-  PositionsResponseSchema,
   ActivityResponseSchema,
   PublicSearchResponseSchema,
   MarketsLookupResponseSchema,
   PricesHistoryResponseSchema,
   GammaEventsResponseSchema,
   OrderBookSchema,
-  type Position,
   type Activity,
   type GammaMarket,
   type GammaEvent,
   type OrderBook,
 } from "./schemas";
 
-export type { Position, Activity, GammaMarket, GammaEvent };
+export type { Activity, GammaMarket, GammaEvent };
 
 const DATA_API = "https://data-api.polymarket.com";
 const GAMMA_API = "https://gamma-api.polymarket.com";
@@ -167,11 +165,6 @@ export async function getPricesHistory(clobTokenId: string, startTs: number, end
 export async function getOrderBook(tokenId: string): Promise<OrderBook> {
   const url = `https://clob.polymarket.com/book?token_id=${tokenId}`;
   return validate(OrderBookSchema, await requestJson(url), "GET clob/book");
-}
-
-export async function getPositions(address: string): Promise<Position[]> {
-  const url = `${DATA_API}/positions?user=${address}&sizeThreshold=0&limit=500&sortBy=CASHPNL&sortDirection=DESC`;
-  return validate(PositionsResponseSchema, await requestJson(url), "GET /positions");
 }
 
 export async function getActivity(

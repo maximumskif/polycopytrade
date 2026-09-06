@@ -55,7 +55,7 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
 test("running migrations twice is a no-op the second time", () => {
   const first = runMigrations(db);
   const second = runMigrations(db);
-  assert.deepEqual(first.applied, ["0001_init", "0002_paper_trading", "0003_orderbook_snapshots"]);
+  assert.deepEqual(first.applied, ["0001_init", "0002_paper_trading", "0003_orderbook_snapshots", "0004_drop_positions"]);
   assert.deepEqual(second.applied, []);
 });
 
@@ -65,9 +65,21 @@ test("migrations create the expected tables", () => {
     .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     .all()
     .map((r: any) => r.name);
-  for (const expected of ["wallets", "wallet_activity", "positions", "api_errors", "wallet_polls", "paper_orders", "orderbook_snapshots"]) {
+  for (const expected of ["wallets", "wallet_activity", "api_errors", "wallet_polls", "paper_orders", "orderbook_snapshots"]) {
     assert.ok(tables.includes(expected), `expected table ${expected} to exist`);
   }
+});
+
+// 0004_drop_positions (docs/IMPROVEMENT_PLAN.md Track B.5): the `positions`
+// table was write-only dead data (see src/tracking/pollWallet.ts) -- confirm
+// the drop migration actually removes it rather than leaving it behind.
+test("migrating drops the now-unused positions table", () => {
+  runMigrations(db);
+  const tables = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+    .all()
+    .map((r: any) => r.name);
+  assert.ok(!tables.includes("positions"), "positions table should have been dropped by 0004_drop_positions");
 });
 
 test("upsertWallet is idempotent and updates mutable fields", () => {

@@ -14,25 +14,6 @@
 
 import { z } from "zod";
 
-export const PositionSchema = z.object({
-  proxyWallet: z.string(),
-  asset: z.string(),
-  conditionId: z.string(),
-  size: z.number(),
-  avgPrice: z.number(),
-  curPrice: z.number(),
-  currentValue: z.number(),
-  cashPnl: z.number(),
-  percentPnl: z.number(),
-  realizedPnl: z.number(),
-  title: z.string(),
-  slug: z.string(),
-  outcome: z.string(),
-  endDate: z.string(),
-});
-export type Position = z.infer<typeof PositionSchema>;
-export const PositionsResponseSchema = z.array(PositionSchema);
-
 // `side` and `type` are loosely typed on purpose: confirmed against real
 // data that non-trade activity rows (e.g. type "REWARD" for a liquidity
 // reward payout) carry side="" and empty conditionId/outcome/title —

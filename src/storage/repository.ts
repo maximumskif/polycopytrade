@@ -4,7 +4,7 @@
 // between storage and everything else (tracking daemon, research scripts).
 
 import { getDb } from "./db";
-import type { Activity, Position } from "../api/schemas";
+import type { Activity } from "../api/schemas";
 import type {
   ApiErrorRecord,
   WalletPollResult,
@@ -70,38 +70,6 @@ export function insertActivity(walletAddress: string, rows: Activity[]): number 
     inserted += Number(result.changes);
   }
   return inserted;
-}
-
-// Positions are a snapshot time series, not deduped — see 0001_init.ts.
-export function insertPositionsSnapshot(walletAddress: string, rows: Position[]): number {
-  const db = getDb();
-  const polledAt = nowSeconds();
-  const stmt = db.prepare(
-    `INSERT INTO positions
-       (wallet_address, condition_id, outcome, asset, size, avg_price, cur_price, current_value, cash_pnl, percent_pnl, realized_pnl, title, slug, end_date, polled_at, raw_payload)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  );
-  for (const p of rows) {
-    stmt.run(
-      walletAddress,
-      p.conditionId,
-      p.outcome,
-      p.asset,
-      p.size,
-      p.avgPrice,
-      p.curPrice,
-      p.currentValue,
-      p.cashPnl,
-      p.percentPnl,
-      p.realizedPnl,
-      p.title,
-      p.slug,
-      p.endDate,
-      polledAt,
-      JSON.stringify(p)
-    );
-  }
-  return rows.length;
 }
 
 export function recordApiError(err: ApiErrorRecord): void {

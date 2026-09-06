@@ -9,11 +9,12 @@
 // this reached 1.6M rows / ~1.85GB inside a single day, which would have
 // made Phase 3's "run for weeks" plan fill the disk. Stopped polling
 // positions entirely rather than adding retention logic for data nothing
-// uses — see docs/AUDIT.md's Phase 3 section. The `positions` table,
-// `insertPositionsSnapshot`, and `getPositions` are left in place
-// (harmless, unused) for Phase 4 to pick back up deliberately if a
-// dashboard ever needs current-position data, with real retention design
-// done at that point instead of guessed at now.
+// uses — see docs/AUDIT.md's Phase 3 section. `getPositions`,
+// `insertPositionsSnapshot`, and the `positions` table itself were left in
+// place afterward for a hypothetical future dashboard; removed entirely
+// 2026-09-05 (docs/IMPROVEMENT_PLAN.md Track B.5) since no dashboard work
+// was imminent — re-add with real retention design if one ever needs
+// current-position data, same call the original audit deferred.
 
 import { getActivity } from "../api/client";
 import { insertActivity, recordWalletPoll } from "../storage/repository";
