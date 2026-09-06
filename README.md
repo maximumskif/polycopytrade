@@ -592,6 +592,11 @@ or unconfirmed — see Roadmap for the remaining fallback wallets.
 
 ## Setup
 
+Requires **Node 22.5+ or Node 24** — the storage layer uses `node:sqlite`
+(built into Node, no native dependency), which doesn't exist on older
+versions. If you're on an older Node, install a current one first (e.g. via
+[nvm](https://github.com/nvm-sh/nvm): `nvm install 22 && nvm use 22`).
+
 ```
 npm install
 cp .env.example .env
