@@ -161,6 +161,19 @@ export type WalletFlag =
   | "uncopyable-high-frequency"
   | "insufficient-sample";
 
+// The exact 0-1 terms qualityScore is a weighted sum of -- kept alongside the
+// composite so a human can see WHY a wallet scored the way it did instead of
+// treating the number as a black box. See scoring/walletScore.ts for the
+// weights and the reasoning behind each term.
+export interface WalletQualityScoreComponents {
+  roiLowerBound: number;
+  riskAdjustedReturn: number;
+  consistency: number;
+  profitConcentration: number;
+  drawdown: number;
+  sampleSize: number;
+}
+
 export interface WalletScore {
   address: string;
   label: string;
@@ -168,12 +181,30 @@ export interface WalletScore {
   distinctEvents: number;
   activitySpanDays: number;
   daysSinceLastActivity: number;
-  concentrationTopEventShare: number; // fraction of total stake in the single largest event
+  concentrationTopEventShare: number; // fraction of total STAKE in the single largest event
+  // Fraction of total realized PROFIT (not stake) coming from the single
+  // largest / top-3 largest events -- distinct from concentrationTopEventShare
+  // above: a wallet can spread its stake evenly across many events yet still
+  // owe nearly all its P&L to one lucky outcome (docs/AUDIT.md's
+  // one-shot-bet lesson, generalized from "did most of the money go into one
+  // bet" to "did most of the money come OUT of one bet").
+  profitConcentrationTopEventShare: number;
+  profitConcentrationTop3EventShare: number;
   electionShare: number; // fraction of resolved trials in the "politics" category
   medianGapSeconds: number; // median time between consecutive TRADE fills — basis for the uncopyable-high-frequency flag
+  // Stability of ROI across weekly rolling windows (see rollingWindow.ts) --
+  // null when there's under 2 windows of history to judge, not 0 (a short
+  // history isn't evidence of instability, just an unanswered question).
+  consistencyScore: number | null;
   netPnl: number;
   roi: number;
   winRate: number;
+  // Composite 0-100 score over wallets that already clear the hard veto
+  // flags above -- NOT a replacement for those flags. A wallet can score
+  // well here and still be un-copyable (e.g. uncopyable-high-frequency);
+  // check `flags`, not just this number.
+  qualityScore: number;
+  qualityScoreComponents: WalletQualityScoreComponents;
   strategyResult: StrategyResult;
 }
 

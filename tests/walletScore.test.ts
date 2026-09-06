@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeWalletScore } from "../src/scoring/walletScore";
+import { computeWalletScore, computeProfitConcentration, computeConsistencyScore, computeQualityScore } from "../src/scoring/walletScore";
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../src/backtesting/statistics";
 import { defaultBacktestConfig } from "../src/backtesting/engine";
 import type { Activity } from "../src/api/client";
@@ -204,4 +204,106 @@ test("non-TRADE activity rows are excluded from the high-frequency cadence check
   const result = computeStrategyResult(trials, config);
   const score = computeWalletScore(wallet, activity, trials, result);
   assert.ok(!score.flags.includes("uncopyable-high-frequency"));
+});
+
+// ---------------------------------------------------------------------
+// Wallet Quality Score (docs/IMPROVEMENT_PLAN.md's "profit-directed" work):
+// composite score + its two new supporting metrics, profit concentration
+// and rolling-window consistency.
+// ---------------------------------------------------------------------
+
+test("computeProfitConcentration: one event carrying all the profit scores near 1", () => {
+  const trials = [
+    trial({ conditionId: "big", eventKey: "big-event", netReturn: 1000 }),
+    trial({ conditionId: "a", eventKey: "ea", netReturn: 5 }),
+    trial({ conditionId: "b", eventKey: "eb", netReturn: -3 }), // losses excluded from the profit-share denominator
+  ];
+  const { topEventShare, top3EventShare } = computeProfitConcentration(trials);
+  assert.ok(topEventShare > 0.98, `expected topEventShare near 1, got ${topEventShare}`);
+  assert.equal(top3EventShare, 1); // only 2 events had positive P&L at all, both counted in "top 3"
+});
+
+test("computeProfitConcentration: profit spread evenly across many events scores low", () => {
+  const trials = Array.from({ length: 20 }, (_, i) => trial({ conditionId: `c${i}`, eventKey: `e${i}`, netReturn: 10 }));
+  const { topEventShare } = computeProfitConcentration(trials);
+  assert.ok(topEventShare < 0.1, `expected an even split to score low, got ${topEventShare}`);
+});
+
+test("computeProfitConcentration: a wallet with no net-positive events returns zero, not NaN", () => {
+  const trials = [trial({ conditionId: "a", eventKey: "ea", netReturn: -5, won: false })];
+  const { topEventShare, top3EventShare } = computeProfitConcentration(trials);
+  assert.equal(topEventShare, 0);
+  assert.equal(top3EventShare, 0);
+});
+
+test("computeConsistencyScore: fewer than 2 weekly windows of history returns null, not a penalized score", () => {
+  const trials = [
+    trial({ conditionId: "a", eventKey: "ea", entryTimestamp: NOW - 2 * 3600 }),
+    trial({ conditionId: "b", eventKey: "eb", entryTimestamp: NOW - 3600 }),
+  ];
+  assert.equal(computeConsistencyScore(trials, config), null);
+});
+
+test("computeConsistencyScore: an edge that decays from strongly positive to negative scores lower than one that improves", () => {
+  const oldest = NOW - 21 * DAY;
+  const trialAt = (daysFromOldest: number, netReturn: number) =>
+    trial({
+      conditionId: `c${daysFromOldest}-${netReturn}`,
+      eventKey: `e${daysFromOldest}-${netReturn}`,
+      entryTimestamp: oldest + daysFromOldest * DAY,
+      usdcStaked: 10,
+      netReturn,
+      won: netReturn > 0,
+    });
+
+  // Three weekly buckets each: decaying goes +80% -> 0% -> -80% ROI (Phase
+  // 1f's 0x_exit shape); improving is the mirror image.
+  const decaying = [trialAt(0, 8), trialAt(1, 8), trialAt(7, 0), trialAt(8, 0), trialAt(14, -8), trialAt(15, -8)];
+  const improving = [trialAt(0, -8), trialAt(1, -8), trialAt(7, 0), trialAt(8, 0), trialAt(14, 8), trialAt(15, 8)];
+
+  const decayingScore = computeConsistencyScore(decaying, config);
+  const improvingScore = computeConsistencyScore(improving, config);
+  assert.ok(decayingScore !== null && improvingScore !== null);
+  assert.ok(improvingScore! > decayingScore!, `expected improving (${improvingScore}) > decaying (${decayingScore})`);
+});
+
+test("computeQualityScore: a profitable, diversified, low-drawdown wallet scores well above a losing, concentrated one", () => {
+  const goodTrials = baselineTrials(30); // all winners, one event each, spread over ~30 days
+  const goodResult = computeStrategyResult(goodTrials, config);
+  const goodConcentration = computeProfitConcentration(goodTrials);
+  const goodConsistency = computeConsistencyScore(goodTrials, config);
+  const good = computeQualityScore(goodResult, goodConcentration, goodConsistency);
+
+  const badTrials = [
+    ...Array.from({ length: 25 }, (_, i) =>
+      trial({
+        conditionId: `bad${i}`,
+        eventKey: "one-big-loss",
+        usdcStaked: 20,
+        netReturn: -15,
+        won: false,
+        entryTimestamp: NOW - (30 - i) * DAY,
+      })
+    ),
+  ];
+  const badResult = computeStrategyResult(badTrials, config);
+  const badConcentration = computeProfitConcentration(badTrials);
+  const badConsistency = computeConsistencyScore(badTrials, config);
+  const bad = computeQualityScore(badResult, badConcentration, badConsistency);
+
+  assert.ok(good.score > bad.score, `expected good (${good.score}) > bad (${bad.score})`);
+  assert.ok(good.score >= 0 && good.score <= 100);
+  assert.ok(bad.score >= 0 && bad.score <= 100);
+});
+
+test("computeWalletScore populates the new quality-score fields alongside the existing flags", () => {
+  const trials = baselineTrials(MIN_SAMPLE_SIZE);
+  const activity = baselineActivity(MIN_SAMPLE_SIZE);
+  const result = computeStrategyResult(trials, config);
+  const score = computeWalletScore(wallet, activity, trials, result);
+
+  assert.ok(score.qualityScore >= 0 && score.qualityScore <= 100);
+  assert.ok(score.profitConcentrationTopEventShare >= 0 && score.profitConcentrationTopEventShare <= 1);
+  assert.ok(score.profitConcentrationTop3EventShare >= score.profitConcentrationTopEventShare);
+  assert.ok(score.qualityScoreComponents.roiLowerBound > 0.5); // baselineTrials is all winners at +50% ROI
 });
