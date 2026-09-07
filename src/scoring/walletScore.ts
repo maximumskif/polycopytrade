@@ -125,13 +125,28 @@ export function computeQualityScore(
     sampleSize: clamp01(strategyResult.effectiveIndependentSampleCount / (MIN_SAMPLE_SIZE * 2)),
   };
 
-  const score01 =
+  const rawScore01 =
     0.3 * components.roiLowerBound +
     0.2 * components.riskAdjustedReturn +
     0.15 * components.consistency +
     0.15 * components.profitConcentration +
     0.1 * components.drawdown +
     0.1 * components.sampleSize;
+
+  // Profitability floor: found live 2026-09-06 validating this against
+  // SDTrading (real net -1.7% ROI, no veto flags) -- it scored 63/100
+  // purely because near-zero concentration/drawdown and a huge sample
+  // (each individually near-perfect) outweighed its two below-neutral
+  // profitability terms. Hygiene should make a PROFITABLE wallet's edge
+  // more trustworthy; it must not be able to rescue a wallet that's
+  // actually losing money into "trade candidate" territory. Only caps when
+  // BOTH profitability terms are below neutral (0.5) -- a wallet with just
+  // one weak term (e.g. 0x1b20a0's wide-CI roiLowerBound=0.37 but
+  // riskAdjustedReturn=0.54) is a real, uncertain-but-live candidate, not
+  // the "clearly not profitable" case this guards against.
+  const PROFITABILITY_FLOOR_CAP = 0.5;
+  const bothProfitabilityTermsWeak = components.roiLowerBound < 0.5 && components.riskAdjustedReturn < 0.5;
+  const score01 = bothProfitabilityTermsWeak ? Math.min(rawScore01, PROFITABILITY_FLOOR_CAP) : rawScore01;
 
   return { score: Math.round(score01 * 100), components };
 }

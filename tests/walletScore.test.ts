@@ -4,7 +4,7 @@ import { computeWalletScore, computeProfitConcentration, computeConsistencyScore
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../src/backtesting/statistics";
 import { defaultBacktestConfig } from "../src/backtesting/engine";
 import type { Activity } from "../src/api/client";
-import type { BacktestTrial } from "../src/domain/types";
+import type { BacktestTrial, StrategyResult } from "../src/domain/types";
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;
@@ -58,6 +58,37 @@ function baselineTrials(n: number, spacingSeconds = DAY): BacktestTrial[] {
 
 function baselineActivity(n: number, spacingSeconds = DAY): Activity[] {
   return Array.from({ length: n }, (_, i) => activityRow({ conditionId: `c${i}`, timestamp: NOW - (n - i) * spacingSeconds }));
+}
+
+// Hand-built StrategyResult for testing computeQualityScore's own logic in
+// isolation from trial construction -- defaults to "large, clean, low-
+// drawdown sample with weak profitability," the exact shape that motivated
+// the profitability-floor cap (real SDTrading validation, 2026-09-06).
+function strategyResult(overrides: Partial<StrategyResult> = {}): StrategyResult {
+  return {
+    config,
+    trialCount: 100,
+    distinctMarkets: 100,
+    distinctEvents: 100,
+    effectiveIndependentSampleCount: 100,
+    totalStaked: 1000,
+    grossReturned: 980,
+    netPnl: -20,
+    roi: -0.02,
+    winRate: 0.48,
+    expectedValuePerDollar: -0.02,
+    avgWin: 5,
+    avgLoss: -5,
+    profitFactor: 0.9,
+    maxDrawdownPct: 0.05,
+    volatility: 0.1,
+    sharpeLike: -0.1,
+    sortinoLike: -0.1,
+    roiBootstrapCI: [-0.05, 0.01],
+    categoryBreakdown: {},
+    meetsMinimumSample: true,
+    ...overrides,
+  };
 }
 
 test("a wallet with 2 distinct events is flagged one-shot", () => {
@@ -294,6 +325,32 @@ test("computeQualityScore: a profitable, diversified, low-drawdown wallet scores
   assert.ok(good.score > bad.score, `expected good (${good.score}) > bad (${bad.score})`);
   assert.ok(good.score >= 0 && good.score <= 100);
   assert.ok(bad.score >= 0 && bad.score <= 100);
+});
+
+test("computeQualityScore: perfect hygiene cannot rescue a wallet whose ROI AND risk-adjusted return are both below neutral", () => {
+  // Real case this regression-tests: SDTrading (837 events, -1.7% real ROI,
+  // no veto flags) scored 63/100 before this cap existed -- near-zero
+  // concentration/drawdown and a huge sample outweighed weak profitability
+  // and landed a genuinely losing wallet in "trade candidate" range.
+  const result = strategyResult({ roiBootstrapCI: [-0.1, -0.02], sortinoLike: -0.5, sharpeLike: -0.5 });
+  const { score, components } = computeQualityScore(result, { topEventShare: 0, top3EventShare: 0 }, 1);
+
+  assert.ok(components.roiLowerBound < 0.5, "test setup: roiLowerBound must be below neutral");
+  assert.ok(components.riskAdjustedReturn < 0.5, "test setup: riskAdjustedReturn must be below neutral");
+  assert.ok(score <= 50, `expected the profitability floor to cap this at <=50, got ${score}`);
+});
+
+test("computeQualityScore: the cap does NOT apply when only one profitability term is weak", () => {
+  // Mirrors 0x1b20a0's real shape: a wide, zero-straddling ROI CI
+  // (roiLowerBound below neutral) alongside a genuinely strong risk-adjusted
+  // return -- a real, uncertain-but-live candidate, not the "clearly not
+  // profitable" case the cap exists for.
+  const result = strategyResult({ roiBootstrapCI: [-0.1, 0.3], sortinoLike: 3, sharpeLike: 3 });
+  const { score, components } = computeQualityScore(result, { topEventShare: 0, top3EventShare: 0 }, 1);
+
+  assert.ok(components.roiLowerBound < 0.5, "test setup: roiLowerBound must be below neutral");
+  assert.ok(components.riskAdjustedReturn >= 0.5, "test setup: riskAdjustedReturn must be at/above neutral");
+  assert.ok(score > 50, `expected no cap since only one term is weak, got ${score}`);
 });
 
 test("computeWalletScore populates the new quality-score fields alongside the existing flags", () => {
