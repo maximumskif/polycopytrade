@@ -213,3 +213,56 @@ Polymarket data rather than adopting it wholesale or chasing meteorabot.
     actually the same entity?) — would need a new Polygon-chain data source
     (e.g. Polygonscan) this project doesn't use today, bigger lift than
     18-19, deliberately deferred rather than started speculatively.
+
+## Track H — Multi-market expansion (added 2026-09-07)
+
+Per the user's decision to expand polycopytrade's scope beyond Polymarket
+rather than treat the blueprint as Polymarket-only or pivot to `meteorabot`.
+Proposed phases (agreed in chat): **B** design → **C** Solana data infra →
+**D** Solana wallet intelligence → **E** token/pool discovery + security
+filters → **F** Solana strategy engine → **G** execution (reusing
+`meteorabot`'s dormant fork-tested swap code) → **H** perps (Hyperliquid,
+lowest priority, own strategy family).
+
+21. ✅ **Done 2026-09-07.** **Phase B — `docs/MULTI_MARKET_ARCHITECTURE.md`.**
+    Built by a subagent in an isolated worktree, merged into master. Hit and
+    recovered from a real snag: the worktree branched off 4 commits behind
+    local master (commits existed locally, never pushed to origin — a
+    harness/isolation quirk, filed as product feedback), so its first pass
+    designed against a stale, simpler `walletScore.ts`. The agent caught the
+    mismatch itself and flagged it rather than guessing past it; resumed
+    with the real current state, reconciled cleanly (no code changes needed,
+    doc-only). **Key finding**: `statistics.ts`/`rollingWindow.ts` and the
+    entire composite-quality-score layer (`computeQualityScore`/
+    `computeProfitConcentration`/`computeConsistencyScore`) are already
+    100% market-agnostic — only two hardcoded literals in
+    `walletScore.ts` (`type === "TRADE"`, `category === "politics"`) are
+    Polymarket-specific, both feeding flags only, neither feeding the score.
+    **Bigger finding**: Polymarket's `hold-to-resolution` trial-building
+    treatment has no Solana analog at all (a spot token never "resolves");
+    only `mirror-exit` generalizes. Proposes a `MarketAdapter` interface and
+    a future (not executed) `src/core/`+`src/markets/{polymarket,solana}/`
+    layout. 6 open questions listed at the doc's end for sign-off before
+    Phase D.
+22. ✅ **Done 2026-09-07, started only.** **Phase C — Solana data client
+    scaffold**, `src/markets/solana/{client,schemas}.ts` +
+    `tests/markets-solana-client.test.ts`. Mirrors `src/api/client.ts`'s
+    reliability pattern (imports the existing generic `src/utils/rateLimiter.ts`/
+    `retry.ts` directly rather than duplicating them). **No live API key
+    exists in this environment** — every endpoint/header/response shape is
+    sourced from Helius/Birdeye's published docs, not confirmed by a real
+    call, and the file headers say so explicitly (a deliberate, flagged
+    exception to this project's normal "confirmed by testing" bar). Two
+    concrete doc discrepancies caught and flagged rather than silently
+    picked: Helius's base-URL docs are internally inconsistent (defaulted to
+    `api.helius.xyz`), and Birdeye's PnL-summary path differs between its
+    two own doc pages (`/wallet/v2/pnl_summary` vs `/wallet/v2/pnl/summary`
+    — used the latter). Rate limits defaulted conservative, both
+    second-hand/unconfirmed. `HELIUS_API_KEY`/`BIRDEYE_API_KEY` stubs added
+    to `.env.example`, not wired to anything live. 15 new tests. **Phase D
+    (real Solana wallet scoring) is blocked on obtaining a real API key** —
+    not started.
+23. Not started — **Phase D onward** (Solana wallet intelligence through
+    perps) blocked on: (a) resolving Phase B's 6 open questions with the
+    user, (b) getting a real Helius and/or Birdeye API key to verify Phase
+    C's scaffold against and unblock Phase D.
