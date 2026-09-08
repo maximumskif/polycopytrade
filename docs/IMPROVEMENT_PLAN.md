@@ -262,7 +262,13 @@ lowest priority, own strategy family).
     to `.env.example`, not wired to anything live. 15 new tests. **Phase D
     (real Solana wallet scoring) is blocked on obtaining a real API key** —
     not started.
-23. Not started — **Phase D onward** (Solana wallet intelligence through
-    perps) blocked on: (a) resolving Phase B's 6 open questions with the
-    user, (b) getting a real Helius and/or Birdeye API key to verify Phase
-    C's scaffold against and unblock Phase D.
+23. ✅ **Done 2026-09-07.** Phase B's 6 open questions resolved with the
+    user (see `docs/MULTI_MARKET_ARCHITECTURE.md`'s "Open questions"
+    section — all six now struck through with their decisions recorded):
+    same-mint `eventKey`, `hold-to-resolution`-has-no-analog signed off,
+    fully separate per-market storage schemas (not a shared table), no
+    Solana "dominant catalyst" flag (existing concentration checks already
+    cover it), and identical composite-score weights initially (no
+    Solana-specific retuning yet). **Phase D onward remains blocked on the
+    one thing none of these unblock: a real Helius and/or Birdeye API key**
+    to verify Phase C's scaffold against.

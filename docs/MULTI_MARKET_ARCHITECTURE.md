@@ -603,43 +603,48 @@ near it.
 
 ## Open questions for the user + orchestrator to resolve before Phase D
 
+**All six resolved 2026-09-07** (kept below, struck through, as a record of
+what was decided and why — not deleted). **Phase D itself remains blocked**
+on one thing none of these decisions unblock: a real Helius and/or Birdeye
+API key to verify Part 2's Solana client scaffold against (`src/markets/solana/`)
+— every endpoint/response shape there is sourced from published docs, not a
+real call, per that file's own header.
+
 1. ~~**The Track G / composite-score discrepancy**~~ — **Resolved** (see
    "Revision history" at the top): a harness/isolation quirk left this
    worktree's branch four commits behind local `master`. Rebased onto the
    real `master`; the composite score, profitability floor, and Track G all
    exist and are reflected throughout this revision.
-2. **`eventKey` for Solana** (Part 2): same-mint grouping is the obvious
-   first cut and matches the existing Polymarket convention most closely,
-   but doesn't catch cross-mint narrative correlation (two memecoins pumping
-   together). Worth a real decision, not a default, once real data exists to
-   check it against — same spirit as this project's own repeated "don't
-   guess a threshold, check it" discipline.
-3. **`hold-to-resolution` has no Solana analog** (Part 2) — confirms that a
-   Solana `MarketAdapter.buildTrials` can only ever be a `mirror-exit`
-   analog. Worth the user explicitly signing off on this before Phase D
-   writes real position-reconstruction code, since it's a bigger conceptual
-   gap than a first read of `BacktestTrial`'s field list suggests.
-4. **Storage: shared `trials` cache table vs. fully separate per-market
-   schemas** (Part 3) — no recommendation forced; needs a real decision once
-   there's a second market's data to actually store.
-5. **What a Solana "one dominant catalyst" flag should trigger on** (Part 2's
-   `concentrationCategories` idea) — Polymarket's `election-only` flag is a
-   very specific, well-evidenced pattern (this project independently
-   rediscovered it multiple times, README Phase 1c). The Solana analog is a
-   guess (one memecoin narrative dominating a wallet's whole history) with
-   zero validation yet — flagged as a guess, not a finding.
-6. **Are the composite score's weights (30/20/15/15/10/10) and `squash()`
-   scales Polymarket-tuned in a way that wouldn't transfer?** They're
-   explicitly documented in the real code as "starting points... not tuned
-   against the full 68-wallet pool yet" (`walletScore.ts` comments) even for
-   Polymarket alone. A Solana wallet population plausibly has structurally
-   different characteristics worth checking before assuming the same
-   weights generalize — e.g. drawdown may be a noisier signal for a
-   volatile memecoin-trading wallet than for a probability-bounded
-   Polymarket wallet, and `MIN_SAMPLE_SIZE`-relative sample-size scaling
-   (line 125) may need a different denominator if Solana wallets typically
-   generate far more or fewer independent events per unit time than
-   Polymarket ones do. Not a blocker for Phase D's adapter-building work,
-   but worth checking once real Solana wallet data exists to check it
-   against — same "don't guess a threshold" discipline as everywhere else
-   in this project.
+2. ~~**`eventKey` for Solana**~~ — **Resolved 2026-09-07: same-mint grouping
+   for a first pass.** Matches the existing Polymarket convention most
+   closely (multiple fills in/out of one token = one real bet).
+   Cross-mint narrative correlation (two memecoins pumping together) is a
+   known, documented gap, not solved now — revisit once Phase D has real
+   data to check whether it matters in practice.
+3. ~~**`hold-to-resolution` has no Solana analog**~~ — **Signed off**: a
+   Solana `MarketAdapter.buildTrials` implements only a `mirror-exit`
+   analog. Not really a choice (a spot token has no oracle-settlement
+   event to hang `hold-to-resolution` on), so treated as a confirmed
+   finding rather than a forced decision.
+4. ~~**Storage: shared `trials` cache table vs. fully separate per-market
+   schemas**~~ — **Resolved 2026-09-07: fully separate per-market schemas
+   for now.** Today's `wallet_activity`/`paper_orders` tables don't change
+   at all. Revisit the shared-table option (Part 3, option (a)) only if a
+   third market ever gets added — not needed for a two-market system.
+5. ~~**What a Solana "one dominant catalyst" flag should trigger on**~~ —
+   **Resolved 2026-09-07: skip it.** The existing `highly-concentrated`
+   (stake-based) and `computeProfitConcentration` (profit-based) checks
+   already catch "most of this wallet's activity/profit is one thing"
+   without needing a Solana-specific category taxonomy guessed at with zero
+   validation. `election-only` itself does NOT get a Solana equivalent —
+   `MarketAdapter.concentrationCategories` (Part 2's proposed interface) can
+   return an empty list for a Solana adapter rather than inventing a
+   taxonomy no data has validated yet.
+6. ~~**Composite score weights/scales Polymarket-tuned?**~~ — **Resolved
+   2026-09-07: use identical weights initially, retune later with real
+   data.** No changes to the 30/20/15/15/10/10 weights or `squash()` scales
+   for a future Solana adapter's first pass — same "don't guess a
+   threshold, check it" discipline already applied to every other number in
+   this project. Revisit once Phase D has a real Solana wallet population
+   large enough to check whether e.g. drawdown behaves as a noisier signal
+   there than for Polymarket's probability-bounded wallets.
