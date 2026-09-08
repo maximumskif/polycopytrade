@@ -14,7 +14,14 @@ import tseslint from "typescript-eslint";
 import prettier from "eslint-config-prettier";
 
 export default tseslint.config(
-  { ignores: ["dist/**", "data/**", "node_modules/**"] },
+  // .claude/worktrees/** holds temporary Agent-tool worktree checkouts (each
+  // with its own nested tsconfig.json) -- confirmed live 2026-09-07: leaving
+  // one in place after merging its branch made typescript-eslint see two
+  // candidate tsconfigRootDirs and fail to parse anything with a "No
+  // tsconfigRootDir was set" error. Worktrees should be removed via `git
+  // worktree remove` once merged regardless; this is defense-in-depth for
+  // the window before that cleanup happens.
+  { ignores: ["dist/**", "data/**", "node_modules/**", ".claude/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
