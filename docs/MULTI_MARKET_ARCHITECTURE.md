@@ -10,7 +10,72 @@ nothing about the running system.** No Polymarket file under `src/api/`,
 see "Constraints" in the task this doc was written under. The systemd
 `track:daemon`/paper-trading loop keeps running throughout, untouched.
 
-## A note on the brief this doc was written against
+## Revision history
+
+**2026-09-07, second pass — reconciled against the real codebase.** The
+first version of this doc (below, originally titled "A note on the brief
+this doc was written against") flagged that `docs/IMPROVEMENT_PLAN.md`'s
+"Track G" and `src/scoring/walletScore.ts`'s composite quality score
+appeared not to exist anywhere — not in the working tree, `git log`, or
+`origin/master`. **Root cause, since confirmed by the task's coordinator:**
+this worktree branched off local `master` at commit `461e93c`, but four more
+commits (`268e3d9` "Add composite Wallet Quality Score, keep existing flags
+as hard vetoes," `d9ae0d1` "Add Track G to the improvement plan," `c310f5c`
+"Add profitability floor to the Wallet Quality Score," `f44e8e6` "Add
+volatility-compression-breakout strategy test") landed on local `master`
+after that branch point and before this task started, and were never pushed
+to `origin` — a harness/isolation quirk (worktree branched before those
+commits landed, `origin` was never a factor either way), not a real absence
+of the work or a wrong call on my part to flag it. Rebased this worktree's
+branch onto the real local `master` (`git rebase master`, clean, no
+conflicts — my additions were purely additive) and re-read the real current
+`src/scoring/walletScore.ts`/`src/domain/types.ts` in full before revising
+anything below.
+
+**What changed in this revision, stated explicitly rather than silently
+patched in:**
+- The composite `qualityScore`/`WalletQualityScoreComponents`/profitability
+  floor are real, and turn out to be **entirely market-agnostic already** —
+  a stronger, better-grounded version of what Part 2's original "if/when one
+  is added" speculation guessed at. This is a **reaffirmation** of this
+  doc's core thesis (the scoring math is agnostic, only two literals in
+  `walletScore.ts` are Polymarket-specific), now checked against the real,
+  richer implementation instead of the absent one — see the rewritten
+  Section 1/2 below.
+- The original guess that a profitability floor "would plausibly reject a
+  wallet whose bootstrap CI's lower bound is negative, expressible purely
+  against `StrategyResult.roiBootstrapCI[0]`" was **substantially correct**:
+  the real floor caps the composite at 50 when BOTH the ROI-lower-bound term
+  AND the risk-adjusted-return term score below neutral — a real, slightly
+  richer two-term version of the single-term guess, found live against
+  SDTrading (real net -1.7% ROI, no veto flags, scored 63/100 before the cap
+  existed). Noted as a **partial confirmation**, not treated as if it were
+  already known.
+- Section 1's inventory of which `walletScore.ts` lines are Polymarket-
+  specific is **unchanged in substance** (still exactly two hardcoded
+  literals: the `"TRADE"` type filter and the `"politics"` category check)
+  — the three new functions (`computeProfitConcentration`,
+  `computeConsistencyScore`, `computeQualityScore`) add zero new
+  Polymarket-specific surface, which is itself worth stating rather than
+  assuming.
+- Everything about `statistics.ts`, `rollingWindow.ts`, `engine.ts`'s
+  `buildTrials`, the `hold-to-resolution`-has-no-Solana-analog finding, and
+  the directory-layout proposal is **reaffirmed unchanged** — none of those
+  files were touched by the four commits (confirmed via `git show --stat`
+  on each), so nothing about them needed revisiting. The `MarketAdapter`
+  interface proposal in Section 2 also holds, with one addition: it should
+  note explicitly that `computeQualityScore` needs zero adapter-supplied
+  input beyond what `MarketAdapter.buildTrials` already produces.
+
+The original first-pass note is kept below, struck through in spirit but not
+deleted, since it's still an accurate record of what a legitimate,
+carefully-checked read of the environment looked like at the time (`grep`
+across the working tree, `git log`, and `origin/master` really did come back
+empty) — useful as a record of why the flag was raised, not as current
+guidance.
+
+<details>
+<summary>Original first-pass note (superseded by the revision above — kept for the record)</summary>
 
 This doc was commissioned as "Phase B" of a `docs/IMPROVEMENT_PLAN.md` "Track
 G," described as already containing a Solana/EVM sniping-blueprint review
@@ -34,6 +99,8 @@ discrepancy should be resolved with the user before Phase D starts** — either
 Track G's content and the score-related work exist in a session/branch this
 worktree never received, or the brief described planned-but-not-yet-done work
 as already-done. See "Open questions" at the end.
+
+</details>
 
 ---
 
@@ -59,7 +126,7 @@ market-agnostic:
   groups), not individual trials, specifically to avoid treating correlated
   bets (the file's own example: 19 rungs of one month's WTI ladder) as 19
   independent draws. The *mechanism* (cluster bootstrap keyed by an opaque
-  grouping string) is 100% reusable; only the meaning of what belonges to
+  grouping string) is 100% reusable; only the meaning of what belongs to
   one `eventKey` is market-specific (see below).
 - `computeStrategyResult` (lines 84-141) — win rate, ROI, profit factor,
   volatility, `sharpeLike`/`sortinoLike` (explicitly documented at lines
@@ -76,20 +143,47 @@ by `entryTimestamp` and reruns `computeStrategyResult` per bucket (lines
 already describes this as answering "is performance stable across time" in
 general terms.
 
-**The veto-flag *philosophy*, not the current implementation.** The pattern
-established across `docs/AUDIT.md`'s Phase 2 (hard disqualifying flags kept
-separate from a continuous score, so a wallet can't buy its way past "this
-is a one-shot bet" with a good ROI number) is a market-agnostic idea. Today's
-`computeWalletScore` (`src/scoring/walletScore.ts:33-87`) implements exactly
-five of these flags as pure functions of counts/ratios/gaps that don't touch
-any Polymarket type: `one-shot` (distinctEvents ≤ 3), `dormant`
-(daysSinceLastActivity > 30), `highly-concentrated` (top-event stake share >
-50%), `uncopyable-high-frequency` (median inter-fill gap < 5s on ≥ 50 fills),
-`insufficient-sample` (below `MIN_SAMPLE_SIZE`). None of these five read
-`category`, Polymarket's `Activity` schema, or anything CLOB-shaped — they
-operate on `resolvedTrials`' `eventKey`/`usdcStaked` and on the wallet's raw
-`activity[].timestamp`. These five would work unmodified against a Solana
-wallet's trials, given the same shape.
+**The veto-flag/composite-score split — real, both layers market-agnostic
+except two literals.** `docs/AUDIT.md`'s Phase 2 established hard
+disqualifying flags kept separate from a continuous score (so a wallet can't
+buy its way past "this is a one-shot bet" with a good ROI number); the real
+`src/scoring/walletScore.ts` (re-read in full after the rebase described in
+"Revision history" above) implements this as two layers, both worth
+inventorying on their own:
+
+- **Six veto flags** (`computeWalletScore`, lines 154-221): `one-shot`
+  (distinctEvents ≤ 3, line 184), `dormant` (daysSinceLastActivity > 30,
+  line 185), `election-only` (electionShare > 70%, line 186),
+  `highly-concentrated` (top-event stake share > 50%, line 187),
+  `uncopyable-high-frequency` (median inter-fill gap < 5s on ≥ 50 fills,
+  lines 188-190), `insufficient-sample` (below `MIN_SAMPLE_SIZE`, line 191).
+  Five of six are pure functions of counts/ratios/gaps over `eventKey`/
+  `usdcStaked`/timestamps — fully market-agnostic. `election-only` is the
+  one exception (see below).
+- **A composite 0-100 `qualityScore`** (`computeQualityScore`, lines
+  103-152), built from `computeProfitConcentration` (lines 61-72 — top-1/
+  top-3 event share of realized PROFIT, distinct from the flag layer's
+  STAKE-based concentration check) and `computeConsistencyScore` (lines
+  82-94 — wires `rollingWindow.ts` into a weekly-bucketed stability read,
+  null with under 2 windows rather than penalized). **All three of these
+  functions read only `BacktestTrial[]`/`StrategyResult`/`BacktestConfig` —
+  none of them touch a Polymarket type, a category string, or an activity
+  row.** `computeQualityScore` itself blends `strategyResult.roiBootstrapCI`/
+  `sortinoLike`/`sharpeLike`/`expectedValuePerDollar`/`maxDrawdownPct`/
+  `effectiveIndependentSampleCount` (all `StrategyResult` fields, all
+  already established as agnostic above) with the two new agnostic
+  functions' output — weights 30/20/15/15/10/10 (lines 129-134), plus a
+  profitability floor (lines 136-149: caps the composite at 50 when both the
+  ROI-lower-bound term and the risk-adjusted-return term score below
+  neutral, found live against SDTrading scoring 63/100 net-negative before
+  the cap existed). **Every one of these mechanisms — the profit-
+  concentration math, the consistency math, the composite blend, and the
+  profitability-floor cap — would run unmodified against a Solana adapter's
+  `BacktestTrial[]` output, exactly like the five agnostic veto flags
+  already established.** This is the single most important correction this
+  revision makes: the richer scoring layer this project actually built is
+  not a bigger adapter-interface burden than the flag layer was — it's the
+  same "reads only the shared trial shape" property, just with more of it.
 
 **Sample-independence discipline in general** (`effectiveIndependentSampleCount`
 as "distinct real-world bets, not distinct fills or distinct markets") is the
@@ -139,25 +233,32 @@ has named it that.** Specifically:
   see Part 2 — this distinction turns out to matter a lot for what a Solana
   adapter should even attempt.
 
-**`src/scoring/walletScore.ts`'s two Polymarket-specific reads inside an
-otherwise-generic function:**
-- Line 56: `activity.filter((a) => a.type === "TRADE")` — `"TRADE"` is a
+**`src/scoring/walletScore.ts`'s two Polymarket-specific reads — still
+exactly two, even in the real, richer file with three more functions in it:**
+- Line 177: `activity.filter((a) => a.type === "TRADE")` — `"TRADE"` is a
   literal from Polymarket's `Activity.type` enum-ish string field (schemas.ts
   line 27, deliberately loose because real rows include `"REWARD"` — see
   schemas.ts's own comment at lines 17-23). `medianGapSeconds` is computed
-  only over this filtered set.
-- Lines 52-53: `resolvedTrials.filter((t) => t.category === "politics")` —
+  only over this filtered set, and feeds only the `uncopyable-high-frequency`
+  flag — not the composite score.
+- Line 173: `resolvedTrials.filter((t) => t.category === "politics")` —
   the `election-only` flag hardcodes one string from `categorize.ts`'s
   taxonomy. This is the one flag that is conceptually Polymarket-specific,
   not just implementation-specific: "one-shot 2024-election bet" is a real,
   specific pattern this project discovered (README Phase 1c) that doesn't
   have an obvious Solana analog by name — see Part 2 for what the analogous
   concept ("one dominant information-driven catalyst") would need to look
-  like there.
-- The async orchestrator `scoreWallet` (lines 89-96) is Polymarket end to
+  like there. Also feeds only a flag, not the composite score.
+- The async orchestrator `scoreWallet` (lines 223-230) is Polymarket end to
   end: `getActivityFromStart` (Polymarket API), `buildTrials` (Polymarket
   adapter), `TrackedWallet` (`src/wallets.ts`'s Polymarket-address-shaped
   config type).
+
+Worth stating plainly: `computeProfitConcentration`, `computeConsistencyScore`,
+and `computeQualityScore` (added to this file after this doc's first pass —
+see "Revision history") introduce **zero new instances of this pattern**.
+Every Polymarket-specific read in the entire file is still confined to
+exactly these same two lines, both feeding flags, neither feeding the score.
 
 **`src/api/client.ts`'s reliability pattern is architecturally reusable, not
 literally reusable.** The pattern (per-host `RateLimiter`, bounded
@@ -263,15 +364,16 @@ interface MarketAdapter<RawActivity> {
   // scoring core only ever treats the result as an opaque grouping key.
   categorize(activity: RawActivity): string;
   // Which category value(s) represent a "one dominant catalyst" pattern
-  // analogous to Polymarket's election-only flag (walletScore.ts:65) --
-  // replaces the current hardcoded `=== "politics"` with a market-supplied
-  // list, since "one memecoin narrative dominates this wallet's whole
-  // history" is the Solana-flavored version of the exact same underlying
-  // risk (a wallet that looks skilled because of one concentrated bet on
-  // one real-world/market event, not repeatable trading).
+  // analogous to Polymarket's election-only flag (walletScore.ts:186) --
+  // replaces the current hardcoded `=== "politics"` (line 173) with a
+  // market-supplied list, since "one memecoin narrative dominates this
+  // wallet's whole history" is the Solana-flavored version of the exact
+  // same underlying risk (a wallet that looks skilled because of one
+  // concentrated bet on one real-world/market event, not repeatable
+  // trading).
   concentrationCategories: string[];
   // Which raw-activity rows count as a real trade for medianGapSeconds
-  // (walletScore.ts:55-58's `type === "TRADE"` filter) -- Solana has no
+  // (walletScore.ts:176-179's `type === "TRADE"` filter) -- Solana has no
   // "REWARD"-style non-trade row in the same sense, but a real adapter
   // still needs to decide what counts (e.g. exclude failed/reverted txs).
   isRealTrade(activity: RawActivity): boolean;
@@ -281,26 +383,48 @@ interface MarketAdapter<RawActivity> {
 `computeWalletScore` itself would need one small, mechanical generalization
 to actually consume this: replace the two hardcoded literals
 (`"TRADE"`/`"politics"`) with adapter-supplied predicates/lists. That is the
-only change this design proposes to the scoring core's *logic* — everything
-in `statistics.ts`/`rollingWindow.ts` needs zero changes at all.
+only change this design proposes to the scoring core's *logic* — and,
+per the reaffirmed finding above, it's the **only** change needed anywhere
+in the scoring core, composite score included: `computeProfitConcentration`,
+`computeConsistencyScore`, and `computeQualityScore` take zero
+Polymarket-shaped input today and would need zero changes for a Solana
+adapter to use them as-is. `statistics.ts`/`rollingWindow.ts` also need zero
+changes.
 
-### The composite score / profitability floor the brief described
+### The real composite score, checked against this design (revised from a guess to a confirmed finding)
 
-Per the "note on the brief" above, no composite 0-100 score or
-profitability-floor cap exists in the current `computeWalletScore`. If/when
-one is added (a real, separate piece of work — not scoped to this pass), the
-adapter interface above imposes exactly one constraint worth stating now
-so that future work doesn't have to redesign this: **a composite score
-should be computed from `StrategyResult`'s fields plus `WalletScore`'s flags,
-never from anything market-specific**, the same way the five already-generic
-veto flags are computed today. If a "profitability floor" is meant to reject
-a wallet whose point-estimate ROI is positive but whose bootstrap CI's lower
-bound is negative (a very plausible reading of "profitability floor" given
-`roiBootstrapCI`'s existence, `statistics.ts:52-82`/`domain/types.ts:146`),
-that check is already expressible today purely against
-`StrategyResult.roiBootstrapCI[0]` — fully market-agnostic, no adapter
-changes needed. This is a guess at intent, not a description of real code;
-flagged as an open question below.
+This doc's first pass, written before the rebase described in "Revision
+history," could only guess at what a future composite score and
+profitability floor might look like. Having now read the real
+`computeQualityScore`/`computeProfitConcentration`/`computeConsistencyScore`
+(`src/scoring/walletScore.ts:61-152`) in full: the guess was **substantially
+right in spirit, and the real implementation is cleaner than the guess** —
+no adapter-interface change is needed at all, versus the guess's hedge that
+one "very plausible reading" would need one. Specifics worth recording:
+- The real `roiLowerBound` term (line 108: `strategyResult.roiBootstrapCI
+  ? strategyResult.roiBootstrapCI[0] : strategyResult.roi`) is almost
+  exactly what the first-pass guess proposed — falling back to the point
+  estimate when there's no CI (below `MIN_SAMPLE_SIZE`) rather than treating
+  a missing CI as automatically bad, a detail the original guess didn't
+  anticipate but that's clearly correct in hindsight (a thin-sample wallet
+  should be caught by the separate `insufficient-sample` flag, not silently
+  double-penalized inside the score too).
+- The real profitability floor (lines 136-149) is a **two-term** AND
+  condition (`roiLowerBound` AND `riskAdjustedReturn` both below neutral),
+  not the single-term version the original guess considered — a real
+  refinement, validated live against SDTrading (a genuinely net-negative,
+  zero-veto-flag wallet that scored 63/100 before the cap existed, entirely
+  because near-perfect concentration/drawdown/sample-size terms outweighed
+  two weak profitability terms). Neither term references anything
+  Polymarket-specific.
+- **Net implication for Phase D, stated plainly**: a Solana `MarketAdapter`
+  implementation does not need to reimplement, extend, or even think about
+  the composite score. Once `MarketAdapter.buildTrials` produces a
+  `BacktestTrial[]` and `MarketAdapter.isRealTrade`/`concentrationCategories`
+  are supplied for the two flag-only literals, `computeWalletScore` — flags
+  AND composite score together — runs unchanged. This is a stronger claim
+  than the original design could make, and is the main thing this revision
+  adds beyond correcting the record.
 
 ---
 
@@ -324,18 +448,25 @@ src/
                                 # market-agnostic (see Part 1)
     statistics.ts               # unchanged, moved as-is
     rollingWindow.ts             # unchanged, moved as-is
-    walletScore.ts                # computeWalletScore generalized per Part 2
-                                # (adapter-supplied isRealTrade/concentration-
-                                # Categories instead of hardcoded literals);
-                                # scoreWallet's async orchestrator part is
-                                # NOT here -- it's market-specific, moves to
-                                # each markets/<name>/ namespace instead
+    walletScore.ts                # computeWalletScore/computeProfitConcentration/
+                                # computeConsistencyScore/computeQualityScore
+                                # ALL move here as-is (reaffirmed Part 1/2:
+                                # the composite score reads only
+                                # BacktestTrial[]/StrategyResult, zero
+                                # Polymarket-specific surface) -- only
+                                # computeWalletScore's two hardcoded literals
+                                # (isRealTrade/concentrationCategories) need
+                                # to become adapter-supplied instead of
+                                # hardcoded. scoreWallet's async orchestrator
+                                # part is NOT here -- it's market-specific,
+                                # moves to each markets/<name>/ namespace
+                                # instead
     utils/
       rateLimiter.ts             # promoted from src/utils/ -- already fully
       retry.ts                  # generic, both markets' clients would import
                                 # these instead of each re-implementing them
                                 # (this pass's solana/client.ts does
-                                # re-implement locally -- seePart 1's note on
+                                # re-implement locally -- see Part 1's note on
                                 # why, and see below)
 
   markets/
@@ -472,12 +603,11 @@ near it.
 
 ## Open questions for the user + orchestrator to resolve before Phase D
 
-1. **The Track G / composite-score discrepancy** (top of this doc) — is
-   there real prior work (a different session, branch, or conversation) this
-   worktree never received, or was the brief describing intended-but-not-yet-
-   done work as done? This matters because Phase D's brief will presumably
-   again reference "the existing composite score" — worth fixing the
-   drift before it compounds.
+1. ~~**The Track G / composite-score discrepancy**~~ — **Resolved** (see
+   "Revision history" at the top): a harness/isolation quirk left this
+   worktree's branch four commits behind local `master`. Rebased onto the
+   real `master`; the composite score, profitability floor, and Track G all
+   exist and are reflected throughout this revision.
 2. **`eventKey` for Solana** (Part 2): same-mint grouping is the obvious
    first cut and matches the existing Polymarket convention most closely,
    but doesn't catch cross-mint narrative correlation (two memecoins pumping
@@ -498,3 +628,18 @@ near it.
    rediscovered it multiple times, README Phase 1c). The Solana analog is a
    guess (one memecoin narrative dominating a wallet's whole history) with
    zero validation yet — flagged as a guess, not a finding.
+6. **Are the composite score's weights (30/20/15/15/10/10) and `squash()`
+   scales Polymarket-tuned in a way that wouldn't transfer?** They're
+   explicitly documented in the real code as "starting points... not tuned
+   against the full 68-wallet pool yet" (`walletScore.ts` comments) even for
+   Polymarket alone. A Solana wallet population plausibly has structurally
+   different characteristics worth checking before assuming the same
+   weights generalize — e.g. drawdown may be a noisier signal for a
+   volatile memecoin-trading wallet than for a probability-bounded
+   Polymarket wallet, and `MIN_SAMPLE_SIZE`-relative sample-size scaling
+   (line 125) may need a different denominator if Solana wallets typically
+   generate far more or fewer independent events per unit time than
+   Polymarket ones do. Not a blocker for Phase D's adapter-building work,
+   but worth checking once real Solana wallet data exists to check it
+   against — same "don't guess a threshold" discipline as everywhere else
+   in this project.
