@@ -172,19 +172,42 @@ Polymarket data rather than adopting it wholesale or chasing meteorabot.
     (higher than `0x1b20a0`'s 67) but is correctly caught by the
     `dormant`/`election-only`/`uncopyable-high-frequency` flags. The score
     alone would have missed it. Weights/scales are starting points, not
-    tuned against the full 68-wallet pool yet.
-19. **Strategy-translation pass** (not started) — of the blueprint's ~20
-    strategies, prioritized order agreed in chat: (1) re-run
-    `consensusSignal.ts`'s smart-money-convergence test restricted to
-    wallets that clear a quality-score threshold instead of the full
-    68-mostly-mediocre pool (a genuinely different test from the existing
-    clean-negative result, not a repeat); (2) smart-money
-    accumulation/divergence (wallet activity building while price is flat/
-    falling) — no new data needed; (3) volatility compression→expansion on
-    the ladder markets' existing price-history pulls. Explicitly ruled out
-    as non-transferable: cross-DEX/CEX/triangular arb, token-security/LP/
-    dev-rug filters, perps/funding/liquidation strategies (no tokens,
-    pools, or perps on Polymarket).
+    tuned against the full 68-wallet pool yet. **Follow-up same day**: added
+    a profitability floor (commit "Add profitability floor to the Wallet
+    Quality Score") after live-validating against `SDTrading` (real net
+    -1.7% ROI, no veto flags) scored 63/100 -- hygiene factors alone
+    shouldn't rescue a losing wallet into "trade candidate" range. Caps the
+    composite at 50 when both ROI-lower-bound and risk-adjusted-return score
+    below neutral. Re-verified live: `SDTrading` now scores 50/100, not 63.
+19. **Strategy-translation pass** (started 2026-09-06) — of the blueprint's
+    ~20 strategies. Explicitly ruled out as non-transferable: cross-DEX/CEX/
+    triangular arb, token-security/LP/dev-rug filters, perps/funding/
+    liquidation strategies (no tokens, pools, or perps on Polymarket).
+    - **Item 1 (consensus-restricted-to-quality-wallets) reordered to last**,
+      not skipped: confirmed 59 of 69 tracked wallets already carry
+      documented ruled-out language in `wallets.ts` -- too small a surviving
+      pool right now for a meaningful convergence test. Revisit once the
+      pool grows (Track E.13).
+    - ✅ **Volatility compression→expansion, done and run live** (commit
+      "Add volatility-compression-breakout strategy test") --
+      `src/research/volatilityBreakout.ts`, `npm run volatility-breakout`.
+      **Result is NOT trustworthy either way, and that's the actual
+      finding**: n=116 trials look mildly positive overall (+10.4% ROI,
+      50.0% win rate) with a striking per-bucket split (5-15c: +126.7% net
+      on n=18; 15-25c: -100% on n=10; BTC/WTI signs flipped from what the
+      original naive ladder-harvest rule found), but all 116 trials come
+      from only **`EVENTS_PER_ASSET=4`+4 = 8 real independent events** --
+      the exact sample-inflation problem `docs/AUDIT.md` §7 already flagged
+      for `backtestLadder.ts`'s own methodology, which this script reuses
+      as-is (no `effectiveIndependentSampleCount`/bootstrap-CI treatment).
+      Effective sample is closer to 8 than 116; the promising 5-15c bucket
+      is likely noise, same shape as Phase 1g's narrow-signal finding that
+      didn't survive an out-of-sample retest. **Do not act on this number.**
+      Real next step if pursued further: either a much larger closed-event
+      pull, or migrate onto `src/backtesting/engine.ts`'s proper
+      independent-sample-count/bootstrap-CI machinery instead of
+      `legacy/backtestLadder.ts`'s simpler summarize().
+    - Item 2 (smart-money accumulation/divergence) not started.
 20. Not planned yet, flagged from the blueprint as a real idea: **funding-
     source wallet clustering** (are two "independently smart" wallets
     actually the same entity?) — would need a new Polygon-chain data source
