@@ -272,3 +272,50 @@ lowest priority, own strategy family).
     Solana-specific retuning yet). **Phase D onward remains blocked on the
     one thing none of these unblock: a real Helius and/or Birdeye API key**
     to verify Phase C's scaffold against.
+
+## Track I — Fine-comb code review (2026-09-08/09)
+
+Requested as a checkpoint before continuing further work, given the volume
+committed across Tracks A-H in one session. Two `/code-review` runs against
+the full session diff (`6f2d09a..HEAD`); the first hit a session-wide rate
+limit mid-flight (5 of 6 finder angles failed with 429s), fixed 5 of its 6
+findings before retrying (see the "Fix 5 of 6 duplication findings" commit).
+The retry ran ~13 hours (one finder angle hung; the orchestrator finalized
+without it per instruction rather than blocking indefinitely) and returned
+10 more findings, 6 fixed:
+
+24. ✅ **Done 2026-09-09.** **Critical, pre-existing bug found and fixed**:
+    `src/backtesting/positionReconstruction.ts`'s `marketKey()` embedded a
+    literal raw NUL byte as a delimiter — `git diff` on this file has shown
+    "Binary files differ" with zero visible hunks since the file was
+    written (not introduced this session), and even `grep` silently found
+    nothing in it without `-a`. Replaced with `":"`, matching the exact
+    delimiter convention `statistics.ts` already uses for the same
+    conditionId+outcome pairing. All future diffs to this file are now
+    readable text.
+25. ✅ **Done 2026-09-09.** Five smaller fixes: a duplicate inline zod
+    schema in `markets/solana/schemas.ts` extracted to one definition; a
+    hand-written sign function in `walletScore.ts` replaced with
+    `Math.sign()`; a redundant `Math.max(...timestamps)` call in
+    `walletScore.ts` computed once instead of twice; a dead `toNumber`
+    re-export removed from `markets/solana/client.ts`; `cli/status.ts`'s
+    two systemd checks parallelized via `Promise.all` instead of running
+    sequentially; `RateLimiter.resetForTests()` added (purely additive) and
+    wired into `markets-solana-client.test.ts`'s `beforeEach` — confirmed
+    live this cut real accumulated cross-test delay (13 tests: 6.2s → 5.2s,
+    remainder is tests intentionally exercising real backoff/retry timing).
+26. **Flagged, not fixed** (each with a documented reason): the composite
+    score's profitability floor creates a real discontinuity at the
+    0.5/0.5 neutral boundary (inherent to the deliberate hard-cap design,
+    not a bug); `markets/solana/client.ts`'s `requestJson` still duplicates
+    `api/client.ts`'s retry control flow (already deliberately deferred —
+    live production request path vs. a currently-unused consumer);
+    `volatilityBreakout.ts`'s raw `JSON.parse` vs. the `parseJsonArray()`
+    pattern used elsewhere is a **pre-existing inconsistency already
+    present across 4 files before this session** (`legacy/backtestLadder.ts`/
+    `followerExecution.ts` use raw `JSON.parse`; `snapshotCollector.ts`/
+    `ouOverBias.ts` each independently duplicate their own
+    `parseJsonArray`) — the new file matches its direct sibling
+    (`backtestLadder.ts`, which it reuses code from), fixing this properly
+    would mean touching frozen `legacy/` code or an unrelated cross-project
+    cleanup.
