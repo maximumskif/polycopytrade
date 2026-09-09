@@ -13,4 +13,14 @@ export class RateLimiter {
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     this.lastCallAt.set(key, Date.now());
   }
+
+  // Test seam (code-review finding, 2026-09-09): with no way to clear
+  // lastCallAt, tests sharing one module-level RateLimiter instance across
+  // many `test()` blocks each pay a real setTimeout wait once enough calls
+  // accumulate against the same key -- confirmed live,
+  // tests/markets-solana-client.test.ts's 13 tests took 6.2s before this
+  // existed. Purely additive; nothing in the real request path calls this.
+  resetForTests(): void {
+    this.lastCallAt.clear();
+  }
 }

@@ -73,16 +73,19 @@ const HeliusSwapTokenAmountSchema = z
   })
   .passthrough();
 
+// nativeInput/nativeOutput share this exact shape (code-review finding,
+// 2026-09-09) -- one definition instead of two copies that could silently
+// drift if a field gets added once Phase D validates this against a real
+// payload and only one copy gets updated.
+const HeliusNativeAmountSchema = z
+  .object({ account: z.string().optional(), amount: z.union([z.string(), z.number()]).optional() })
+  .nullable()
+  .optional();
+
 const HeliusSwapEventSchema = z
   .object({
-    nativeInput: z
-      .object({ account: z.string().optional(), amount: z.union([z.string(), z.number()]).optional() })
-      .nullable()
-      .optional(),
-    nativeOutput: z
-      .object({ account: z.string().optional(), amount: z.union([z.string(), z.number()]).optional() })
-      .nullable()
-      .optional(),
+    nativeInput: HeliusNativeAmountSchema,
+    nativeOutput: HeliusNativeAmountSchema,
     tokenInputs: z.array(HeliusSwapTokenAmountSchema).optional(),
     tokenOutputs: z.array(HeliusSwapTokenAmountSchema).optional(),
     tokenFees: z.array(z.unknown()).optional(),

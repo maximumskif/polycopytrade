@@ -18,21 +18,29 @@
 // data -- showing both avoids trusting either signal alone.
 
 import "dotenv/config";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { runMigrations } from "../storage/migrate";
 import { listWalletHealth, getDepthCollectorHealth } from "../storage/repository";
 import { main as paperReportMain } from "./paperReport";
 import { fmtAgo } from "../utils/format";
 
-function systemdStatus(unit: string): string {
+const execFileAsync = promisify(execFile);
+
+// Async + run via Promise.all at the call site (code-review finding,
+// 2026-09-09) -- the track/depth checks are unrelated to each other, so
+// there's no reason to pay two sequential subprocess round-trips in a
+// command whose whole point is being a quick status check.
+async function systemdStatus(unit: string): Promise<string> {
   try {
-    return execFileSync("systemctl", ["--user", "is-active", unit], { encoding: "utf8" }).trim();
+    const { stdout } = await execFileAsync("systemctl", ["--user", "is-active", unit]);
+    return stdout.trim();
   } catch (err) {
     // is-active exits non-zero for "inactive"/"failed" (still valid output
     // on stdout) as well as genuinely missing systemctl/unit -- distinguish
     // by whether we got stdout at all.
-    const stdout = (err as { stdout?: Buffer | string }).stdout;
-    if (stdout) return stdout.toString().trim();
+    const stdout = (err as { stdout?: string }).stdout;
+    if (stdout) return stdout.trim();
     return "unknown (systemctl unavailable)";
   }
 }
@@ -41,8 +49,10 @@ export async function main() {
   runMigrations();
 
   console.log("=== daemons ===");
-  const trackState = systemdStatus("polycopytrade-track.service");
-  const depthState = systemdStatus("polycopytrade-depth.service");
+  const [trackState, depthState] = await Promise.all([
+    systemdStatus("polycopytrade-track.service"),
+    systemdStatus("polycopytrade-depth.service"),
+  ]);
 
   const health = listWalletHealth();
   const lastWalletPoll = health.reduce<number | null>((latest, h) => {

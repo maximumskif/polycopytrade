@@ -59,7 +59,6 @@ import {
 } from "./schemas";
 
 export type { HeliusTransaction, BirdeyeWalletPnlSummary };
-export { toNumber } from "./schemas";
 
 type Provider = "helius" | "birdeye";
 
@@ -116,6 +115,12 @@ const rateLimiters: Record<Provider, RateLimiter> = {
   helius: new RateLimiter(HELIUS_MIN_GAP_MS),
   birdeye: new RateLimiter(BIRDEYE_MIN_GAP_MS),
 };
+
+// Test seam, same reasoning as RateLimiter.resetForTests() (src/utils/rateLimiter.ts).
+export function __resetRateLimitersForTests(): void {
+  rateLimiters.helius.resetForTests();
+  rateLimiters.birdeye.resetForTests();
+}
 
 export class SolanaApiError extends Error {
   constructor(

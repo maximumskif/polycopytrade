@@ -17,11 +17,18 @@ import {
   __resetFetchImplForTests,
   __setMaxRetriesForTests,
   __resetMaxRetriesForTests,
+  __resetRateLimitersForTests,
 } from "../src/markets/solana/client";
 import { HeliusTransactionsResponseSchema, BirdeyeWalletPnlSummarySchema, toNumber } from "../src/markets/solana/schemas";
 
 beforeEach(() => {
   __setMaxRetriesForTests(2); // keep retry tests fast, same reasoning as tests/apiClient.test.ts
+  // Without this, the module-level rate limiters accumulate lastCallAt
+  // across every test() in this file, so later tests pay a real setTimeout
+  // wait once enough calls stack up against the same provider key --
+  // confirmed live: this file's 13 tests took 6.2s before this existed
+  // (code-review finding, 2026-09-09).
+  __resetRateLimitersForTests();
 });
 
 afterEach(() => {

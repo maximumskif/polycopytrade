@@ -107,10 +107,7 @@ export function computeQualityScore(
   // fallback, then a small fixed nudge from the sign of expected value if
   // even that's null (zero-variance return series), rather than treating
   // "no signal" as "bad."
-  const riskAdjustedRaw =
-    strategyResult.sortinoLike ??
-    strategyResult.sharpeLike ??
-    (strategyResult.expectedValuePerDollar > 0 ? 2 : strategyResult.expectedValuePerDollar < 0 ? -2 : 0);
+  const riskAdjustedRaw = strategyResult.sortinoLike ?? strategyResult.sharpeLike ?? Math.sign(strategyResult.expectedValuePerDollar) * 2;
 
   const components: WalletQualityScoreComponents = {
     roiLowerBound: squash(roiLowerBound, 0.5),
@@ -155,8 +152,9 @@ export function computeWalletScore(
 ): WalletScore {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const timestamps = activity.map((a) => a.timestamp);
-  const activitySpanDays = timestamps.length ? (Math.max(...timestamps) - Math.min(...timestamps)) / 86400 : 0;
-  const daysSinceLastActivity = timestamps.length ? (nowSeconds - Math.max(...timestamps)) / 86400 : Infinity;
+  const lastActivityTs = timestamps.length ? Math.max(...timestamps) : null;
+  const activitySpanDays = timestamps.length ? (lastActivityTs! - Math.min(...timestamps)) / 86400 : 0;
+  const daysSinceLastActivity = lastActivityTs !== null ? (nowSeconds - lastActivityTs) / 86400 : Infinity;
 
   const resolvedTrials = trials.filter((t) => t.resolved);
 
