@@ -8,6 +8,15 @@
 import { config } from "../config/env";
 import { RateLimiter } from "../utils/rateLimiter";
 import { backoffDelayMs, sleep } from "../utils/retry";
+// None of today's endpoints take a secret query param (positions/activity/
+// gamma/CLOB are all public reads) — redactUrl is a default-safe guard for
+// the day an authenticated endpoint (e.g. CLOB order placement, see
+// docs/AUDIT.md §10) gets added and someone logs its URL without thinking
+// about it. Shared with src/markets/solana/client.ts (src/utils/redactUrl.ts)
+// rather than each copying the regex, since a missed secret-shaped param
+// name is a real credential-leak risk either way.
+import { redactUrl } from "../utils/redactUrl";
+import { validateSchema as validate } from "../utils/validateSchema";
 import {
   ActivityResponseSchema,
   PublicSearchResponseSchema,
@@ -55,19 +64,6 @@ export function onApiError(listener: ApiErrorListener) {
 
 function hostOf(url: string): string {
   return new URL(url).host;
-}
-
-// None of today's endpoints take a secret query param (positions/activity/
-// gamma/CLOB are all public reads) — this is a default-safe guard for the
-// day an authenticated endpoint (e.g. CLOB order placement, see
-// docs/AUDIT.md §10) gets added and someone logs its URL without thinking
-// about it.
-function redactUrl(url: string): string {
-  const u = new URL(url);
-  for (const key of [...u.searchParams.keys()]) {
-    if (/key|secret|passphrase|token|password/i.test(key)) u.searchParams.set(key, "***");
-  }
-  return u.toString();
 }
 
 // Overridable so tests can exercise pagination/retry/backoff logic against
@@ -137,14 +133,6 @@ async function requestJson(url: string): Promise<unknown> {
   }
 
   throw lastError ?? new PolymarketApiError("exhausted retries", host, redacted, null, config.apiMaxRetries);
-}
-
-function validate<T>(schema: { parse: (data: unknown) => T }, data: unknown, context: string): T {
-  try {
-    return schema.parse(data);
-  } catch (err) {
-    throw new Error(`Response validation failed for ${context}: ${(err as Error).message}`, { cause: err });
-  }
 }
 
 // Escape hatch for endpoints (e.g. clob.polymarket.com) not covered by a

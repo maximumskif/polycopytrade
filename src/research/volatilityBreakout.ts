@@ -17,6 +17,7 @@
 
 import { getPricesHistory, type GammaMarket } from "../api/client";
 import { getClosedLadderEvents, summarize, type Trial } from "../legacy/backtestLadder";
+import { stdev } from "../backtesting/statistics";
 
 export interface PricePoint {
   t: number;
@@ -27,12 +28,6 @@ export interface BreakoutSignal {
   breakoutIndex: number;
   direction: "up" | "down";
   entryPrice: number; // the "Yes" token's price at the breakout point
-}
-
-function stdev(xs: number[]): number {
-  if (xs.length < 2) return 0;
-  const m = xs.reduce((s, x) => s + x, 0) / xs.length;
-  return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1));
 }
 
 // Fraction of `population` at or below `value` -- used to judge "is this

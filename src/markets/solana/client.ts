@@ -35,13 +35,22 @@
 // the safer call under the time available) or src/config/env.ts (avoids
 // adding a new consumer to the config module the live tracking daemon also
 // depends on, for a code path nothing yet calls). It DOES import
-// src/utils/rateLimiter.ts and src/utils/retry.ts directly, unmodified —
-// those are not Polymarket-specific, not in this task's off-limits list,
-// and re-deriving the same backoff math a second time would be exactly the
-// kind of duplication docs/AUDIT.md calls out elsewhere as a real risk.
+// src/utils/rateLimiter.ts, src/utils/retry.ts, src/utils/redactUrl.ts, and
+// src/utils/validateSchema.ts directly, unmodified — none of those four are
+// Polymarket-specific, none are in this task's off-limits list, and
+// re-deriving the same backoff/redaction/validation logic a second time
+// would be exactly the kind of duplication docs/AUDIT.md calls out
+// elsewhere as a real risk (code-review pass, 2026-09-08, extracted
+// redactUrl/validateSchema out of src/api/client.ts into src/utils/ for
+// exactly this reason — requestJson's retry-loop CONTROL FLOW is the one
+// piece still deliberately left duplicated below, since unifying it would
+// mean restructuring src/api/client.ts's live, production request path for
+// a currently-unused consumer; see the note at requestJson).
 
 import { RateLimiter } from "../../utils/rateLimiter";
 import { backoffDelayMs, sleep } from "../../utils/retry";
+import { redactUrl } from "../../utils/redactUrl";
+import { validateSchema as validate } from "../../utils/validateSchema";
 import {
   HeliusTransactionsResponseSchema,
   BirdeyeWalletPnlSummarySchema,
@@ -121,19 +130,6 @@ export class SolanaApiError extends Error {
   }
 }
 
-// Mirrors src/api/client.ts's redactUrl exactly (same regex, same intent) —
-// this file's two providers put their API key directly in the query string
-// (Helius's `api-key` param) rather than only in a header, so this is not a
-// defensive-for-later guard the way it was for Polymarket at the time it
-// was written; it's load-bearing from day one here.
-function redactUrl(url: string): string {
-  const u = new URL(url);
-  for (const key of [...u.searchParams.keys()]) {
-    if (/key|secret|passphrase|token|password/i.test(key)) u.searchParams.set(key, "***");
-  }
-  return u.toString();
-}
-
 let fetchImpl: typeof fetch = fetch;
 export function __setFetchImplForTests(fn: typeof fetch): void {
   fetchImpl = fn;
@@ -169,7 +165,17 @@ async function fetchWithTimeout(url: string, headers: Record<string, string> | u
 
 // Same shape as src/api/client.ts's requestJson: bounded retry budget,
 // exponential backoff + jitter on 429s and transient network errors, fast
-// fail (no retry burned) on any other non-2xx status.
+// fail (no retry burned) on any other non-2xx status. Deliberately NOT
+// unified with that file's copy (code-review finding, 2026-09-08, flagged
+// not fixed): the two differ in error type (SolanaApiError vs
+// PolymarketApiError) and error reporting (console.error here vs an
+// injectable errorListener there), and src/api/client.ts's version is the
+// live tracking daemon's actual request path today, while this file has no
+// live callers yet (see the file header). Generalizing it now would mean
+// restructuring tested, working production code to serve a consumer
+// nothing calls yet — worth doing once Phase D actually exercises this
+// file against a real key and the two implementations' real behavior
+// (not just their current source text) can be compared, not before.
 async function requestJson(
   provider: Provider,
   url: string,
@@ -216,14 +222,6 @@ async function requestJson(
   }
 
   throw lastError ?? new SolanaApiError("exhausted retries", provider, redacted, null, maxRetries);
-}
-
-function validate<T>(schema: { parse: (data: unknown) => T }, data: unknown, context: string): T {
-  try {
-    return schema.parse(data);
-  } catch (err) {
-    throw new Error(`Response validation failed for ${context}: ${(err as Error).message}`, { cause: err });
-  }
 }
 
 // Reads an API key from an explicit override (mainly for tests) or the

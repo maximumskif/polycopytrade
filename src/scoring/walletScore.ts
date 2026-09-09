@@ -12,7 +12,7 @@
 
 import { getActivityFromStart, type Activity } from "../api/client";
 import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
-import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../backtesting/statistics";
+import { computeStrategyResult, MIN_SAMPLE_SIZE, mean } from "../backtesting/statistics";
 import { computeRollingWindowResults } from "../backtesting/rollingWindow";
 import type { BacktestConfig, BacktestTrial, StrategyResult, WalletFlag, WalletQualityScoreComponents, WalletScore } from "../domain/types";
 import type { TrackedWallet } from "../wallets";
@@ -30,10 +30,6 @@ function median(xs: number[]): number {
   const sorted = [...xs].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0;
 }
 
 function clamp01(x: number): number {

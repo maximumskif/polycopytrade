@@ -11,11 +11,16 @@ import type { BacktestConfig, BacktestTrial, StrategyResult } from "../domain/ty
 export const MIN_SAMPLE_SIZE = 20;
 const BOOTSTRAP_RESAMPLES = 2000;
 
-function mean(xs: number[]): number {
+// Exported so other modules that need the same basic stats (e.g.
+// scoring/walletScore.ts's consistency check, research/volatilityBreakout.ts's
+// compression detection) share one implementation instead of hand-rolling
+// their own — this file's own header already states that's the point of
+// putting shared computation here (code-review finding, 2026-09-08).
+export function mean(xs: number[]): number {
   return xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0;
 }
 
-function stdev(xs: number[]): number {
+export function stdev(xs: number[]): number {
   if (xs.length < 2) return 0;
   const m = mean(xs);
   return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1));
