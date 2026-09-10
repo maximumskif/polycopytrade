@@ -22,14 +22,15 @@ export async function main() {
 
     console.log(`\n[${target.label}] ${target.address}`);
     console.log(`  stake=$${target.stakeUsdc}  delay=${target.delaySeconds}s  categoryFilter=${target.categoryFilter ?? "(none)"}`);
-    console.log(`  open=${open.length} ($${(open.length * target.stakeUsdc).toFixed(2)} staked)  unresolvable=${unresolvable.length}`);
+    const openStaked = open.reduce((s, o) => s + o.stakeUsdc, 0);
+    console.log(`  open=${open.length} ($${openStaked.toFixed(2)} staked)  unresolvable=${unresolvable.length}`);
 
     if (closed.length === 0) {
       console.log(`  closed=0 — no paper trades have resolved yet`);
       continue;
     }
 
-    const staked = closed.length * target.stakeUsdc;
+    const staked = closed.reduce((s, o) => s + o.stakeUsdc, 0);
     const netPnl = closed.reduce((s, o) => s + (o.pnlUsdc ?? 0), 0);
     const distinctEvents = new Set(closed.map((o) => o.conditionId)).size;
     console.log(
