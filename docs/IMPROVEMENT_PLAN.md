@@ -207,7 +207,17 @@ Polymarket data rather than adopting it wholesale or chasing meteorabot.
       pull, or migrate onto `src/backtesting/engine.ts`'s proper
       independent-sample-count/bootstrap-CI machinery instead of
       `legacy/backtestLadder.ts`'s simpler summarize().
-    - Item 2 (smart-money accumulation/divergence) not started.
+    - ✅ **Item 2 (smart-money accumulation/divergence), tested 2026-09-10 —
+      inconclusive by starvation, not a clean negative.**
+      `src/research/smartMoneyDivergence.ts`, `npm run
+      smart-money-divergence`. The tracked-wallet pool only has 2 wallets
+      that clear the project's own quality bar (zero veto flags,
+      qualityScore>=50), so the "2+ quality wallets accumulate while price
+      stays flat" hypothesis found essentially nothing to test on (1 total
+      accumulation cluster across the whole pool, and it wasn't even
+      divergent). See `docs/AUDIT.md`'s dated entry — this argues for
+      prioritizing Track E.13 (new wallet sourcing) before revisiting this
+      script, not for concluding the hypothesis is false.
 20. Not planned yet, flagged from the blueprint as a real idea: **funding-
     source wallet clustering** (are two "independently smart" wallets
     actually the same entity?) — would need a new Polygon-chain data source
