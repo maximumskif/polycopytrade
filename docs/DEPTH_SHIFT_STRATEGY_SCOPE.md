@@ -131,3 +131,97 @@ Do not build any entry/exit rule against this data until there's a
 meaningful accumulated window (at minimum, enough 15-minute cycles across
 enough real price moves to see what a depth shift actually looks like) —
 there is currently ~0 minutes of history.
+
+## 6. §2 open question answered: yes, a WebSocket order-book feed exists (verified live, 2026-09-10)
+
+**Answer: yes.** Polymarket's CLOB exposes a public, unauthenticated market
+WebSocket that streams order-book snapshots and incremental updates. This
+was confirmed two ways: reading Polymarket's official docs, and actually
+connecting to it from this sandbox and capturing real messages for a live
+market (this project's "confirmed by testing" bar per `docs/AUDIT.md`, not
+"the docs say so").
+
+**Docs consulted** (all under `docs.polymarket.com`, current as of
+2026-09-10): `/developers/CLOB/websocket/wss-overview`,
+`/api-reference/wss/market`, `/quickstart/websocket/WSS-Quickstart`.
+
+**Endpoint**: `wss://ws-subscriptions-clob.polymarket.com/ws/market` — a
+public "market" channel, separate from the authenticated "user" channel
+(order-fill updates for your own orders — not relevant here) and from the
+"sports"/RTDS channels (unrelated data). No API key, no wallet signature,
+no auth of any kind is required to subscribe to order-book data — same
+unauthenticated-public-read posture as every REST endpoint this project
+already calls in `src/api/client.ts`.
+
+**Subscription model — per-token, not per-market.** Subscribe by sending
+`{"assets_ids": ["<clobTokenId>", ...], "type": "market", "initial_dump":
+true, "level": 2}` after connecting. `assets_ids` takes an array, so a
+single connection can watch both the "Up" and "Down" tokens of a market
+(or multiple markets' tokens) at once — the same `clobTokenIds` this
+project already extracts from `GammaMarket.clobTokenIds` in
+`snapshotCollector.ts`. Assets can be added/removed later on the same
+connection via an `{"operation": "subscribe"/"unsubscribe", ...}` message,
+no reconnect needed. Heartbeat is client-driven: send the literal text
+frame `"PING"` every 10s, server replies `"PONG"`.
+
+**Message shape — snapshot first, then deltas.** With `initial_dump: true`
+(the default), the very first message per subscribed asset is a full `book`
+snapshot: `{"event_type":"book","asset_id":...,"market":...,"bids":[...],
+"asks":[...],"timestamp":...,"hash":...}` — same shape as today's REST
+`GET /book` response, just pushed instead of polled. After that, updates
+arrive as `price_change` events — incremental deltas for individual price
+levels (`{"event_type":"price_change","price_changes":[{"asset_id",
+"price","size","side","best_bid","best_ask","hash"},...],"timestamp"}`),
+**not** repeated full-book snapshots. A correct consumer has to apply these
+deltas on top of the initial snapshot to maintain a live book (or, more
+simply, can just track `best_bid`/`best_ask`, which every `price_change`
+message already carries directly — the collector's existing
+`bestBid`/`bestAsk` fields need nothing more than that). Other event types
+(`last_trade_price`, `tick_size_change`, and — only with
+`custom_feature_enabled: true` — `best_bid_ask`, `new_market`,
+`market_resolved`) exist but weren't needed for this test.
+
+**Empirical verification.** Wrote a throwaway script (`ws` was unnecessary
+— Node 22's native `WebSocket` global handled it) that connected to the
+endpoint above and subscribed to the live "Up" token of the currently-open
+`btc-updown-15m-1789066800` market (resolved the same deterministic-slug
+way `snapshotCollector.ts` already does), then logged everything for 25
+seconds. Result: **connection succeeded immediately, first message was a
+real `book` snapshot with live bid/ask levels for that exact market, and
+659 further messages arrived over the next 25 seconds — all
+`price_change` events with genuine, changing prices/sizes/best_bid/
+best_ask** (this was near the end of the 15-minute window, so the book was
+moving fast toward resolution — a good stress case). `PING`/`PONG`
+heartbeat worked as documented. The script and its full captured output
+were discarded after verification (kept out of `src/` per this doc's own
+scoping rule) — the message shapes above and the 659-messages-in-25s figure
+are copied directly from that run, not from the docs.
+
+**Would this replace REST polling outright? Yes.** 659 updates in 25
+seconds for one token, delivered push-side with sub-second latency, is
+categorically faster and cheaper than any REST poll cadence discussed in
+§2 (even a 1-second poll would still average <1 sample per potentially
+several price-changing events, and would still cost a request every
+cycle against the `RateLimiter(1100ms)` budget). The WebSocket feed:
+
+- **Solves the §2 cadence problem directly** — no polling interval to
+  tune, no rate-limit budget to carve out; the server pushes on every
+  change instead of the client guessing an interval.
+- **Solves the §3 "several concurrent markets" problem more cleanly than
+  REST** — one connection, one `assets_ids` array, covers BTC-Up,
+  BTC-Down, ETH-Up, ETH-Down (or more) simultaneously; no per-market
+  polling loop needed.
+- **Changes the collector's job from "poll and snapshot" to "consume a
+  stream and persist"** — `snapshotCollector.ts` would need real rework
+  (an open socket + delta-application state machine instead of a
+  `sleep(5000)` loop calling `getOrderBook`), not just a faster interval.
+  That rework is exactly the kind of strategy-adjacent build this scoping
+  document still gates: per Track E.15, the open question is now
+  answered, but the collector rewrite itself is a separate, deliberate
+  next step, not done as part of this research task.
+
+**Confidence: high.** This is not a docs-only claim — a real WebSocket
+connection to Polymarket's production endpoint was opened from this
+sandbox, subscribed successfully with no credentials, and returned
+hundreds of genuine live messages for a real, currently-open BTC
+Up-or-Down market within the same 25-second window.
