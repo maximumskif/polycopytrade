@@ -31,7 +31,9 @@
     "depth:collector": "tsx src/depthShift/snapshotCollector.ts",
     "consensus-signal": "tsx src/research/consensusSignal.ts",
     "sport-segmentation": "tsx src/research/sportSegmentation.ts",
-    "volatility-breakout": "tsx src/research/volatilityBreakout.ts"
+    "volatility-breakout": "tsx src/research/volatilityBreakout.ts",
+    "source-wallets": "tsx src/research/sourceWallets.ts",
+    "ou-over-under-split": "tsx src/research/ouOverUnderSplit.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

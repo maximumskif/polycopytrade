@@ -24,13 +24,15 @@ import {
   PricesHistoryResponseSchema,
   GammaEventsResponseSchema,
   OrderBookSchema,
+  LeaderboardResponseSchema,
   type Activity,
   type GammaMarket,
   type GammaEvent,
   type OrderBook,
+  type LeaderboardEntry,
 } from "./schemas";
 
-export type { Activity, GammaMarket, GammaEvent };
+export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry };
 
 const DATA_API = "https://data-api.polymarket.com";
 const GAMMA_API = "https://gamma-api.polymarket.com";
@@ -297,4 +299,26 @@ export async function resolveProxyWallet(usernameOrSlug: string): Promise<string
     "GET /public-search (profiles)"
   );
   return res.profiles?.[0]?.proxyWallet ?? null;
+}
+
+// data-api's /v1/leaderboard, category/timePeriod/orderBy params confirmed
+// against docs.polymarket.com/api-reference/core/get-trader-leaderboard-rankings
+// on 2026-09-13 -- source-wallets.ts's first real use of a `category` other
+// than the implicit OVERALL this project's manually-scraped wallets.ts
+// sources have always used, and the first WEEK/MONTH/ALL beyond what those
+// scrapes covered by hand.
+export async function getLeaderboard(
+  category: "OVERALL" | "POLITICS" | "SPORTS" | "ESPORTS" | "CRYPTO" | "CULTURE" | "MENTIONS" | "WEATHER" | "ECONOMICS" | "TECH" | "FINANCE",
+  timePeriod: "WEEK" | "MONTH" | "ALL",
+  orderBy: "PNL" | "VOL" = "PNL",
+  opts: { limit?: number; offset?: number } = {}
+): Promise<LeaderboardEntry[]> {
+  const qs = new URLSearchParams({
+    category,
+    timePeriod,
+    orderBy,
+    limit: String(opts.limit ?? 25),
+    offset: String(opts.offset ?? 0),
+  });
+  return validate(LeaderboardResponseSchema, await requestJson(`${DATA_API}/v1/leaderboard?${qs.toString()}`), "GET /v1/leaderboard");
 }

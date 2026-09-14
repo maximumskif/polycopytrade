@@ -538,4 +538,193 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     source: "https://x.com/sopersone/status/2089410888373776758",
     historyPages: 10,
   },
+  // Added 2026-09-13 (Track E.13 follow-up): a sweep of data-api's 9
+  // non-OVERALL leaderboard categories (POLITICS, SPORTS, ESPORTS, CRYPTO,
+  // CULTURE, WEATHER, ECONOMICS, TECH, FINANCE) x MONTH/ALL windows, PNL-
+  // ordered, via `npm run source-wallets` (src/research/sourceWallets.ts).
+  // Top 3 per category by pnl, deduped against every wallet already above,
+  // each run through the same scoreWallet() pipeline as everywhere else in
+  // this file. 26 of 27 came back RULED OUT, almost all on `dormant`
+  // (600+ days since last activity) — confirms category ALL-time
+  // leaderboards mostly surface the same one-shot-big-win-then-inactive
+  // pattern already ruled out repeatedly on the OVERALL leaderboard above,
+  // just segmented by category instead of blended together. Recorded here
+  // (including the ruled-out ones) so a future source-wallets rerun's
+  // dedupe against TRACKED_WALLETS correctly skips all 27 instead of
+  // re-scoring them from scratch. One candidate cleared with zero veto
+  // flags — bin8888 below — but on a thin 22-event sample; not added to
+  // live paper-trading, that's a separate decision.
+  {
+    address: "0x885783760858e1bd5dd09a3c3f916cfa251ac270",
+    label:
+      "BetTom42 (POLITICS all-time #8 — scored: 100% win, dormant+election-only+highly-concentrated+uncopyable-high-freq, ROI 98.6%, 4 events — RULED OUT, classic dormant 2024-election one-shot)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/politics/all/profit",
+  },
+  {
+    address: "0x23786fdad0073692157c6d7dc81f281843a35fcb",
+    label:
+      "mikatrade77 (POLITICS all-time #9 — scored: 100% win, one-shot+dormant+election-only+highly-concentrated+uncopyable-high-freq, ROI 77.8%, 3 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/politics/all/profit",
+  },
+  {
+    address: "0xd0c042c08f755ff940249f62745e82d356345565",
+    label:
+      "alexmulti (POLITICS all-time #10 — scored: 99.9% win, dormant+election-only+highly-concentrated+uncopyable-high-freq, ROI 93.5%, 4 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/politics/all/profit",
+  },
+  {
+    address: "0xf2f6af4f27ec2dcf4072095ab804016e14cd5817",
+    label: "gopfan2 (WEATHER all-time #1 — scored: 48.0% win, dormant, ROI 17.8%, 114 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+  },
+  {
+    address: "0x594edb9112f526fa6a80b8f858a6379c8a2c1c11",
+    label: "ColdMath (WEATHER all-time #3 — scored: 65.1% win, dormant, ROI 4.8%, 414 events — RULED OUT, near-breakeven)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+  },
+  {
+    address: "0x75049bd489194be19c45c31ed311e556411c9c69",
+    label: "ro0k (TECH all-time #6 — scored: 60.4% win, dormant, ROI 5.3%, 95 events — RULED OUT, near-breakeven)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/all/profit",
+  },
+  {
+    address: "0x17db3fcd93ba12d38382a0cade24b200185c5f6d",
+    label: "fengdubiying (ESPORTS all-time #4 — scored: 83.6% win, dormant, ROI 27.4%, 86 events — RULED OUT, dormant despite decent numbers)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
+  {
+    address: "0xed107a85a4585a381e48c7f7ca4144909e7dd2e5",
+    label: "qmarktea2 (ECONOMICS all-time #2 — scored: 95.2% win, dormant, ROI 3.5%, 171 events — RULED OUT, near-breakeven despite high win rate)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/all/profit",
+  },
+  {
+    address: "0x17559efac103ac7f361be37ec0b93888d4c55aac",
+    label: "CamelUp (FINANCE all-time #3 — scored: 54.5% win, dormant, ROI 8.9%, 126 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/finance/all/profit",
+  },
+  // The one clean survivor of this sweep: no veto flags, active as of
+  // 1 day before scoring (2026-09-13) — genuinely live, not dormant. Still
+  // a thin 22-event sample by this project's own MIN_SAMPLE_SIZE bar;
+  // treat qualityScore=64 as "worth a closer look," not a green light.
+  {
+    address: "0xa80e3fe5e7a445fa047fe6de1e27f9a15217b94b",
+    label:
+      "bin8888 (FINANCE all-time #2 — scored 2026-09-13: 85.9% win, NO veto flags, ROI 33.3%, 22 events, netPnl=$492,238, daysSinceLastActivity=1.0 — CANDIDATE, thin sample, pending deeper review/paper-trading decision)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/finance/all/profit",
+  },
+  {
+    address: "0xf705fa045201391d9632b7f3cde06a5e24453ca7",
+    label: "unnamed (CRYPTO all-time #2 — scored: 53.3% win, dormant, ROI 20.9%, 34 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/crypto/all/profit",
+  },
+  {
+    address: "0x3a8aa345d5db7ec5138298c8c4f4540259be7699",
+    label:
+      "TheReturnOfDarthMaul (ECONOMICS monthly #1, also seen on FINANCE — scored: 79.7% win, dormant, ROI -2.1%, 717 events — RULED OUT, net negative despite high win rate on a well-powered sample)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/month/profit",
+  },
+  {
+    address: "0x6af75d4e4aaf700450efbac3708cce1665810ff1",
+    label: "gopfan (WEATHER all-time #4 — scored: 49.4% win, dormant, ROI 8.7%, 228 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+  },
+  {
+    address: "0xee50a31c3f5a7c77824b12a941a54388a2827ed6",
+    label: "0xafEe (TECH all-time #1 — scored: 76.4% win, dormant, ROI 20.2%, 68 events — RULED OUT, dormant despite decent numbers)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/all/profit",
+  },
+  {
+    address: "0x689ae12e11aa489adb3605afd8f39040ff52779e",
+    label: "Annica (CULTURE all-time #2 — scored: 51.6% win, dormant, ROI 3.5%, 11 events — RULED OUT, near-breakeven, tiny sample)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/culture/all/profit",
+  },
+  {
+    address: "0x063aeee10fbfd55b6def10da28e87a601e7deb4b",
+    label: "noovd (CULTURE all-time #4 — scored: 15.8% win, dormant, ROI 14.1%, 67 events — RULED OUT, low win rate rescued by payout odds, not a real signal)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/culture/all/profit",
+  },
+  {
+    address: "0x241f846866c2de4fb67cdb0ca6b963d85e56ef50",
+    label: "Pestle (ECONOMICS all-time #1 — scored: 8.2% win, dormant, ROI -16.0%, 279 events — RULED OUT, badly negative on a well-powered sample)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/all/profit",
+  },
+  {
+    address: "0xb0c85813a7a4428f1139ff91d3118a92c391fe7f",
+    label:
+      "bitcoin.gold (seen on POLITICS/CULTURE/TECH/FINANCE, best TECH all-time #4 — scored: 81.7% win, dormant+uncopyable-high-freq, ROI 0.2%, 175 events — RULED OUT, breakeven and bot-speed)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/all/profit",
+  },
+  {
+    address: "0xc2e7800b5af46e6093872b177b7a5e7f0563be51",
+    label: "beachboy4 (SPORTS all-time #11 — scored: 46.8% win, dormant+uncopyable-high-freq, ROI -0.2%, 102 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/sports/all/profit",
+  },
+  {
+    address: "0x006cc834cc092684f1b56626e23bedb3835c16ea",
+    label: "unnamed (SPORTS all-time #14 — scored: 39.5% win, dormant, ROI 19.5%, 382 events — RULED OUT, below hit-rate bar despite positive ROI)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/sports/all/profit",
+  },
+  {
+    address: "0xc257ea7e3a81ca8e16df8935d44d513959fa358e",
+    label: "YT-JuicySlots (ESPORTS all-time #7 — scored: 41.9% win, dormant, ROI 3.4%, 93 events — RULED OUT, near-breakeven)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
+  {
+    address: "0x63ce342161250d705dc0b16df89036c8e5f9ba9a",
+    label: "0x8dxd (CRYPTO all-time #1 — scored: 48.5% win, dormant+uncopyable-high-freq, ROI 0.3%, 54 events — RULED OUT, breakeven and bot-speed)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/crypto/all/profit",
+  },
+  {
+    address: "0x44c1dfe43260c94ed4f1d00de2e1f80fb113ebc1",
+    label:
+      "aenews2 (seen on CRYPTO/CULTURE/WEATHER/TECH, best CULTURE all-time #3 — scored: 57.4% win, dormant, ROI -0.2%, 187 events — RULED OUT, breakeven)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/culture/all/profit",
+  },
+  {
+    address: "0xe734e7bf7cfb9e464681f71822f6c2f6be514f0c",
+    label: "boyau (FINANCE all-time #1 — scored: 30.7% win, dormant+highly-concentrated, ROI 6.7%, 20 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/finance/all/profit",
+  },
+  {
+    address: "0xdc876e6873772d38716fda7f2452a78d426d7ab6",
+    label: "432614799197 (SPORTS all-time #16 — scored: 43.7% win, dormant, ROI -24.9%, 84 events — RULED OUT, badly negative)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/sports/all/profit",
+  },
+  {
+    address: "0xcc500cbcc8b7cf5bd21975ebbea34f21b5644c82",
+    label: "justdance (CRYPTO all-time #3 — scored: 77.2% win, dormant+uncopyable-high-freq, ROI -24.0%, 43 events — RULED OUT, net negative despite high win rate)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/crypto/all/profit",
+  },
+  {
+    address: "0xa5ea13a81d2b7e8e424b182bdc1db08e756bd96a",
+    label: "bossoskil1 (ESPORTS all-time #1 — scored: 28.5% win, dormant, ROI -7.4%, 27 events — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
 ];

@@ -107,3 +107,18 @@ export const OrderBookSchema = z.object({
   asks: z.array(OrderBookLevelSchema).optional(),
 });
 export type OrderBook = z.infer<typeof OrderBookSchema>;
+
+// data-api's /v1/leaderboard — confirmed against docs.polymarket.com's
+// published reference (2026-09-13), not tested against a live call before
+// first use (same doc-sourced-not-tested caveat as src/markets/solana/*).
+// userName/xUsername optional: a wallet can rank with display fields unset.
+export const LeaderboardEntrySchema = z.object({
+  rank: z.string(),
+  proxyWallet: z.string(),
+  userName: z.string().nullable().optional(),
+  vol: z.number(),
+  pnl: z.number(),
+  xUsername: z.string().nullable().optional(),
+});
+export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+export const LeaderboardResponseSchema = z.array(LeaderboardEntrySchema);
