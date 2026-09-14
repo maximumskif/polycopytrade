@@ -115,10 +115,33 @@ begins.
     beyond one-off X posts, or a systematic pass over a category this
     project hasn't swept yet (politics-specialist non-one-shot wallets,
     live-sports beyond MLB/tennis).
-14. **Revisit the flagged-but-unfiled thin-sample sub-signals** once more
-    data accrues: the O/U "Over"-only sub-filter (96.7% win but n=12
-    markets), the WNBA bucket (+45.2% net, n=4 events) — re-check with
-    `computeStrategyResult` rather than acting on them now.
+14. ✅ **Re-checked 2026-09-13 — no growth, verdict unchanged, still not
+    actioned.** Re-pulled `0x1b20a0...`'s current full history
+    (`historyPages=10`, same cap as always) and re-ran both sub-signals
+    through `computeStrategyResult`. **Both are exactly as thin as they
+    were on 2026-08-18** — 2274 total resolved trials, identical to the
+    original count, meaning this wallet has resolved zero new sports
+    trades in the ~26 days since the last check (separate from the
+    daemon's own paper-trading copy, which has been running since Track
+    E.12 and shows 8 fills/5 markets — that's a different, much newer
+    dataset). **WNBA**: still exactly 68 trials / 4 distinct events, 42.6%
+    win, +45.2% ROI, 95% CI [-100.0%, 89.8%] — unchanged, still below
+    `MIN_SAMPLE_SIZE=20`, still watch-don't-filter. **O/U Over-only**:
+    269 trials / 12 distinct *markets* (matches the original number) but
+    only **7 distinct independent *events*** once properly grouped by
+    `eventKey` (several O/U lines share one real game, same correction
+    already applied to the MLB league count) — even thinner than the
+    original "12" implied. 96.7% win, +113.6% ROI, 95% CI [90.4%, 134.8%]
+    — a fully-positive CI, but built by `computeStrategyResult`'s new
+    `src/research/ouOverUnderSplit.ts` (`npm run ou-over-under-split`,
+    added this pass) off only 7 independent event-clusters; a tight CI
+    from a 7-cluster bootstrap is not the same confidence as one from 20+,
+    treat it as a stronger-looking but still-provisional number, not
+    grounds to act. **Under**: 521 trials / 27 markets / 17 events, 34.2%
+    win, +54.6% ROI, 95% CI [-29.7%, 90.5%] — still straddles zero. No
+    config change made (same standing rule as everywhere else in this
+    project) — this wallet's own live trading has simply gone quiet since
+    mid-August; re-check again once/if it resumes and new trials resolve.
 15. **Depth-shift strategy**: still just a scoping doc + a passive collector
     with ~0 accumulated history. Before any strategy code, do the open
     research task from `docs/DEPTH_SHIFT_STRATEGY_SCOPE.md` §2 — whether
@@ -207,7 +230,39 @@ Polymarket data rather than adopting it wholesale or chasing meteorabot.
       pull, or migrate onto `src/backtesting/engine.ts`'s proper
       independent-sample-count/bootstrap-CI machinery instead of
       `legacy/backtestLadder.ts`'s simpler summarize().
-    - Item 2 (smart-money accumulation/divergence) not started.
+    - ✅ **Item 2 (smart-money accumulation/divergence), checked
+      2026-09-13 — not testable, clean negative on pool size, no script
+      needed.** Operationalized as: do >=2 quality (non-ruled-out) tracked
+      wallets independently entering the same market within a short window
+      predict a favorable subsequent price move/resolution? First
+      established the real quality-pool size, since label text in
+      `wallets.ts` is an unreliable proxy (several early entries, e.g.
+      `0x_exit`'s wallet and the six original all-time-leaderboard wallets,
+      carry no ruled-out/dormant text in their label even though their real
+      verdict — recorded in prose in `README.md`/`docs/AUDIT.md`, not the
+      label — is negative: `0x_exit`'s wallet's edge decayed to negative by
+      week 3 and the account has been dormant ~4 months, for one). Auditing
+      all 95 `TRACKED_WALLETS` against their actual documented verdicts
+      (not just label keywords) leaves exactly **3 wallets** that are both
+      un-ruled-out AND have a real positive signal: `0x1b20a0...` (the
+      project's actual Phase 3 candidate, sports/MLB-driven), `TennisLove`
+      (clean but n=4 events, too thin), and today's `bin8888` (clean but
+      n=22 events, FINANCE category). **Confirmed empirically, not just by
+      category label**: pulled all three wallets' full real activity
+      history (2384/113/3828 rows respectively) and checked for shared
+      `conditionId`s across every pair — **zero overlap across all three
+      pairs**, out of 72+13+61 combined distinct markets. With the entire
+      surviving quality pool trading in disjoint market domains (sports,
+      tennis, finance) and never once landing on the same market, a
+      same-market multi-wallet co-occurrence signal has no real
+      observations to test — writing a backtest script would just report
+      n=0 by construction. This reconfirms, with harder evidence, the same
+      wall `docs/AUDIT.md`'s earlier "does the tracked pool's aggregate
+      consensus beat an efficient market" test hit and Item 1 above already
+      flagged. **Revisit only if/when the quality pool grows enough that
+      wallets in the same category actually start overlapping on real
+      markets** — Track E.13's sourcing sweep today added 27 candidates and
+      grew the pool by exactly one (`bin8888`), so this is not close yet.
 20. Not planned yet, flagged from the blueprint as a real idea: **funding-
     source wallet clustering** (are two "independently smart" wallets
     actually the same entity?) — would need a new Polygon-chain data source
@@ -319,3 +374,85 @@ without it per instruction rather than blocking indefinitely) and returned
     (`backtestLadder.ts`, which it reuses code from), fixing this properly
     would mean touching frozen `legacy/` code or an unrelated cross-project
     cleanup.
+
+## Track J — Depth-shift WebSocket research (2026-09-13)
+
+27. ✅ **Done 2026-09-13.** **Resolves Track E.15's open research
+    question.** Confirmed (doc-sourced, not yet tested live) that
+    Polymarket's CLOB exposes a public, unauthenticated WebSocket
+    market-data channel at `wss://ws-subscriptions-clob.polymarket.com/ws/market`
+    — subscribe with `{assets_ids, type: "market"}`, get an initial full
+    `book` snapshot then incremental `price_change`/`last_trade_price`/
+    `tick_size_change` events, 10s PING/PONG keepalive required, no
+    historical/replay capability (same real-time-only limitation as the
+    REST side). See `docs/DEPTH_SHIFT_STRATEGY_SCOPE.md` §2 for full
+    detail and sources. **Recommendation, not yet actioned**: migrating
+    `src/depthShift/snapshotCollector.ts` from REST polling to this WS
+    channel would remove the 5-second poll/rate-limit-budget problem §2
+    raised, but that's real code (reconnect/backoff, PING keepalive, new
+    schema validation) and needs its own explicit go-ahead — the running
+    REST collector keeps accumulating data unchanged in the meantime. No
+    code was written this pass, per this project's rule that the doc's own
+    scope discipline applies to research passes too.
+
+## Track E.13 follow-up — category-leaderboard sweep (2026-09-13)
+
+28. ✅ **Done 2026-09-13.** **Resolves Track E.13.** Added
+    `getLeaderboard()` (`src/api/client.ts`, confirmed against
+    docs.polymarket.com's `/v1/leaderboard` reference) and
+    `npm run source-wallets` (`src/research/sourceWallets.ts`) — the first
+    sweep of data-api's 9 non-OVERALL leaderboard categories (POLITICS,
+    SPORTS, ESPORTS, CRYPTO, CULTURE, WEATHER, ECONOMICS, TECH, FINANCE)
+    across MONTH+ALL windows, PNL-ordered. Deduped against all 69
+    `TRACKED_WALLETS`, then ran the existing `scoreWallet()` pipeline (same
+    one `npm run wallet-score` uses) on the top 3 per category. **Result:
+    450 raw entries -> 311 new addresses -> 27 shortlisted -> 26 of 27
+    vetoed**, almost entirely on `dormant` — confirms category ALL-time
+    leaderboards are dominated by the same one-shot-big-win-then-inactive
+    pattern this project already ruled out repeatedly on the OVERALL
+    leaderboard (most survivors sat 60-800+ days since last activity).
+    **One clean candidate surfaced**: `bin8888`
+    (`0xa80e3fe5e7a445fa047fe6de1e27f9a15217b94b`, FINANCE category,
+    ALL-time #2) — qualityScore 64/100, zero veto flags, 22 events, 85.9%
+    win rate, +33.3% ROI, $492,238 net P&L, **last active 1 day ago**
+    (genuinely live, not dormant). Thin sample (22 events) — same
+    discipline as every other candidate in this project: worth a
+    paper-trading decision, not treating 22 events as proven edge yet
+    (already at `historyPages=10`, the API's own page-offset cap, so
+    there's no deeper history to pull). **Follow-up same day**: all 27
+    scored candidates (including the 26 ruled out) recorded in
+    `src/wallets.ts` with full label/score/source provenance, matching
+    this project's existing practice of logging ruled-out wallets
+    permanently — so a future `source-wallets` rerun's dedupe against
+    `TRACKED_WALLETS` skips all 27 instead of re-scoring them from scratch
+    (each score cost real, rate-limited API time; this run took ~90
+    minutes for 27 wallets). `bin8888` is NOT added to the tracking
+    daemon or `paperTrading/config.ts` — only to `wallets.ts` for
+    provenance — actually tracking/paper-trading it is a separate decision
+    still pending.
+
+## Track H Phase D — partial unblock (2026-09-13)
+
+29. **Partial.** **A real `HELIUS_API_KEY` was added to `.env`** (user-
+    provided). Ran `getHeliusWalletTransactionHistory` live against a real
+    wallet (a Jito mainnet tip account — officially published, high-volume,
+    chosen so the address needed no guessing) and confirmed: `api.helius.xyz`
+    is the right host (resolves the base-URL ambiguity `client.ts` flagged),
+    the response validates cleanly against `HeliusTransactionsResponseSchema`
+    with zero changes needed, and `timestamp` is confirmed unix seconds (not
+    ms). Updated `src/markets/solana/client.ts` and `schemas.ts`'s file
+    headers in place to record what's now confirmed vs. still open, per
+    this project's existing practice of dating and citing confirmations
+    rather than silently trusting docs. **Still blocked**: no
+    `BIRDEYE_API_KEY` was provided, so `getBirdeyeWalletPnlSummary` and its
+    schema remain entirely unconfirmed; and the tip-account test wallet
+    only had plain SOL transfers, so Helius's `events.swap` shape — the
+    single most important field for real wallet PnL reconstruction — is
+    still unconfirmed (docs-sourced only). **Phase D proper (building
+    `src/markets/solana/engine.ts`'s `buildTrials`) should not start until
+    one of those two gaps closes** — either a Birdeye key arrives, or a
+    real wallet with actual token swaps gets tested against Helius. Neither
+    was attempted this pass since it needs either a credential the user
+    hasn't provided or a specific real trader's address the user hasn't
+    named yet (see `docs/MULTI_MARKET_ARCHITECTURE.md`'s updated "Open
+    questions" section for the same finding).
