@@ -80,10 +80,12 @@ test("reopening after a full close produces two separate positions, not one", ()
   assert.equal(positions[1].finalSize, 5);
 });
 
-test("a sell with no prior tracked buy is flagged incompleteHistory, not silently trusted", () => {
+test("a sell with no prior tracked buy is flagged incompleteHistory, not silently trusted, and records the full sale proceeds as realizedPnl", () => {
   const [pos] = reconstructPositions("0xw", [fill({ timestamp: 100, side: "SELL", size: 10, price: 0.6 })]);
   assert.equal(pos.incompleteHistory, true);
   assert.equal(pos.closedAt, 100);
+  assert.equal(pos.finalSize, 0);
+  assert.ok(Math.abs(pos.realizedPnl - 6) < 1e-9);
 });
 
 test("a sell larger than the tracked position is flagged incompleteHistory", () => {

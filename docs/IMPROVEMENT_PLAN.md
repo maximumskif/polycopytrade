@@ -230,39 +230,37 @@ Polymarket data rather than adopting it wholesale or chasing meteorabot.
       pull, or migrate onto `src/backtesting/engine.ts`'s proper
       independent-sample-count/bootstrap-CI machinery instead of
       `legacy/backtestLadder.ts`'s simpler summarize().
-    - ✅ **Item 2 (smart-money accumulation/divergence), checked
-      2026-09-13 — not testable, clean negative on pool size, no script
-      needed.** Operationalized as: do >=2 quality (non-ruled-out) tracked
-      wallets independently entering the same market within a short window
-      predict a favorable subsequent price move/resolution? First
-      established the real quality-pool size, since label text in
-      `wallets.ts` is an unreliable proxy (several early entries, e.g.
-      `0x_exit`'s wallet and the six original all-time-leaderboard wallets,
-      carry no ruled-out/dormant text in their label even though their real
-      verdict — recorded in prose in `README.md`/`docs/AUDIT.md`, not the
-      label — is negative: `0x_exit`'s wallet's edge decayed to negative by
-      week 3 and the account has been dormant ~4 months, for one). Auditing
-      all 95 `TRACKED_WALLETS` against their actual documented verdicts
-      (not just label keywords) leaves exactly **3 wallets** that are both
-      un-ruled-out AND have a real positive signal: `0x1b20a0...` (the
-      project's actual Phase 3 candidate, sports/MLB-driven), `TennisLove`
-      (clean but n=4 events, too thin), and today's `bin8888` (clean but
-      n=22 events, FINANCE category). **Confirmed empirically, not just by
-      category label**: pulled all three wallets' full real activity
-      history (2384/113/3828 rows respectively) and checked for shared
-      `conditionId`s across every pair — **zero overlap across all three
-      pairs**, out of 72+13+61 combined distinct markets. With the entire
-      surviving quality pool trading in disjoint market domains (sports,
-      tennis, finance) and never once landing on the same market, a
-      same-market multi-wallet co-occurrence signal has no real
-      observations to test — writing a backtest script would just report
-      n=0 by construction. This reconfirms, with harder evidence, the same
-      wall `docs/AUDIT.md`'s earlier "does the tracked pool's aggregate
-      consensus beat an efficient market" test hit and Item 1 above already
-      flagged. **Revisit only if/when the quality pool grows enough that
-      wallets in the same category actually start overlapping on real
-      markets** — Track E.13's sourcing sweep today added 27 candidates and
-      grew the pool by exactly one (`bin8888`), so this is not close yet.
+    - ✅ **Item 2 (smart-money accumulation/divergence), tested 2026-09-10 —
+      inconclusive by starvation, not a clean negative.**
+      `src/research/smartMoneyDivergence.ts`, `npm run
+      smart-money-divergence`. The tracked-wallet pool only has 2 wallets
+      that clear the project's own quality bar (zero veto flags,
+      qualityScore>=50), so the "2+ quality wallets accumulate while price
+      stays flat" hypothesis found essentially nothing to test on (1 total
+      accumulation cluster across the whole pool, and it wasn't even
+      divergent). See `docs/AUDIT.md`'s dated entry — this argues for
+      prioritizing Track E.13 (new wallet sourcing) before revisiting this
+      script, not for concluding the hypothesis is false.
+      - **Follow-up, checked independently 2026-09-13 (parallel session,
+        merged after the fact — see note below): same conclusion, harder
+        evidence, still not a clean negative.** A second pass used a
+        different quality bar (un-ruled-out AND a real positive signal,
+        checked against actual documented verdicts rather than the
+        `qualityScore>=50` threshold — which, note, technically admits
+        `SDTrading`, a net -1.7% ROI wallet capped at exactly 50/100 by the
+        profitability floor, Track G.18) against the wallet pool as it
+        stood right after Track E.13's same-day sourcing sweep (96
+        wallets, including the 27 newly sourced that day). That bar leaves
+        exactly 3 wallets — `0x1b20a0...`, `TennisLove` (n=4, thin), and
+        `bin8888` (n=22, thin) — and pulling their full real activity
+        history (2384/113/3828 rows respectively) found **zero overlapping
+        `conditionId`s across all three pairs**, out of 72+13+61 combined
+        distinct markets: sports, tennis, and finance never once collide.
+        Confirms the starvation finding above with a bigger, differently-
+        filtered pool rather than contradicting it. **Revisit only once
+        the quality pool grows enough that wallets in the same category
+        actually start overlapping on real markets** — one sourcing sweep
+        grew it by exactly one wallet, so this is not close yet.
 20. Not planned yet, flagged from the blueprint as a real idea: **funding-
     source wallet clustering** (are two "independently smart" wallets
     actually the same entity?) — would need a new Polygon-chain data source
@@ -377,23 +375,26 @@ without it per instruction rather than blocking indefinitely) and returned
 
 ## Track J — Depth-shift WebSocket research (2026-09-13)
 
-27. ✅ **Done 2026-09-13.** **Resolves Track E.15's open research
-    question.** Confirmed (doc-sourced, not yet tested live) that
-    Polymarket's CLOB exposes a public, unauthenticated WebSocket
-    market-data channel at `wss://ws-subscriptions-clob.polymarket.com/ws/market`
-    — subscribe with `{assets_ids, type: "market"}`, get an initial full
-    `book` snapshot then incremental `price_change`/`last_trade_price`/
-    `tick_size_change` events, 10s PING/PONG keepalive required, no
-    historical/replay capability (same real-time-only limitation as the
-    REST side). See `docs/DEPTH_SHIFT_STRATEGY_SCOPE.md` §2 for full
-    detail and sources. **Recommendation, not yet actioned**: migrating
+27. ✅ **Superseded by a stronger, earlier finding — see below.** This
+    session independently answered Track E.15's open question (doc-sourced
+    only, never opened a live connection) without knowing a parallel
+    session had already answered it three days earlier with an actual live
+    WebSocket connection and 659 captured real messages — a stale local
+    git clone on this session's side, caught only when the two diverged
+    branches were merged after the fact (see the merge commit around this
+    date for the full story). Both reached the same yes/no conclusion
+    (`wss://ws-subscriptions-clob.polymarket.com/ws/market`, `{assets_ids,
+    type: "market"}` subscribe, snapshot-then-`price_change`-deltas, 10s
+    PING/PONG) but the earlier, empirically-verified pass in
+    `docs/DEPTH_SHIFT_STRATEGY_SCOPE.md` §6 (2026-09-10) is the canonical
+    answer — it has real captured message shapes (`hash`, `level`,
+    `best_bid_ask`/`new_market`/`market_resolved` event types) this pass
+    never discovered from docs alone. §2 of that doc now points here only
+    as a pointer to §6, not a competing answer. **Recommendation
+    (unchanged either way, not yet actioned)**: migrating
     `src/depthShift/snapshotCollector.ts` from REST polling to this WS
-    channel would remove the 5-second poll/rate-limit-budget problem §2
-    raised, but that's real code (reconnect/backoff, PING keepalive, new
-    schema validation) and needs its own explicit go-ahead — the running
-    REST collector keeps accumulating data unchanged in the meantime. No
-    code was written this pass, per this project's rule that the doc's own
-    scope discipline applies to research passes too.
+    channel needs its own explicit go-ahead — the running REST collector
+    keeps accumulating data unchanged in the meantime.
 
 ## Track E.13 follow-up — category-leaderboard sweep (2026-09-13)
 
@@ -430,6 +431,25 @@ without it per instruction rather than blocking indefinitely) and returned
     daemon or `paperTrading/config.ts` — only to `wallets.ts` for
     provenance — actually tracking/paper-trading it is a separate decision
     still pending.
+    - **Post-merge correctness check (2026-09-13, same day)**: this whole
+      sweep was scored against a local checkout that turned out to be
+      stale — three days behind `origin/master`, discovered only when
+      pushing (see the merge commit around this date). The missed commits
+      included a real P&L bug fix (`positionReconstruction.ts`: a SELL
+      with no prior tracked BUY silently zeroed its `realizedPnl` instead
+      of recording the sale proceeds, understating ROI/win-rate for any
+      wallet with an incomplete/paginated pull). Re-ran `bin8888` through
+      `wallet-score` and the 0x1b20a0 O/U-split/WNBA checks (item 14 below)
+      against the fixed code after merging: **all numbers came back
+      identical** (bin8888: 85.9% win, $492,238.33 net, 33.3% ROI, still no
+      flags; WNBA/O-U-split: byte-identical to the pre-fix run) — none of
+      these wallets' pulled history actually hit the buggy code path. The
+      26 ruled-out candidates were NOT individually re-scored (their veto
+      flags are activity-pattern-based — `dormant`/`uncopyable-high-freq`/
+      etc. — not PnL-magnitude-based, so the bug could not plausibly flip
+      a RULED OUT verdict); their prose netPnl/ROI figures in `wallets.ts`
+      should be read as pre-fix and directionally right, not re-verified
+      to the dollar.
 
 ## Track H Phase D — partial unblock (2026-09-13)
 

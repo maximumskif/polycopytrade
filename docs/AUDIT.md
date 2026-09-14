@@ -630,6 +630,67 @@ today.
   the right shape; this closes the "segment by league" thread with a
   confirmation, not a new lever.
 
+- **Smart-money accumulation/divergence tested (2026-09-10): inconclusive
+  by starvation, not a clean negative — the tracked-wallet pool currently
+  has only 2 wallets that clear the project's own quality bar.** Track
+  G.19 item 2 (the last unstarted item from the profit-tooling blueprint
+  translation), a third and genuinely different wallet-crowd question from
+  the two already-negatived ones: not "does agreement among the full
+  68-wallet pool carry signal" (`consensusSignal.ts`, clean negative,
+  2026-08-17) and not "is one wallet's own edge a market-wide inefficiency"
+  (`ouOverBias.ts`, clean negative, 2026-08-17), but "does a market where
+  price is flat/moving opposite while 2+ of this project's
+  HIGHEST-QUALITY-SCORED wallets (zero `computeWalletScore` veto flags,
+  `qualityScore>=50` — a much stricter bar than 'any tracked wallet')
+  independently accumulate the same outcome within 72h, predict the
+  resolution better than the market's own price implies." Built
+  `src/research/smartMoneyDivergence.ts` (`npm run smart-money-divergence`),
+  reusing `computeStrategyResult`'s `effectiveIndependentSampleCount`/
+  bootstrap-CI machinery throughout (the specific discipline
+  `volatilityBreakout.ts` skipped, per item 26's post-mortem) and a
+  cost-bounding cheap pre-filter (mirrors `computeWalletScore`'s own veto
+  logic against raw activity, zero extra API calls) before paying for the
+  expensive full-history resolution pass on real survivors only. 16 new
+  unit tests on the pure detection functions
+  (`tests/research-smartMoneyDivergence.test.ts`).
+  - **Result: the quality pool that survived — zero veto flags AND
+    qualityScore>=50 — is only 2 wallets out of all 68 tracked**
+    (`SDTrading`, qualityScore 50, 866 events, 47.6% win, -1.9% ROI —
+    roughly breakeven; `CORGI8`, qualityScore 66, 312 events, 44.1% win,
+    +8.4% ROI — below the hit-rate bar on win rate alone). Every other
+    tracked wallet is dormant (the project's now-familiar base rate) or
+    excluded by a real flag. With only 2 candidate wallets, there is
+    almost no chance of finding markets where 2+ of them independently
+    accumulated the same outcome — and indeed there wasn't one beyond a
+    single case: **1 total accumulation cluster found across the entire
+    pool's 7,553 resolved trials, and it was trend-following (price already
+    moved with the accumulation), not divergent.** Zero divergent clusters
+    — the actual hypothesis this script exists to test — means the
+    divergent-vs-control comparison it was built to run literally cannot
+    execute on today's data (both `[ALL clusters]` and
+    `[Trend-following]` report n=1, `effectiveIndependentSampleCount=1.0`,
+    no bootstrap CI; `[DIVERGENT accumulation]` reports zero trials).
+  - **This is NOT the same kind of finding as `consensusSignal.ts`/
+    `ouOverBias.ts`'s clean negatives** — those ran with a well-powered
+    sample and found no edge. This hypothesis is currently **untestable**,
+    not disproven: the tracked-wallet pool is too thin, at its current
+    quality bar, to ever produce enough co-accumulation events to measure
+    anything. The methodology itself checks out (verified by direct
+    reading: proper `eventKey` grouping, last-qualifying-fill-as-signal-
+    price convention documented and tested, divergent/trend-following
+    split correctly implemented, `npm run typecheck`/`npm test`
+    143/143 green). **Do not read "no signal found" from this result** —
+    read "cannot be tested with 2 quality wallets in the pool."
+  - **Real next step, not done here**: this result is actually a strong
+    argument for prioritizing Track E.13 (new wallet sourcing) over any
+    further strategy-fork work — every crowd-based signal this project can
+    build (this one, a future one) is bottlenecked on having more than 2
+    simultaneously-active, quality-scored wallets to look for agreement
+    among. Revisit this script once the tracked pool has grown a
+    meaningfully larger quality cohort, rather than tuning
+    `ACCUMULATION_WINDOW_SECONDS`/`DIVERGENCE_THRESHOLD` against a
+    1-observation sample.
+
 ## 1. Existing commands and responsibilities
 
 | Command | File | Responsibility |

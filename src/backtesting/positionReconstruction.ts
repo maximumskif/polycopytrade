@@ -96,6 +96,7 @@ export function reconstructPositions(walletAddress: string, activity: Activity[]
         events = [];
         incompleteHistory = true;
         avgCost = 0;
+        size = fill.size;
       }
       const sellSize = Math.min(fill.size, size);
       const overSize = fill.size - sellSize;

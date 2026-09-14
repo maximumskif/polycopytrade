@@ -33,7 +33,8 @@
     "sport-segmentation": "tsx src/research/sportSegmentation.ts",
     "volatility-breakout": "tsx src/research/volatilityBreakout.ts",
     "source-wallets": "tsx src/research/sourceWallets.ts",
-    "ou-over-under-split": "tsx src/research/ouOverUnderSplit.ts"
+    "ou-over-under-split": "tsx src/research/ouOverUnderSplit.ts",
+    "smart-money-divergence": "tsx src/research/smartMoneyDivergence.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
