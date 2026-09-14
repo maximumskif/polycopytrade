@@ -63,12 +63,47 @@ collector would need:
   window opens as soon as the last one closes), so this isn't a
   poll-then-stop job like the ladder/O/U scripts, it's a new kind of
   always-on collector.
-- **Open question, not yet researched**: whether Polymarket's CLOB exposes
-  a WebSocket feed for order-book updates (would solve the
-  polling-cadence problem far better than REST polling ever could, and is
-  the standard way real market-making bots watch a book). This project has
-  never used or investigated the CLOB WebSocket API — that's the first
-  concrete research task before writing any collector code.
+- **Researched 2026-09-13 — resolved, doc-sourced only (not yet confirmed
+  by a live connection from this project).** Polymarket's CLOB does expose
+  a public WebSocket market-data channel:
+  `wss://ws-subscriptions-clob.polymarket.com/ws/market`. Confirmed against
+  `docs.polymarket.com`'s own API reference
+  (`/api-reference/wss/market` and `/market-data/websocket/market-channel`)
+  and cross-checked against third-party write-ups describing the same
+  `py-clob-client` behavior — consistent across sources, but this project
+  has not yet opened a real connection to it, so treat the shape below the
+  way `src/markets/solana/client.ts` treats its doc-sourced-only endpoints:
+  believed correct, not verified live.
+  - **No auth required** for this channel — same "public read" shape as
+    the REST `/book` endpoint this project already polls unauthenticated.
+  - **Subscribe** by sending `{"assets_ids": ["<clobTokenId>", ...], "type": "market"}`
+    (one connection can watch multiple tokens at once — relevant since §2
+    above notes several BTC/ETH Up-or-Down markets run concurrently).
+  - **Initial snapshot included**: with the default `initial_dump: true`,
+    the server pushes a full `book` event (bids/asks/hash/timestamp) on
+    subscribe, then incremental `price_change` (per-price-level deltas),
+    `last_trade_price`, and `tick_size_change` events as they happen — no
+    need to separately REST-poll `/book` once to seed state.
+  - **Heartbeat**: client must send a `PING` text frame every 10 seconds or
+    the server drops the connection; server replies `PONG`.
+  - **Still no historical/replay capability** on this channel — same as
+    the REST side (§1 above): it is real-time-only, so the "collect now,
+    backtest later" approach in §4 is unchanged regardless of transport.
+  - **Rate/connection limits**: not documented anywhere found; unknown
+    until tested live.
+  - **Recommendation**: this materially answers the §2 cadence problem —
+    a single persistent WS connection subscribed to both assets' token IDs
+    replaces the 5-second REST poll loop entirely, with lower latency and
+    no rate-limit budget to size (no more per-request `RateLimiter` calls
+    for this collector at all). **Worth migrating
+    `src/depthShift/snapshotCollector.ts` from REST polling to this WS
+    channel** as a follow-up — but that's a real code change (new
+    dependency or hand-rolled WS client, reconnect/backoff handling, PING
+    keepalive, schema validation for the new event shapes) and should get
+    its own explicit go-ahead rather than riding in on this research pass,
+    per this doc's own scope discipline. The currently-running REST
+    collector is not broken and keeps accumulating data in the meantime;
+    this is an improvement to make later, not a blocker to fix now.
 
 ## 3. What's still true even if the data problem is solved
 
