@@ -11,23 +11,42 @@
 // ============================================================================
 // READ THIS BEFORE WIRING ANYTHING ELSE UP TO THIS FILE
 // ============================================================================
-// No Solana API key (Helius or Birdeye) is available in this environment.
-// Every endpoint path, header name, and response shape here is sourced from
-// each provider's PUBLISHED DOCUMENTATION (fetched 2026-09-07 via WebFetch/
-// WebSearch), not confirmed by a real authenticated call. This is a
-// deliberate, explicit exception to this project's own stated bar for every
-// existing Polymarket integration (docs/AUDIT.md, src/api/client.ts/
-// schemas.ts — every claim there is confirmed by testing against the real
-// live API). It is safe to commit as SCAFFOLDING — the shape and
-// conventions are right, and it compiles/typechecks/lints clean with no
-// live wiring anywhere — but nothing in src/scoring/ or src/backtesting/
-// should be pointed at this file's output until Phase D runs it against a
-// real key and fixes whatever the docs got wrong or omitted. Docs visibly
-// drifted even during this single research pass — see the two
-// provider-specific caveats below (schemas.ts's Birdeye path discrepancy,
-// and this file's Helius base-URL uncertainty) for concrete examples of why
-// "looks right from the docs" is not the same bar this project normally
-// holds itself to.
+// UPDATE 2026-09-13 (Track H Phase D, partial unblock): a real HELIUS_API_KEY
+// was added to .env. getHeliusWalletTransactionHistory() was run live against
+// a real, well-known, high-volume wallet (a Jito mainnet tip account —
+// officially published at jito-foundation.gitbook.io/mev, chosen because its
+// address needed no guessing and it has enormous real transaction volume) and
+// CONFIRMED end-to-end: `api.helius.xyz` is the correct host (resolving the
+// base-URL ambiguity noted below in this project's favor), the response
+// validated cleanly against HeliusTransactionsResponseSchema with no
+// adjustment needed, and `timestamp` is confirmed to be unix SECONDS (a
+// milliseconds reading would decode to 1970, not a real recent date — this
+// resolves the "unconfirmed unit" flag in schemas.ts). **Still NOT
+// confirmed**: the `events.swap` shape (HeliusSwapEventSchema) — the single
+// most important field for real wallet PnL/scoring — because a tip account
+// only receives plain SOL transfers, never SPL token swaps. Do not trust
+// HeliusSwapEventSchema against real data until it's tested against a wallet
+// that has actually executed swaps (e.g. via Jupiter/Raydium). No
+// BIRDEYE_API_KEY exists yet, so getBirdeyeWalletPnlSummary() and its schema
+// remain entirely unconfirmed — everything below about "no key available"
+// still applies to the Birdeye half of this file.
+//
+// Original scaffold note (2026-09-07), still accurate for Birdeye and for
+// the swap-event shape above: every endpoint path, header name, and response
+// shape here is sourced from each provider's PUBLISHED DOCUMENTATION, not
+// confirmed by a real authenticated call. This is a deliberate, explicit
+// exception to this project's own stated bar for every existing Polymarket
+// integration (docs/AUDIT.md, src/api/client.ts/schemas.ts — every claim
+// there is confirmed by testing against the real live API). It is safe to
+// commit as SCAFFOLDING — the shape and conventions are right, and it
+// compiles/typechecks/lints clean — but nothing in src/scoring/ or
+// src/backtesting/ should be pointed at this file's Birdeye or swap-event
+// output until those specific pieces are verified too. Docs visibly drifted
+// even during the original research pass — see the two provider-specific
+// caveats below (schemas.ts's Birdeye path discrepancy, and this file's
+// Helius base-URL uncertainty, now resolved in favor of api.helius.xyz
+// above) for concrete examples of why "looks right from the docs" is not the
+// same bar this project normally holds itself to.
 //
 // This file deliberately does NOT import anything from src/api/client.ts
 // (off-limits for this task, and its PolymarketApiError/zod schemas are

@@ -604,11 +604,19 @@ near it.
 ## Open questions for the user + orchestrator to resolve before Phase D
 
 **All six resolved 2026-09-07** (kept below, struck through, as a record of
-what was decided and why — not deleted). **Phase D itself remains blocked**
-on one thing none of these decisions unblock: a real Helius and/or Birdeye
-API key to verify Part 2's Solana client scaffold against (`src/markets/solana/`)
-— every endpoint/response shape there is sourced from published docs, not a
-real call, per that file's own header.
+what was decided and why — not deleted). **Phase D was blocked on a real
+Helius and/or Birdeye API key — partially unblocked 2026-09-13**: a real
+`HELIUS_API_KEY` was added and `src/markets/solana/client.ts`'s
+`getHeliusWalletTransactionHistory` was confirmed live (correct host,
+response envelope validates cleanly, `timestamp` confirmed unix seconds —
+see that file's header for the exact test). **Still blocked**: no
+`BIRDEYE_API_KEY` exists yet, and the single most important field for real
+wallet scoring — Helius's `events.swap` shape — remains unconfirmed because
+the wallet tested only had plain transfers, never a real token swap. Phase
+D proper (building `src/markets/solana/engine.ts`'s `buildTrials`, which
+needs the swap shape to reconstruct positions) should not start until
+either a Birdeye key arrives or a real-swap wallet is tested against
+Helius, whichever comes first.
 
 1. ~~**The Track G / composite-score discrepancy**~~ — **Resolved** (see
    "Revision history" at the top): a harness/isolation quirk left this

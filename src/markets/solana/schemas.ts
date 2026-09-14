@@ -1,22 +1,35 @@
 // Zod schemas for Helius / Birdeye response shapes.
 //
-// READ THIS BEFORE TRUSTING ANY FIELD BELOW: every schema here is
-// transcribed from published documentation fetched 2026-09-07 (WebFetch
-// against helius.dev/docs and data.birdeye.so/docs), NOT confirmed against a
-// real authenticated payload. That is the opposite of this project's own
-// stated bar for src/api/schemas.ts, where every optional-vs-required call
-// cites a specific real response that shaped it (see that file's comments —
+// UPDATE 2026-09-13 (Track H Phase D, partial unblock): with a real
+// HELIUS_API_KEY now in .env, HeliusTransactionSchema (the top-level
+// envelope — signature/timestamp/type/source/description/fee/feePayer/
+// nativeTransfers/tokenTransfers/events) was validated live against a real
+// payload (see client.ts's file header for the test wallet/method) with
+// zero adjustment needed — `.passthrough()` meant it would have accepted
+// extra fields either way, but every field this schema DOES type held its
+// documented shape. `timestamp` confirmed unix seconds, not ms. The nested
+// `HeliusSwapEventSchema` (and everything Birdeye) is still NOT confirmed —
+// the test wallet only had plain transfers, never a real swap — see
+// client.ts for exactly what remains open. Read that update before trusting
+// anything below beyond the top-level Helius envelope.
+//
+// Original note (2026-09-07), still accurate for Birdeye and the swap
+// event shape: every schema here is transcribed from published
+// documentation fetched via WebFetch against helius.dev/docs and
+// data.birdeye.so/docs, NOT confirmed against a real authenticated payload.
+// That is the opposite of this project's own stated bar for
+// src/api/schemas.ts, where every optional-vs-required call cites a
+// specific real response that shaped it (see that file's comments —
 // GammaMarket.endDate, GammaEvent.endDate/liquidity/volume were all
 // tightened-then-loosened after a REAL response broke an overly-strict
-// first draft). No Solana API key is available in this environment, so
-// that same "audit against real payloads" pass has not happened yet.
-// Every field below is deliberately as loose/optional as plausible given
-// that uncertainty, on purpose, learning from the Polymarket lesson above
-// rather than repeating it blind: better to accept a response this schema
-// doesn't fully anticipate than to throw on a real payload just because a
-// docs page didn't mention some field. Phase D (real wallet-scoring
-// integration) MUST re-run this against a real key and tighten/fix
-// whatever's wrong before anything downstream depends on these shapes.
+// first draft). Every field below is deliberately as loose/optional as
+// plausible given that uncertainty, on purpose, learning from the
+// Polymarket lesson above rather than repeating it blind: better to accept
+// a response this schema doesn't fully anticipate than to throw on a real
+// payload just because a docs page didn't mention some field. The
+// swap-event shape and everything Birdeye MUST still be re-run against real
+// data (a real-swap wallet, and a BIRDEYE_API_KEY respectively) before
+// anything downstream depends on them.
 
 import { z } from "zod";
 
@@ -97,7 +110,7 @@ const HeliusSwapEventSchema = z
 export const HeliusTransactionSchema = z
   .object({
     signature: z.string().optional(),
-    timestamp: z.number().optional(), // unix seconds, per docs — unconfirmed unit (could be ms; verify against a real payload before trusting math on this)
+    timestamp: z.number().optional(), // unix seconds — confirmed 2026-09-13 against a real payload (see file header)
     type: z.string().optional(), // Helius's own category (e.g. "SWAP", "TRANSFER") — NOT this project's categorize() taxonomy, a different classification problem, see docs/MULTI_MARKET_ARCHITECTURE.md Part 2
     source: z.string().optional(), // e.g. "JUPITER", "RAYDIUM" — which program executed it
     description: z.string().optional(),
