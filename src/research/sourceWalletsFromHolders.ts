@@ -61,7 +61,7 @@ const HOLDERS_PER_MARKET_SIDE = 15;
 // confirm on deeper pull" pattern this project already used for 0x_exit:
 // historyPages raised from 10 to 40 only once the shallow pass looked
 // worth it).
-const MAX_CANDIDATES_TO_SCORE = 5;
+const MAX_CANDIDATES_TO_SCORE = 15;
 const SHALLOW_HISTORY_PAGES = 4;
 
 // Real finding, first live run of this script (2026-09-15): shortlisting by
@@ -73,7 +73,7 @@ const SHALLOW_HISTORY_PAGES = 4;
 // historical pull) BEFORE the few survivors get the slower
 // scoreWalletShallow() treatment, instead of discovering dormancy only
 // after paying for that pull.
-const RECENCY_PREFILTER_POOL_SIZE = 40;
+const RECENCY_PREFILTER_POOL_SIZE = 80;
 const RECENCY_WINDOW_DAYS = 14;
 
 interface Sighting {
