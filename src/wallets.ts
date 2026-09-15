@@ -622,13 +622,17 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   // The one clean survivor of this sweep: no veto flags, active as of
   // 1 day before scoring (2026-09-13) — genuinely live, not dormant. Still
-  // a thin 22-event sample by this project's own MIN_SAMPLE_SIZE bar;
-  // treat qualityScore=64 as "worth a closer look," not a green light.
+  // Reviewed 2026-09-15 (IMPROVEMENT_PLAN.md item 35) and NOT added to
+  // paper trading: wallet-breakdown + classifyArchetypes show the 22
+  // "events" are 97% the same directional bet (WTI/Crude Oil price-
+  // threshold ladders, same shape as 0x_exit's already-negative-
+  // backtested ladder-harvester), profit concentrated in a March-June
+  // 2026 run reading as one well-timed macro call, not a repeatable edge.
   {
     address: "0xa80e3fe5e7a445fa047fe6de1e27f9a15217b94b",
     label:
-      "bin8888 (FINANCE all-time #2 — scored 2026-09-13: 85.9% win, NO veto flags, ROI 33.3%, 22 events, netPnl=$492,238, daysSinceLastActivity=1.0 — CANDIDATE, thin sample, pending deeper review/paper-trading decision)",
-    archetype: "unclassified",
+      "bin8888 (FINANCE all-time #2 — 85.9% win, ROI 33.3%, 22 events, netPnl=$492,238 — NOT paper-traded: re-reviewed 2026-09-15, 97% of fills are concentrated WTI/Crude Oil ladder bets, same shape already backtested negative via 0x_exit; still tracked for provenance)",
+    archetype: "ladder-harvester",
     source: "https://polymarket.com/leaderboard/finance/all/profit",
   },
   {

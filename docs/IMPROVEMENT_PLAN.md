@@ -591,3 +591,31 @@ one exception, logged retroactively once confirmed pushed and still green
     unless a materially larger sample becomes available organically (more
     markets resolving over time) rather than by re-spending API budget on
     the same underlying population.
+35. ✅ **Done 2026-09-15. Resolves the pending `bin8888` paper-trading
+    decision from item 28.** Re-scored live: still active
+    (`daysSinceLastActivity=0.2`), qualityScore ticked up to 65/100, still
+    zero veto flags — same clean-candidate shape as 2026-09-13. But a
+    deeper pull (`wallet-breakdown`, `classify-archetypes`, both run
+    fresh) changed the read: the 22-"event" sample isn't diversified —
+    1,703 of 1,758 resolved fills (97%) are `crypto/commodity`, almost all
+    "Will WTI/Crude Oil (CL) hit $X in [month]" price-threshold markets at
+    different strikes/expiries, i.e. the same directional oil-price bet
+    repeated. `classifyArchetypes` newly tags it **`ladder-harvester`**
+    (confidence 0.70, 2.5 markets/event) — the identical strategy shape to
+    `0x_exit`, which this project already backtested negative on BTC/WTI
+    ladders specifically (Track G.19). Profit is also concentrated (top
+    event = 31% of profit, top 3 = 88.6%; quality score's own
+    `profitConcentration=0.69`/`consistency=0.38` were already flagging
+    this, which is why 65/100 isn't higher despite the headline ROI/win
+    rate). Week-by-week, the bulk of the $492K net P&L clusters in a
+    March-June 2026 run (wk0 +146% net, wk3 +238% net on a single WTI
+    cluster) reading like one well-timed directional call on rising oil
+    prices, not a repeatable mechanical edge; 139 fills are still open/
+    unresolved so the current position's outcome is unknown. **Decision
+    (user's call, presented with this recommendation): do NOT add
+    `bin8888` to `paperTrading/config.ts`.** Left in `TRACKED_WALLETS`
+    as-is (still polled by the tracking daemon, so activity continues to
+    accrue for provenance/future re-review) with its `wallets.ts` label
+    updated from "pending deeper review" to record this outcome and the
+    reason, matching this project's practice of flagging investigated-but-
+    not-acted-on findings rather than omitting them.
