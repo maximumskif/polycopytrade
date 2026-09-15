@@ -38,7 +38,8 @@
     "ou-over-under-split": "tsx src/research/ouOverUnderSplit.ts",
     "smart-money-divergence": "tsx src/research/smartMoneyDivergence.ts",
     "archetype-cohorts": "tsx src/research/archetypeCohorts.ts",
-    "favorite-harvesting": "tsx src/research/favoriteHarvesting.ts"
+    "favorite-harvesting": "tsx src/research/favoriteHarvesting.ts",
+    "funding-source-clustering": "tsx src/research/fundingSourceClustering.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

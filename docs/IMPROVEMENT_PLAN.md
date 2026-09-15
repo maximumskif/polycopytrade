@@ -662,3 +662,55 @@ once a sourcing channel actually grows the quality pool.
       Onramp/relayer confound at all, before writing any client/schema
       code. Same "verify live before building" discipline as Track H
       Phase D's Helius work.
+
+## Track G.20 — funding-source clustering: built, run, clean negative on partial coverage (2026-09-15)
+
+37. ✅ **Done 2026-09-15.** A real `ETHERSCAN_API_KEY` was added to `.env`
+    (user-provided). Built and ran the funding-source-clustering trace
+    item 36 scoped: `src/markets/polygon/{client,schemas,logDecoding}.ts`
+    (Etherscan API V2, chainid=137) + `src/research/fundingSourceClustering.ts`
+    (`npm run funding-source-clustering [-- --limit=N]`), with
+    `tests/polygonFundingTrace.test.ts` against real captured fixtures
+    (`tests/fixtures/polygon-{tokentx,receipt}.sample.json`) — 7 new tests,
+    179/179 total, typecheck/lint clean. Every schema/endpoint claim is
+    confirmed against a real response, same bar `src/api/schemas.ts` holds
+    itself to (unlike `src/markets/solana/schemas.ts`'s still-doc-only
+    ones) — see `logDecoding.ts`'s file header for the exact real
+    transaction this was traced through.
+    - **The signal**: a wallet's `pUSD` is minted (from the zero address),
+      not transferred from a real depositor, so naively reading the mint's
+      `from` reveals nothing. But the deposit transaction's logs include
+      an ERC-4337 `UserOperationEvent` whose `sender` is the real account
+      that authorized the deposit — confirmed live to be distinct from
+      both the trading wallet and Polymarket's own infra contracts
+      (EntryPoint/Onramp). Live-tested going one hop further (who funded
+      THAT account) and found it resolves to a swap-router/aggregator
+      contract (`permit2TransferAndMulticall`) — not a human, and not a
+      per-user signal (most users converging on the same handful of
+      popular routers) — so a second hop was deliberately NOT built into
+      the automated sweep, only documented as a manual-review option if
+      the first hop ever surfaces a real cluster worth digging into.
+    - **Real bug found and fixed live while building**: Etherscan signals
+      rate-limiting as HTTP 200 with `status:"0", message:"NOTOK"`, not an
+      HTTP 429 — invisible to the standard retry-on-429 check every other
+      client in this project uses. `requestJson` now also retries on this
+      body shape specifically (matching only the confirmed `"NOTOK"`
+      value, not a broader "rate limit"-text sniff, to avoid swallowing a
+      real non-retryable error under similar wording).
+    - **Result: 17 of 95 tracked wallets resolved to an authorizing
+      address; zero share a funder with any other tracked wallet** — a
+      genuine, not-starved negative for this subset (17 distinct
+      addresses is a real sample, not 1-2 wallets scraping by). Confirms
+      `unnamed monthly #15` (`0x1b20a0...`, this project's best
+      paper-trading candidate)'s authorizing address independently, same
+      value found during live design-testing.
+    - **Real, majority-sized coverage gap, not a rare edge case**: the
+      other 78 wallets' funding transactions have NO `UserOperationEvent`
+      at all — e.g. `SDTrading`'s funding tx calls Gnosis Safe's
+      `execTransaction`, a structurally different deposit-relay pattern
+      from ERC-4337, not just an older EntryPoint version. This decoder
+      only handles the ERC-4337 case. **Extending to Safe (and whatever
+      else the remaining unresolved wallets turn out to use) is real,
+      separate follow-up work — deliberately not attempted this pass,
+      pending a decision on whether the clean negative on the resolved
+      17 makes the remaining 78 worth the additional build.**
