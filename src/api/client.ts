@@ -25,14 +25,16 @@ import {
   GammaEventsResponseSchema,
   OrderBookSchema,
   LeaderboardResponseSchema,
+  HoldersResponseSchema,
   type Activity,
   type GammaMarket,
   type GammaEvent,
   type OrderBook,
   type LeaderboardEntry,
+  type HoldersGroup,
 } from "./schemas";
 
-export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry };
+export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry, HoldersGroup };
 
 const DATA_API = "https://data-api.polymarket.com";
 const GAMMA_API = "https://gamma-api.polymarket.com";
@@ -321,4 +323,27 @@ export async function getLeaderboard(
     offset: String(opts.offset ?? 0),
   });
   return validate(LeaderboardResponseSchema, await requestJson(`${DATA_API}/v1/leaderboard?${qs.toString()}`), "GET /v1/leaderboard");
+}
+
+// data-api's /holders — a genuinely different wallet-sourcing signal from
+// getLeaderboard's historical PNL rank: who currently holds a large
+// position in a market that's trading RIGHT NOW. Confirmed live 2026-09-15
+// (docs/IMPROVEMENT_PLAN.md's wallet-sourcing track): `market` (the
+// conditionId) is required -- `/positions`-style user-only or bare
+// condition_id/conditionId/token param names all 400. Returns one group per
+// outcome token, holders pre-sorted descending by `amount` (share count,
+// not USD).
+export async function getTopHolders(conditionId: string, limit = 20): Promise<HoldersGroup[]> {
+  const qs = new URLSearchParams({ market: conditionId, limit: String(limit) });
+  return validate(HoldersResponseSchema, await requestJson(`${DATA_API}/holders?${qs.toString()}`), "GET /holders");
+}
+
+// gamma-api's /events ordered by recent (24h) volume -- "what's actually
+// trading heavily right now," independent of any wallet's historical PNL.
+// The natural feed for getTopHolders() above: pairs a currently-hot market
+// with who's currently sized into it, rather than who made money in the
+// past. `order=volume24hr` confirmed live 2026-09-15.
+export async function getActiveEventsByVolume(limit = 20): Promise<GammaEvent[]> {
+  const qs = new URLSearchParams({ closed: "false", order: "volume24hr", ascending: "false", limit: String(limit) });
+  return validate(GammaEventsResponseSchema, await requestJson(`${GAMMA_API}/events?${qs.toString()}`), "GET /events (by volume24hr)");
 }

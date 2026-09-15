@@ -79,6 +79,10 @@ export const GammaEventSchema = z.object({
   endDate: z.string().optional(),
   volume: z.number().optional(),
   liquidity: z.number().optional(),
+  // Confirmed present on a real /events?order=volume24hr response
+  // (2026-09-15, wallet-sourcing track) — optional since only relevant to
+  // that one active-markets-by-recent-volume query, not every /events call.
+  volume24hr: z.number().optional(),
   markets: z.array(GammaMarketSchema).nullable().optional(),
 });
 export type GammaEvent = z.infer<typeof GammaEventSchema>;
@@ -122,3 +126,32 @@ export const LeaderboardEntrySchema = z.object({
 });
 export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
 export const LeaderboardResponseSchema = z.array(LeaderboardEntrySchema);
+
+// data-api's /holders — confirmed by a real live call, 2026-09-15 (see
+// docs/IMPROVEMENT_PLAN.md's wallet-sourcing track): `market=<conditionId>`
+// is required (a bare `user`-only /positions-style query 400s asking for
+// `market`); returns one group per outcome token, each pre-sorted
+// descending by `amount` (outcome-token share count, NOT USD — a holder's
+// real dollar stake is amount*price, not reported directly here).
+export const HolderSchema = z.object({
+  proxyWallet: z.string(),
+  amount: z.number(),
+  name: z.string().nullable().optional(),
+  pseudonym: z.string().nullable().optional(),
+  outcomeIndex: z.number().optional(),
+});
+export type Holder = z.infer<typeof HolderSchema>;
+export const HoldersGroupSchema = z.object({
+  token: z.string(),
+  holders: z.array(HolderSchema),
+});
+export type HoldersGroup = z.infer<typeof HoldersGroupSchema>;
+// Confirmed live 2026-09-15 (wallet-sourcing track): a market close to
+// resolution (all outcome tokens already fully settled/redeemed) returns a
+// bare `null` body instead of `[]` -- normalized to an empty array here so
+// callers don't need their own null check for what's really just "no
+// holders left to report."
+export const HoldersResponseSchema = z
+  .array(HoldersGroupSchema)
+  .nullable()
+  .transform((v) => v ?? []);

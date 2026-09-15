@@ -1,0 +1,90 @@
+[
+  {
+    "token": "97186030785608128217926542396950266594898339988989015155120280107165449433603",
+    "holders": [
+      {
+        "proxyWallet": "0x58b3380f71bd6c706dd398a5e60bde55fa3a653c",
+        "bio": "",
+        "asset": "97186030785608128217926542396950266594898339988989015155120280107165449433603",
+        "pseudonym": "Moist-Dame",
+        "amount": 3378158.338658,
+        "displayUsernamePublic": true,
+        "outcomeIndex": 0,
+        "name": "timetowander",
+        "profileImage": "",
+        "profileImageOptimized": "",
+        "verified": false
+      },
+      {
+        "proxyWallet": "0x0bb8a71b7ed93265c8045640fb3aa1eb93ad253e",
+        "bio": "",
+        "asset": "97186030785608128217926542396950266594898339988989015155120280107165449433603",
+        "pseudonym": "Velvety-Squid-Subroutine",
+        "amount": 2283230.033605,
+        "displayUsernamePublic": true,
+        "outcomeIndex": 0,
+        "name": "anykey",
+        "profileImage": "",
+        "profileImageOptimized": "",
+        "verified": false
+      },
+      {
+        "proxyWallet": "0x859b4303ce5ae7d6fd43bc118d807a01b37f31b8",
+        "bio": "",
+        "asset": "97186030785608128217926542396950266594898339988989015155120280107165449433603",
+        "pseudonym": "Idle-Vision",
+        "amount": 2159167.050241,
+        "displayUsernamePublic": true,
+        "outcomeIndex": 0,
+        "name": "ColdSoap2",
+        "profileImage": "",
+        "profileImageOptimized": "",
+        "verified": false
+      }
+    ]
+  },
+  {
+    "token": "81470465080656150088482886298356783621062802919110096763062861781139262816347",
+    "holders": [
+      {
+        "proxyWallet": "0xa5ef39c3d3e10d0b270233af41cac69796b12966",
+        "bio": "",
+        "asset": "81470465080656150088482886298356783621062802919110096763062861781139262816347",
+        "pseudonym": "",
+        "amount": 15350775.514301,
+        "displayUsernamePublic": false,
+        "outcomeIndex": 1,
+        "name": "",
+        "profileImage": "",
+        "profileImageOptimized": "",
+        "verified": false
+      },
+      {
+        "proxyWallet": "0xd1c769317bd15de7768a70d0214cf0bbcc531d2b",
+        "bio": "",
+        "asset": "81470465080656150088482886298356783621062802919110096763062861781139262816347",
+        "pseudonym": "Shocked-Anagram",
+        "amount": 1000000,
+        "displayUsernamePublic": true,
+        "outcomeIndex": 1,
+        "name": "033033033",
+        "profileImage": "",
+        "profileImageOptimized": "",
+        "verified": false
+      },
+      {
+        "proxyWallet": "0xed107a85a4585a381e48c7f7ca4144909e7dd2e5",
+        "bio": "",
+        "asset": "81470465080656150088482886298356783621062802919110096763062861781139262816347",
+        "pseudonym": "Flashy-Label",
+        "amount": 28786.349089,
+        "displayUsernamePublic": true,
+        "outcomeIndex": 1,
+        "name": "qmarktea2",
+        "profileImage": "https://polymarket-upload.s3.us-east-2.amazonaws.com/profile-image-117964-6e6d789b-ebb3-49e9-a6ac-5535f729d9a2.png",
+        "profileImageOptimized": "",
+        "verified": false
+      }
+    ]
+  }
+]

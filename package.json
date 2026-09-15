@@ -34,6 +34,7 @@
     "sport-segmentation": "tsx src/research/sportSegmentation.ts",
     "volatility-breakout": "tsx src/research/volatilityBreakout.ts",
     "source-wallets": "tsx src/research/sourceWallets.ts",
+    "source-wallets-holders": "tsx src/research/sourceWalletsFromHolders.ts",
     "ou-over-under-split": "tsx src/research/ouOverUnderSplit.ts",
     "smart-money-divergence": "tsx src/research/smartMoneyDivergence.ts",
     "archetype-cohorts": "tsx src/research/archetypeCohorts.ts"

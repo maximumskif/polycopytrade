@@ -10,7 +10,7 @@
 // runs it through the Phase 2 engine) — the same pattern as
 // engine.ts/statistics.ts.
 
-import { getActivityFromStart, type Activity } from "../api/client";
+import { getActivityFromStart, getActivityDeep, type Activity } from "../api/client";
 import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
 import { computeStrategyResult, MIN_SAMPLE_SIZE, mean } from "../backtesting/statistics";
 import { computeRollingWindowResults } from "../backtesting/rollingWindow";
@@ -214,6 +214,15 @@ export function computeWalletScore(
   };
 }
 
+async function scoreFromActivity(wallet: TrackedWallet, activity: Activity[]): Promise<{ score: WalletScore; trials: BacktestTrial[] }> {
+  const datasetCutoff = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : Math.floor(Date.now() / 1000);
+  const config = defaultBacktestConfig({ walletAddresses: [wallet.address], datasetCutoff });
+  const trials = await buildTrials(wallet.address, activity, config);
+  const strategyResult = computeStrategyResult(trials, config);
+  const score = computeWalletScore(wallet, activity, trials, strategyResult);
+  return { score, trials };
+}
+
 // Returns the raw activity/trials alongside the score for callers that need
 // them for further post-processing (e.g. archetypeClassifier.ts's
 // order-clustering) without a second, redundant network pull.
@@ -221,14 +230,32 @@ export async function scoreWalletWithActivity(
   wallet: TrackedWallet
 ): Promise<{ score: WalletScore; activity: Activity[]; trials: BacktestTrial[] }> {
   const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10);
-  const datasetCutoff = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : Math.floor(Date.now() / 1000);
-  const config = defaultBacktestConfig({ walletAddresses: [wallet.address], datasetCutoff });
-  const trials = await buildTrials(wallet.address, activity, config);
-  const strategyResult = computeStrategyResult(trials, config);
-  const score = computeWalletScore(wallet, activity, trials, strategyResult);
+  const { score, trials } = await scoreFromActivity(wallet, activity);
   return { score, activity, trials };
 }
 
 export async function scoreWallet(wallet: TrackedWallet): Promise<WalletScore> {
   return (await scoreWalletWithActivity(wallet)).score;
+}
+
+// Non-reproducible quick screen -- see getActivityDeep's own docstring:
+// its window shifts every call, "NOT fine for a reproducible backtest."
+// Deliberately used here anyway for a different reason than a backtest:
+// getActivityFromStart pages FORWARD from a wallet's OLDEST activity, so a
+// shallow page budget on a high-volume wallet can cap out before ever
+// reaching its recent trades -- found live 2026-09-15 sourcing holder-based
+// candidates, where two genuinely active wallets both came back falsely
+// flagged "dormant" from a shallow getActivityFromStart pull (same root
+// cause as an earlier live finding on `bin8888`). getActivityDeep pages
+// backward from NOW instead, so a shallow pull's "last activity" reading is
+// actually recent. Only for a fast "is this worth a deeper look" screen --
+// promote a promising candidate to scoreWallet()'s full, reproducible pull
+// before trusting the number for anything else.
+export async function scoreWalletShallow(
+  wallet: TrackedWallet,
+  pages = 4
+): Promise<{ score: WalletScore; activity: Activity[]; trials: BacktestTrial[] }> {
+  const activity = await getActivityDeep(wallet.address, pages);
+  const { score, trials } = await scoreFromActivity(wallet, activity);
+  return { score, activity, trials };
 }
