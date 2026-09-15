@@ -619,3 +619,46 @@ one exception, logged retroactively once confirmed pushed and still green
     updated from "pending deeper review" to record this outcome and the
     reason, matching this project's practice of flagging investigated-but-
     not-acted-on findings rather than omitting them.
+
+## Track G.20 research — funding-source clustering is a bigger lift than originally scoped (2026-09-15)
+
+Also checked: whether to re-run `npm run smart-money-divergence` (Track
+G.19 item 2) given the quality pool might have grown. It hasn't — no new
+wallet has cleared the qualityScore>=50/zero-veto-flags bar since
+2026-09-13 (today's holders-sourcing channel's one candidate, `ScottyNooo`,
+scored 42/100, below the bar), so a re-run would burn real rate-limited
+API time to reproduce the same starvation result. Skipped; revisit only
+once a sourcing channel actually grows the quality pool.
+
+36. **Research only, not yet built.** Item 20's funding-source-clustering
+    idea (do two "independently smart" wallets share a common funder,
+    implying the same real entity) turns out to need updating before any
+    client code gets written — two things changed since this was first
+    scoped as "needs Polygonscan":
+    - **The API moved.** Polygonscan's standalone API was deprecated
+      2025-08-15; Polygon POS data now comes from the unified Etherscan
+      API V2 (`https://api.etherscan.io/v2/api?chainid=137`, one API key
+      across chains, 5 req/s / 100k req/day free tier). The env var this
+      needs is `ETHERSCAN_API_KEY`, not `POLYGONSCAN_API_KEY`.
+    - **Polymarket's collateral token moved too.** Trading collateral is
+      now **pUSD** (`0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB`), not raw
+      USDC.e (`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`) — incoming
+      USDC/USDC.e gets wrapped into pUSD via a **Collateral Onramp**
+      contract (`0x93070a847efEf7F70739046A929D47a521F5B8ee`). A naive
+      "who sent this wallet its first pUSD" trace would likely just find
+      the Onramp contract as the ERC-20 transfer's `from`, not the real
+      depositor — the actual funding identity would need the underlying
+      transaction's true signer, which may itself be a gasless relayer
+      rather than the depositor's own EOA if Polymarket's proxy-wallet
+      deposit flow uses meta-transactions (not yet confirmed either way).
+    - Confirmed these addresses via public PolygonScan/docs.polymarket.com
+      pages (web search + fetch), but **could not pull real transfer data**
+      — polygonscan.com's transfer tables render via JS that a plain page
+      fetch doesn't capture, and the Etherscan V2 API requires a key even
+      on the free tier. **Blocked on an `ETHERSCAN_API_KEY`** — user is
+      getting one; next step once it lands is pulling one real tracked
+      wallet's (`tokentx`, contractaddress=pUSD and =USDC.e) full transfer
+      history live to see whether the funding-source signal survives the
+      Onramp/relayer confound at all, before writing any client/schema
+      code. Same "verify live before building" discipline as Track H
+      Phase D's Helius work.
