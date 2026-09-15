@@ -214,11 +214,21 @@ export function computeWalletScore(
   };
 }
 
-export async function scoreWallet(wallet: TrackedWallet): Promise<WalletScore> {
+// Returns the raw activity/trials alongside the score for callers that need
+// them for further post-processing (e.g. archetypeClassifier.ts's
+// order-clustering) without a second, redundant network pull.
+export async function scoreWalletWithActivity(
+  wallet: TrackedWallet
+): Promise<{ score: WalletScore; activity: Activity[]; trials: BacktestTrial[] }> {
   const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10);
   const datasetCutoff = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : Math.floor(Date.now() / 1000);
   const config = defaultBacktestConfig({ walletAddresses: [wallet.address], datasetCutoff });
   const trials = await buildTrials(wallet.address, activity, config);
   const strategyResult = computeStrategyResult(trials, config);
-  return computeWalletScore(wallet, activity, trials, strategyResult);
+  const score = computeWalletScore(wallet, activity, trials, strategyResult);
+  return { score, activity, trials };
+}
+
+export async function scoreWallet(wallet: TrackedWallet): Promise<WalletScore> {
+  return (await scoreWalletWithActivity(wallet)).score;
 }

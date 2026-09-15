@@ -17,7 +17,8 @@ export interface TrackedWallet {
   label: string;
   archetype:
     | "ladder-harvester" // mechanical, sells the "boring" side of price-ladder markets
-    | "whale-conviction" // few, very large, high-conviction bets
+    | "whale-conviction" // few, very large, high-conviction bets, not sports-dominant
+    | "live-sports-whale" // few, very large bets concentrated in live sports/esports — README's "Trader archetypes" table found two wallets (0xE30E7, Djdjdjekekek) manually corrected into this bucket from "sniper"/"whale-conviction" respectively; added as its own archetype 2026-09-15 since neither prior label fit and this project's own real fill-clustering analysis already established it as a real, distinct pattern
     | "sniper" // very few trades, very high profit/volume ratio
     | "sports-scalper" // high-frequency micro-edge across many games
     | "sports-systematic" // moderate-frequency, consistent small edges in one sport
@@ -47,7 +48,11 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   {
     address: "0xe30e74595517de48f1fb19f4553dd3d9f1e96b87",
     label: "0xE30E7... (leaderboard #3)",
-    archetype: "sniper",
+    // Was "sniper" here but README's own "Trader archetypes" table already
+    // documents the real correction from fill-clustering analysis: 11 real
+    // orders (after clustering), avg $54,987, live Challenger-level tennis —
+    // this field was just never updated to match. Fixed 2026-09-15.
+    archetype: "live-sports-whale",
     source: "https://polymarket.com/leaderboard/overall/monthly/profit",
   },
   {
@@ -59,7 +64,11 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   {
     address: "0x6d20c35f65d9899b6d6b74f8466e824580f9a165",
     label: "Djdjdjekekek (leaderboard #1)",
-    archetype: "whale-conviction",
+    // Was "whale-conviction" here but README's own "Trader archetypes" table
+    // already documents the real correction: 30 real orders, avg $79,597,
+    // live tennis + LoL esports (not macro) — this field was just never
+    // updated to match. Fixed 2026-09-15.
+    archetype: "live-sports-whale",
     source: "https://polymarket.com/@djdjdjekekek",
   },
   {

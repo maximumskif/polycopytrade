@@ -25,6 +25,7 @@
     "wallet-breakdown": "tsx src/legacy/walletBreakdown.ts",
     "backtest": "tsx src/cli/backtest.ts",
     "wallet-score": "tsx src/cli/walletScore.ts",
+    "classify-archetypes": "tsx src/cli/classifyArchetypes.ts",
     "follower-delay-demo": "tsx src/cli/followerDelayDemo.ts",
     "paper:report": "tsx src/cli/paperReport.ts",
     "ou-over-bias": "tsx src/research/ouOverBias.ts",
@@ -34,7 +35,8 @@
     "volatility-breakout": "tsx src/research/volatilityBreakout.ts",
     "source-wallets": "tsx src/research/sourceWallets.ts",
     "ou-over-under-split": "tsx src/research/ouOverUnderSplit.ts",
-    "smart-money-divergence": "tsx src/research/smartMoneyDivergence.ts"
+    "smart-money-divergence": "tsx src/research/smartMoneyDivergence.ts",
+    "archetype-cohorts": "tsx src/research/archetypeCohorts.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
