@@ -3,15 +3,28 @@
 // share the same real controlling account, revealed by who funded each
 // wallet's very first Polymarket deposit?
 //
-// APPROACH (see src/markets/polygon/logDecoding.ts's file header for the
-// full live-verified trace this is built on): a wallet's `pUSD` balance is
-// MINTED (from the zero address), not transferred from a real depositor —
-// so the mint's own `from` field reveals nothing. Instead, the deposit
-// transaction's logs contain an ERC-4337 `UserOperationEvent` whose
-// `sender` is the real account that authorized the deposit — a per-user
-// address, confirmed live to be distinct from the trading wallet itself and
-// from Polymarket's own infra contracts (EntryPoint/Onramp). That `sender`
-// is this file's ONE clustering signal.
+// APPROACH: two independent signals, tried in order, since live testing
+// found tracked wallets split across two structurally different proxy-
+// wallet architectures:
+//
+// 1. Gnosis Safe: the trading wallet itself IS a Safe contract. A single
+//    eth_call to its own getOwners() (client.ts's getSafeOwners) reveals
+//    its real controlling account directly — no funding-transaction lookup
+//    needed at all. Confirmed live 2026-09-15 (SDTrading's wallet returns
+//    exactly one owner; calling the same function against a non-Safe
+//    wallet reverts, a real "not a Safe" signal, not a bug).
+// 2. ERC-4337 account abstraction (see logDecoding.ts's file header for the
+//    full live-verified trace): a wallet's `pUSD` balance is MINTED (from
+//    the zero address), not transferred from a real depositor, so the
+//    mint's own `from` field reveals nothing. Instead, the deposit
+//    transaction's logs contain a `UserOperationEvent` whose `sender` is
+//    the real account that authorized the deposit — confirmed live to be
+//    distinct from the trading wallet itself and from Polymarket's own
+//    infra contracts (EntryPoint/Onramp).
+//
+// A wallet that is neither (some other deposit-relay pattern this project
+// hasn't seen yet) comes back with authorizingAddress=null and a specific
+// reason — still a real, documented gap, not silently assumed covered.
 //
 // DELIBERATELY NOT ATTEMPTED: tracing a further hop back (who funded THAT
 // account with USDC.e) — live-tested during design and found to resolve to
@@ -35,17 +48,32 @@
 
 import "dotenv/config";
 import { TRACKED_WALLETS } from "../wallets";
-import { getEarliestIncomingTokenTransfer, getTransactionReceiptSender, PUSD_CONTRACT, USDC_E_CONTRACT } from "../markets/polygon/client";
+import { getEarliestIncomingTokenTransfer, getTransactionReceiptSender, getSafeOwners, PUSD_CONTRACT, USDC_E_CONTRACT } from "../markets/polygon/client";
 
 interface WalletFundingResult {
   wallet: (typeof TRACKED_WALLETS)[number];
   authorizingAddress: string | null;
-  fundingToken: "pUSD" | "USDC.e" | null;
-  fundingTxHash: string | null;
+  method: "safe-owner" | "erc4337-userop" | null;
   reason?: string; // set when authorizingAddress is null -- why, not just that
 }
 
 async function traceFundingHop(wallet: (typeof TRACKED_WALLETS)[number]): Promise<WalletFundingResult> {
+  try {
+    const owners = await getSafeOwners(wallet.address);
+    if (owners) {
+      // Multiple owners: the exact SET is the fingerprint (a partial
+      // overlap between two different owner sets is a weaker, different
+      // question this doesn't attempt to answer) -- sorted so owner order
+      // never affects the cluster key.
+      return { wallet, authorizingAddress: [...owners].sort().join(","), method: "safe-owner" };
+    }
+  } catch (err) {
+    // Falls through to the ERC-4337 path -- a getOwners() call failing
+    // (network/rate-limit exhaustion) doesn't mean "not a Safe," so this
+    // isn't treated as a final answer the way a clean revert is.
+    console.error(`[${wallet.label}] getSafeOwners failed, falling back to ERC-4337 trace: ${(err as Error).message}`);
+  }
+
   for (const [label, contract] of [
     ["pUSD", PUSD_CONTRACT],
     ["USDC.e", USDC_E_CONTRACT],
@@ -54,7 +82,7 @@ async function traceFundingHop(wallet: (typeof TRACKED_WALLETS)[number]): Promis
     try {
       transfer = await getEarliestIncomingTokenTransfer(wallet.address, contract);
     } catch (err) {
-      return { wallet, authorizingAddress: null, fundingToken: null, fundingTxHash: null, reason: `${label} lookup failed: ${(err as Error).message}` };
+      return { wallet, authorizingAddress: null, method: null, reason: `${label} lookup failed: ${(err as Error).message}` };
     }
     if (!transfer) continue;
 
@@ -64,26 +92,20 @@ async function traceFundingHop(wallet: (typeof TRACKED_WALLETS)[number]): Promis
         return {
           wallet,
           authorizingAddress: null,
-          fundingToken: label,
-          fundingTxHash: transfer.hash,
-          // Live-observed 2026-09-15 across the first several tracked
-          // wallets: most funding transactions do NOT contain a
-          // UserOperationEvent at all -- e.g. SDTrading's funding tx calls
-          // Gnosis Safe's `execTransaction`, a completely different
-          // deposit-relay pattern from ERC-4337, not just an older
-          // EntryPoint version. This decoder only handles the ERC-4337
-          // case (see logDecoding.ts) -- a real, majority-sized gap, not a
-          // rare edge case. Extending to Safe (and any other pattern found)
-          // is real follow-up work, not assumed away.
-          reason: "no ERC-4337 UserOperationEvent in the funding tx (may be a Gnosis Safe execTransaction or another non-AA deposit path -- see fundingSourceClustering.ts known gap)",
+          method: null,
+          // Live-observed 2026-09-15: a wallet that's neither a Safe (ruled
+          // out above) nor has a UserOperationEvent in its funding tx uses
+          // some other deposit-relay pattern this project hasn't
+          // identified yet -- a real, documented gap.
+          reason: `not a Safe, and no ERC-4337 UserOperationEvent in the ${label} funding tx -- unknown deposit pattern`,
         };
       }
-      return { wallet, authorizingAddress: sender, fundingToken: label, fundingTxHash: transfer.hash };
+      return { wallet, authorizingAddress: sender, method: "erc4337-userop" };
     } catch (err) {
-      return { wallet, authorizingAddress: null, fundingToken: label, fundingTxHash: transfer.hash, reason: `receipt lookup failed: ${(err as Error).message}` };
+      return { wallet, authorizingAddress: null, method: null, reason: `receipt lookup failed: ${(err as Error).message}` };
     }
   }
-  return { wallet, authorizingAddress: null, fundingToken: null, fundingTxHash: null, reason: "no incoming pUSD or USDC.e transfer found" };
+  return { wallet, authorizingAddress: null, method: null, reason: "not a Safe, and no incoming pUSD or USDC.e transfer found" };
 }
 
 // Usage: npm run funding-source-clustering [-- --limit=N]
@@ -101,7 +123,7 @@ export async function main() {
   for (const wallet of wallets) {
     const result = await traceFundingHop(wallet);
     results.push(result);
-    const status = result.authorizingAddress ? `authorizingAddress=${result.authorizingAddress} (via ${result.fundingToken})` : `unknown (${result.reason})`;
+    const status = result.authorizingAddress ? `authorizingAddress=${result.authorizingAddress} (via ${result.method})` : `unknown (${result.reason})`;
     console.log(`[${wallet.label}] ${status}`);
   }
 

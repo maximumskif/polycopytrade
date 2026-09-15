@@ -714,3 +714,52 @@ once a sourcing channel actually grows the quality pool.
       separate follow-up work — deliberately not attempted this pass,
       pending a decision on whether the clean negative on the resolved
       17 makes the remaining 78 worth the additional build.**
+
+38. ✅ **Done 2026-09-15. Extends item 37 with a second signal.** User
+    asked to extend coverage to the 78 unresolved wallets. Investigating
+    a few live turned up that Polymarket's proxy wallets split across
+    (at least) three structurally different architectures, not two:
+    - **Gnosis Safe** (e.g. `SDTrading`) — the trading wallet itself IS a
+      1-of-1 Safe. Added `getSafeOwners()` (`src/markets/polygon/client.ts`):
+      one `eth_call` to the wallet's own `getOwners()` (a standard,
+      documented Safe interface function, selector `0xa0e67e2b`) reveals
+      its real controlling EOA directly — no funding-transaction lookup
+      needed at all. New `src/markets/polygon/abiDecoding.ts` (a minimal,
+      purpose-built ABI `address[]` decoder — not a general library, this
+      project has exactly one on-chain read that needs it). Confirmed live
+      against both a real Safe (1 owner decoded correctly) and a real
+      non-Safe (a clean revert, the expected "not a Safe" signal, not
+      a bug). 5 new tests (12 total in this file), including a
+      hand-constructed 2-owner case (standard ABI encoding, not something
+      requiring live verification the way a provider's own response shape
+      does — no live 2-owner Safe was found to capture instead).
+    - **Plain EOA** (e.g. `0x_exit`'s featured wallet): the funding
+      transaction's own signer (`eth_getTransactionByHash`'s `from`) IS
+      the trading wallet address itself — a user connected a regular
+      wallet directly, no proxy contract at all. Structurally, there is
+      NO separate "authorizing account" to find for this case — the
+      wallet already is its own owner. Not counted as an error, but also
+      not a fingerprint this method can use.
+    - **A third, older Polymarket-proprietary architecture** (e.g.
+      `0xE30E7`, per `docs.polymarket.com`'s own history and the
+      `Polymarket/proxy-factories` GitHub repo): a GSN-style relayer calls
+      a custom `proxy()` function on a `ProxyWalletFactory`-deployed
+      wallet. Read that repo's actual `ProxyWallet.sol` / `ProxyWalletLib`
+      source directly: **there is no public function that exposes the
+      owner** — it lives in a library's internal storage slot, not a
+      standard getter. The real owner address appears to be embedded as a
+      parameter in the relay call's raw calldata, but confirming its exact
+      position would mean reverse-engineering an undocumented layout
+      rather than reading a confirmed standard interface — the same bar
+      this project held ERC-4337/Safe to before trusting them. **Not
+      attempted** — flagged, not guessed at.
+    - **Result, full 95-wallet pool: 41/95 resolved (17 via ERC-4337, 24
+      via Safe), zero share a funder with any other tracked wallet** — a
+      more than doubled, still-clean negative. 184/184 tests pass,
+      typecheck/lint clean. The remaining ~54 unresolved wallets split
+      across plain-EOA (no fingerprint exists) and the third
+      proxy-relay architecture (fingerprint likely exists, not decoded).
+      **Extending further (reverse-engineering the legacy ProxyWallet
+      calldata layout) is a real, separate decision — not started, given
+      41 real answers with zero clusters already makes a positive result
+      from the remaining wallets look less likely, not more.**

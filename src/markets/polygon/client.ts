@@ -25,8 +25,9 @@ import { RateLimiter } from "../../utils/rateLimiter";
 import { backoffDelayMs, sleep } from "../../utils/retry";
 import { redactUrl } from "../../utils/redactUrl";
 import { validateSchema as validate } from "../../utils/validateSchema";
-import { TokenTxResponseSchema, TransactionReceiptEnvelopeSchema, type TokenTransfer } from "./schemas";
+import { TokenTxResponseSchema, TransactionReceiptEnvelopeSchema, EthCallEnvelopeSchema, type TokenTransfer } from "./schemas";
 import { findUserOperationSender } from "./logDecoding";
+import { decodeAddressArrayResult } from "./abiDecoding";
 
 export type { TokenTransfer };
 
@@ -232,4 +233,41 @@ export async function getTransactionReceiptSender(txHash: string, apiKey?: strin
   const parsed = validate(TransactionReceiptEnvelopeSchema, body, "GET Etherscan eth_getTransactionReceipt");
   if (!parsed.result) return null; // hash not found/not yet mined — a real, expected case, not an error
   return findUserOperationSender(parsed.result.logs);
+}
+
+// keccak256("getOwners()") -- standard Gnosis Safe interface function.
+const SAFE_GET_OWNERS_SELECTOR = "0xa0e67e2b";
+
+// Reads a Gnosis Safe's current owner set directly via eth_call, rather
+// than decoding execTransaction's signature bytes -- confirmed live
+// 2026-09-15 against a real tracked wallet that's a Safe
+// (0x16bb9951a36fce71e2ef57890b786145e0ba8492, returned exactly one owner)
+// and against a real non-Safe wallet (an ERC-4337 account, which reverts
+// calling a function its contract doesn't implement -- a real, expected
+// "not a Safe" signal, not a bug). Returns null for a revert (not a Safe,
+// or some other contract shape this project hasn't seen), never throws for
+// that case -- callers use null to fall back to the ERC-4337 trace.
+//
+// CAVEAT (documented, not tested): this reads owners as of NOW, not as of
+// the wallet's original funding — a Safe whose ownership changed since
+// would fingerprint its current controller, not necessarily whoever funded
+// it originally. Not expected to matter for a one-off personal trading
+// wallet, but not verified either way.
+export async function getSafeOwners(address: string, apiKey?: string): Promise<string[] | null> {
+  const key = requireApiKey(apiKey);
+  const qs = new URLSearchParams({
+    chainid: String(POLYGON_CHAIN_ID),
+    module: "proxy",
+    action: "eth_call",
+    to: address,
+    data: SAFE_GET_OWNERS_SELECTOR,
+    tag: "latest",
+    apikey: key,
+  });
+  const url = `${ETHERSCAN_BASE}?${qs.toString()}`;
+  const body = await requestJson(url);
+  const parsed = validate(EthCallEnvelopeSchema, body, "GET Etherscan eth_call getOwners");
+  if ("error" in parsed) return null;
+  const owners = decodeAddressArrayResult(parsed.result);
+  return owners.length > 0 ? owners : null;
 }

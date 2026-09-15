@@ -10,11 +10,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { TokenTxResponseSchema, TransactionReceiptEnvelopeSchema } from "../src/markets/polygon/schemas";
+import { TokenTxResponseSchema, TransactionReceiptEnvelopeSchema, EthCallEnvelopeSchema } from "../src/markets/polygon/schemas";
 import { decodeErc20Transfer, findUserOperationSender, topicToAddress, ERC20_TRANSFER_TOPIC0 } from "../src/markets/polygon/logDecoding";
+import { decodeAddressArrayResult } from "../src/markets/polygon/abiDecoding";
 
 const tokentxFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/polygon-tokentx.sample.json"), "utf8"));
 const receiptFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/polygon-receipt.sample.json"), "utf8"));
+const safeOwnersFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/polygon-eth-call-safe-owners.sample.json"), "utf8"));
+const notSafeFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/polygon-eth-call-not-safe.sample.json"), "utf8"));
 
 test("TokenTxResponseSchema accepts a real pUSD tokentx response", () => {
   const parsed = TokenTxResponseSchema.parse(tokentxFixture);
@@ -59,4 +62,34 @@ test("decodeErc20Transfer decodes the real pUSD mint log from the receipt fixtur
 
 test("decodeErc20Transfer returns null for a non-Transfer log", () => {
   assert.equal(decodeErc20Transfer({ address: "0xabc", topics: ["0xnotatransfer"], data: "0x" }), null);
+});
+
+test("EthCallEnvelopeSchema accepts a real successful getOwners() response", () => {
+  const parsed = EthCallEnvelopeSchema.parse(safeOwnersFixture);
+  assert.ok("result" in parsed);
+});
+
+test("EthCallEnvelopeSchema accepts a real revert response from a non-Safe contract", () => {
+  const parsed = EthCallEnvelopeSchema.parse(notSafeFixture);
+  assert.ok("error" in parsed);
+});
+
+test("decodeAddressArrayResult decodes a real single-owner getOwners() result", () => {
+  const parsed = EthCallEnvelopeSchema.parse(safeOwnersFixture);
+  if (!("result" in parsed)) throw new Error("expected a result, not an error");
+  const owners = decodeAddressArrayResult(parsed.result);
+  assert.deepEqual(owners, ["0x0a26016918a1ad8e57b899ea9484ce0ac87d5255"]);
+});
+
+test("decodeAddressArrayResult decodes a hand-constructed two-owner array (standard ABI encoding, no live 2-owner Safe found to capture)", () => {
+  const offset = "0".repeat(62) + "20";
+  const length = "0".repeat(63) + "2";
+  const owner1 = "0".repeat(24) + "1111111111111111111111111111111111111111";
+  const owner2 = "0".repeat(24) + "2222222222222222222222222222222222222222";
+  const owners = decodeAddressArrayResult(`0x${offset}${length}${owner1}${owner2}`);
+  assert.deepEqual(owners, ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"]);
+});
+
+test("decodeAddressArrayResult returns an empty array for a too-short result", () => {
+  assert.deepEqual(decodeAddressArrayResult("0x00"), []);
 });

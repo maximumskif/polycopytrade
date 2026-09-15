@@ -86,3 +86,16 @@ export const TransactionReceiptEnvelopeSchema = z.object({
   jsonrpc: z.string(),
   result: TransactionReceiptSchema.nullable(),
 });
+
+// ---------------------------------------------------------------------
+// module=proxy&action=eth_call (used for Gnosis Safe's getOwners())
+// ---------------------------------------------------------------------
+// Confirmed live 2026-09-15 against two real tracked wallets: a real Safe
+// (0x16bb9951...) returns {jsonrpc,id,result:"0x..."}, and calling the same
+// function against a non-Safe (an ERC-4337 account, 0x6d20c35f...) reverts
+// as {jsonrpc,id,error:{code,message,data}} — both real, expected shapes,
+// not a failure of either wallet type.
+export const EthCallEnvelopeSchema = z.union([
+  z.object({ jsonrpc: z.string(), result: z.string() }),
+  z.object({ jsonrpc: z.string(), error: z.object({ code: z.number(), message: z.string() }).passthrough() }),
+]);
