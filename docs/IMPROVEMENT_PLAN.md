@@ -476,3 +476,118 @@ without it per instruction rather than blocking indefinitely) and returned
     hasn't provided or a specific real trader's address the user hasn't
     named yet (see `docs/MULTI_MARKET_ARCHITECTURE.md`'s updated "Open
     questions" section for the same finding).
+
+## Track G.19/E.13 follow-up — archetype classifier, holders-based sourcing, favorite-longshot-bias (2026-09-15)
+
+Session was interrupted by a machine shutdown right after these landed;
+this entry backfills the log per this project's practice of writing up
+non-trivial work as it's completed, not after the fact — this batch is the
+one exception, logged retroactively once confirmed pushed and still green
+(172/172 tests, typecheck clean).
+
+30. ✅ **Done 2026-09-15.** **Archetype classifier** — 76 of 96 tracked
+    wallets' `archetype` field was the "unclassified" placeholder and was
+    never actually computed anywhere, purely stored/printed metadata.
+    Added `src/scoring/archetypeClassifier.ts`'s `classifyArchetype()`,
+    deriving the label from the same `WalletScore`/`BacktestTrial` data
+    `walletScore.ts` already computes. Found live against `0xE30E7` that
+    raw fill counts badly misclassify a fragmenting large order as
+    high-frequency scalping — fixed by reusing `walletStats.ts`'s
+    `clusterFills()` for every count/size/frequency-sensitive rule, with a
+    regression test locking in the fix. Also fixed a real staleness bug
+    found along the way: `wallets.ts`'s archetype field for two wallets
+    (`0xE30E7`, `Djdjdjekekek`) didn't match README's own already-published
+    manual "live-sports whale" corrections — that category didn't even
+    exist in the type union; added it and fixed both entries. New tools:
+    `npm run classify-archetypes` (compares algorithmic vs. declared
+    archetype per wallet, `--write` to persist) and
+    `npm run archetype-cohorts` (pools quality-scored wallets by shared
+    archetype, tests whether a cohort's combined backtest beats the whole
+    pool). Live-validated against 6 previously-manual archetypes: 4
+    confirmed exactly; one (`0xE30E7`) disagrees for a real reason (its
+    declared label came from an early shallow pull, superseded by a deeper
+    README analysis) — left as a flagged disagreement, not silently
+    overwritten.
+31. ✅ **Done 2026-09-15.** **New wallet-sourcing channel: per-market top
+    holders**, not historical leaderboards. Motivated by the same day's
+    archetype-cohort sweep finding the entire 95-wallet tracked pool
+    almost completely dormant (only 1 wallet still clears the quality
+    bar). Sources by who currently holds a large real position in a
+    market trading heavily right now, via data-api's `/holders` endpoint
+    (confirmed live, not doc-sourced) paired with gamma-api's
+    active-events-by-24h-volume listing. `npm run source-wallets-holders`.
+    Two real bugs found and fixed live against production data: (1)
+    `/holders` returns bare `null` instead of `[]` for a market close to
+    full resolution — `HoldersResponseSchema` now normalizes null to an
+    empty array instead of throwing; (2) the first shortlisting heuristic
+    (biggest position/most markets) scored 4/4 candidates dormant because
+    holder `amount` reflects position SIZE, not RECENCY — added a cheap
+    single-call recency pre-filter (`getActivity`, most-recent-first)
+    ahead of the expensive full pull. That surfaced a second, deeper bug:
+    `scoreWallet()`'s `getActivityFromStart` pages FORWARD from a wallet's
+    OLDEST activity, so a shallow page budget on a high-volume wallet can
+    cap out before reaching recent trades — falsely flagging genuinely
+    active wallets dormant (same root cause as the earlier `bin8888`
+    finding in item 28). Added `scoreWalletShallow()`
+    (`src/scoring/walletScore.ts`) using `getActivityDeep` (pages backward
+    from now) for a fast, non-reproducible screening pass — confirmed
+    live: a previously falsely-dormant candidate (`ScottyNooo`) correctly
+    scored 42/100/highly-concentrated once fixed. 158/158 tests passed at
+    the time, typecheck/lint clean. One candidate (`Elias.Thornwell`) hit
+    24+ minutes of pure rate-limit wait resolving a large market history
+    and was cut rather than block further — an inherent API cost for a
+    high-volume wallet, not a bug.
+32. ✅ **Done 2026-09-15.** **Favorite-longshot-bias strategy test** — a
+    new, broader direction than the one narrow version already tested
+    (`0x_exit`'s ladder-harvester, which backtested negative). Tests
+    whether heavily-favored outcomes (high price, high win probability)
+    carry a small but real positive edge, across every category the
+    project's 96 tracked wallets have actually traded. Two new pieces:
+    `src/backtesting/bankrollSimulation.ts` — a genuinely new capability,
+    since every other backtest in this project measures aggregate stats
+    (flat stake per trial, order-independent); this simulates a GROWING
+    bankroll across a chronologically-ordered real-bet sequence, sized
+    conservatively (Wilson-lower-bound win-rate estimate, quarter Kelly,
+    hard stake-fraction cap). `src/research/favoriteHarvesting.ts`
+    (`npm run favorite-harvesting`) reuses real fills already in the local
+    `wallet_activity` DB (same source `consensusSignal.ts` uses, zero new
+    historical-pull cost), buckets by entry price (70-99c), resolves each
+    against real settlement, runs every bucket through the same
+    `eventKey`-grouped `computeStrategyResult()` every other result in
+    this project goes through, plus the new bankroll sim. **Live result
+    (150 markets/bucket sample): no bucket clears statistical
+    significance yet** — every 95% ROI CI straddles zero, including the
+    combined result (+1.2% ROI, CI [-4.6%, 6.5%]). One bucket (80-85c)
+    looked worth a deeper pull: +7.2% ROI, and the only bucket where the
+    bankroll sim found a real sizeable edge (338 bets, 2.09x over $1000
+    starting bankroll, 44.8% max drawdown) — promising, not proven. Also
+    bumped `sourceWalletsFromHolders.ts`'s scoring scope
+    (`MAX_CANDIDATES_TO_SCORE` 5→15, `RECENCY_PREFILTER_POOL_SIZE` 40→80)
+    now that it runs detached/unattended instead of blocking an
+    interactive session on slow rate-limited pulls. 172/172 tests passed
+    at the time, typecheck/lint clean.
+33. ✅ **Done 2026-09-15.** Added `--bucket`/`--maxMarkets` flags to
+    `favoriteHarvesting.ts` to scope a run to a single price bucket at a
+    much higher market cap, rather than re-paying the full 5-bucket API
+    cost to sharpen one bucket's CI. Targets item 32's 80-85c bucket,
+    which only sampled 150 of 1,517 available distinct markets. Usage:
+    `npm run favorite-harvesting -- --bucket=80-85 --maxMarkets=600`. Added
+    but **not yet run** as of this entry — see the follow-up below.
+34. ✅ **Done 2026-09-15.** **Ran item 33's 80-85c deep-dive** — full 600
+    of the 1,517 available distinct markets (vs. 150 in item 32's initial
+    pass). **Result: the edge shrank and is still not statistically
+    significant.** 1,561 trials across 463 distinct events, winRate 84.5%,
+    netPnl $45.72, ROI **+2.9%** (down from +7.2% on the smaller sample),
+    95% ROI CI **[-3.9%, 9.2%]** — still straddles zero. Bankroll sim
+    (same Wilson-lower-bound/quarter-Kelly sizing as item 32) also
+    weakened: $1000 → $1446.04 (1.45x, down from 2.09x) over 842 bets
+    (up from 338), maxDrawdown 37.4% (down from 44.8%). **Verdict: this
+    is the expected direction for a real small-sample overestimate, not a
+    new red flag** — matches this project's existing sample-size
+    discipline (a promising point estimate on ~150 markets regressing
+    toward insignificance on ~4x the sample is exactly what "not proven"
+    in item 32 meant). The 80-85c bucket is **not actionable** as a
+    standalone strategy on current data; no further deep-dive planned
+    unless a materially larger sample becomes available organically (more
+    markets resolving over time) rather than by re-spending API budget on
+    the same underlying population.
