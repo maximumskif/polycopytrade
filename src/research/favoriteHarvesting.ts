@@ -82,7 +82,7 @@ function eventKeyFor(fill: RawFill): string {
   return fill.condition_id;
 }
 
-function fetchBucketFills(bucket: PriceBucket): RawFill[] {
+function fetchBucketFills(bucket: PriceBucket, maxMarkets: number): RawFill[] {
   const db = getDb();
   return db
     .prepare(
@@ -97,7 +97,7 @@ function fetchBucketFills(bucket: PriceBucket): RawFill[] {
            LIMIT ?
          )`
     )
-    .all(bucket.min, bucket.max, bucket.min, bucket.max, MAX_MARKETS_PER_BUCKET) as unknown as RawFill[];
+    .all(bucket.min, bucket.max, bucket.min, bucket.max, maxMarkets) as unknown as RawFill[];
 }
 
 // $1 fixed stake per trial (matches consensusSignal.ts's own convention) --
@@ -149,13 +149,35 @@ function baseConfig(strategyName: string) {
   return defaultBacktestConfig({ strategyName, entryRule: "buy whenever a real tracked-wallet fill's entry price falls in this bucket" });
 }
 
+// Usage: npm run favorite-harvesting [-- --bucket=80-85 --maxMarkets=600]
+// Deep-dive mode: --bucket restricts the run to one bucket (matching a
+// PRICE_BUCKETS label exactly) with a much higher --maxMarkets cap than the
+// default full-sweep pass -- for following up on a bucket that looked
+// promising without re-paying the API cost of every other bucket too.
+function parseArgs(): { bucketLabel: string | null; maxMarkets: number } {
+  const args = process.argv.slice(2);
+  const bucketArg = args.find((a) => a.startsWith("--bucket="));
+  const maxMarketsArg = args.find((a) => a.startsWith("--maxMarkets="));
+  return {
+    bucketLabel: bucketArg ? bucketArg.split("=")[1] : null,
+    maxMarkets: maxMarketsArg ? parseInt(maxMarketsArg.split("=")[1], 10) : MAX_MARKETS_PER_BUCKET,
+  };
+}
+
 async function main() {
+  const { bucketLabel, maxMarkets } = parseArgs();
+  const buckets = bucketLabel ? PRICE_BUCKETS.filter((b) => b.label === bucketLabel) : PRICE_BUCKETS;
+  if (bucketLabel && buckets.length === 0) {
+    console.error(`No bucket labeled "${bucketLabel}". Valid labels: ${PRICE_BUCKETS.map((b) => b.label).join(", ")}`);
+    process.exit(1);
+  }
+
   const allTrials: BacktestTrial[] = [];
 
-  console.log(`Scanning ${PRICE_BUCKETS.length} price buckets, up to ${MAX_MARKETS_PER_BUCKET} distinct markets each...\n`);
+  console.log(`Scanning ${buckets.length} price bucket(s), up to ${maxMarkets} distinct markets each...\n`);
 
-  for (const bucket of PRICE_BUCKETS) {
-    const fills = fetchBucketFills(bucket);
+  for (const bucket of buckets) {
+    const fills = fetchBucketFills(bucket, maxMarkets);
     const distinctMarketsFound = new Set(fills.map((f) => f.condition_id)).size;
     console.log(`[${bucket.label}c] ${fills.length} raw fills across ${distinctMarketsFound} distinct markets. Resolving...`);
 
@@ -195,16 +217,18 @@ async function main() {
     console.log("");
   }
 
-  console.log(`=== Combined across all favorite buckets (70-99c) ===`);
-  const combined = computeStrategyResult(allTrials, baseConfig("favorite-harvesting-combined"));
-  console.log(
-    `trials=${combined.trialCount} distinctEvents=${combined.distinctEvents} effectiveIndependentSampleCount=${combined.effectiveIndependentSampleCount.toFixed(1)}`
-  );
-  console.log(`winRate=${pct(combined.winRate)} netPnl=$${combined.netPnl.toFixed(2)} roi=${pct(combined.roi)}`);
-  console.log(
-    `95% ROI CI: ${combined.roiBootstrapCI ? `[${pct(combined.roiBootstrapCI[0])}, ${pct(combined.roiBootstrapCI[1])}]` : "n/a (too few independent events)"}`
-  );
-  console.log(`category breakdown:`, combined.categoryBreakdown);
+  if (buckets.length > 1) {
+    console.log(`=== Combined across all favorite buckets (70-99c) ===`);
+    const combined = computeStrategyResult(allTrials, baseConfig("favorite-harvesting-combined"));
+    console.log(
+      `trials=${combined.trialCount} distinctEvents=${combined.distinctEvents} effectiveIndependentSampleCount=${combined.effectiveIndependentSampleCount.toFixed(1)}`
+    );
+    console.log(`winRate=${pct(combined.winRate)} netPnl=$${combined.netPnl.toFixed(2)} roi=${pct(combined.roi)}`);
+    console.log(
+      `95% ROI CI: ${combined.roiBootstrapCI ? `[${pct(combined.roiBootstrapCI[0])}, ${pct(combined.roiBootstrapCI[1])}]` : "n/a (too few independent events)"}`
+    );
+    console.log(`category breakdown:`, combined.categoryBreakdown);
+  }
 }
 
 main().catch((err) => {
