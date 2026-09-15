@@ -762,4 +762,7 @@ once a sourcing channel actually grows the quality pool.
       **Extending further (reverse-engineering the legacy ProxyWallet
       calldata layout) is a real, separate decision — not started, given
       41 real answers with zero clusters already makes a positive result
-      from the remaining wallets look less likely, not more.**
+      from the remaining wallets look less likely, not more.** **Decision
+      (user's call, 2026-09-15): stop here.** Track G.20 considered closed
+      at 41/95 coverage / clean negative unless a future session has a
+      specific reason to revisit the legacy ProxyWallet pattern.
