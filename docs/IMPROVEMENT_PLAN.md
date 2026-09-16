@@ -766,3 +766,54 @@ once a sourcing channel actually grows the quality pool.
       (user's call, 2026-09-15): stop here.** Track G.20 considered closed
       at 41/95 coverage / clean negative unless a future session has a
       specific reason to revisit the legacy ProxyWallet pattern.
+
+## Track E.15 — depth-collector migrated to the CLOB WebSocket (2026-09-15)
+
+39. ✅ **Done 2026-09-15. Resolves Track E.15's open question (already
+    answered doc/live-confirmed in §6 of `docs/DEPTH_SHIFT_STRATEGY_SCOPE.md`
+    — this is the deferred rewrite itself, done live).** Every message
+    shape re-confirmed against the real production endpoint this session
+    (not relying on the earlier session's now-3-days-old capture):
+    `book`/`price_change` payloads carry `event_type`/`tick_size`/
+    `last_trade_price` fields the docs omit; `price_changes` entries are
+    ABSOLUTE new sizes at (price, side), not deltas; `size="0"` really
+    does mean "remove this level" (captured a real one, not inferred from
+    the schema); and — the key fact enabling clean 15-minute market
+    rollover — sending `{"operation":"subscribe",...}` on an ALREADY-OPEN
+    connection triggers a fresh `book` snapshot for the newly-added asset,
+    no reconnect needed.
+    - New `src/depthShift/clobWebSocket.ts`: zod schemas + a pure,
+      fully-unit-tested in-memory book-state (build from a snapshot, apply
+      `price_change` deltas, sorted best-bid/best-ask). 10 tests against
+      real captured fixtures (`tests/fixtures/clob-ws-*.sample.json`).
+    - `src/depthShift/snapshotCollector.ts` rewritten: one WebSocket
+      connection tracks both BTC/ETH "Up" tokens' live book state,
+      persisting a snapshot on a **2-second timer, deliberately decoupled
+      from message volume** — live-tested throughput was 5,000-7,000
+      messages in 20 seconds for a single token during a fast-moving
+      market; persisting per-message would have grown the DB roughly
+      1,000x faster than the old 5s-REST-poll cadence for zero analytical
+      benefit (a depth-shift rule reads snapshots seconds apart, not a
+      full tick replay) — 2.5x faster than the old cadence while keeping
+      growth bounded and predictable, a documented engineering choice, not
+      a strategy decision. Includes a reconnect loop with capped DELAY but
+      uncapped attempts (`backoffDelayMs`, `maxDelayMs=30_000`) — a
+      deliberately different shape from this project's usual bounded-retry
+      convention (`docs/AUDIT.md` §10, meant for one logical API call),
+      since this is a long-running daemon's connection loop, same
+      "runs forever, backs off, never gives up" character as its own
+      systemd `Restart=always` wrapper.
+    - **Smoke-tested against a scratch copy of the real DB** (never wrote
+      to production during testing): correctly captured a real BTC
+      Up-or-Down market's book collapsing to one side as it approached
+      resolution (best bid climbing 0.54 → 0.99, ask-side depth thinning
+      from 44 levels to zero) — **cross-verified against a fresh,
+      independent REST `/book` call at the same moment: asks genuinely
+      empty (0 real levels), confirming this was real market behavior,
+      not a parsing bug.** 194/194 tests pass, typecheck/lint clean.
+    - **Not independently live-tested**: the `operation:"unsubscribe"`
+      message's exact effect (low risk if wrong — a stale subscription
+      just means ignored extra messages for a token nothing tracks
+      anymore, not a correctness bug); a real WS disconnect triggering the
+      reconnect loop (only the connect/subscribe/message path was
+      exercised end-to-end this pass, not a forced connection drop).
