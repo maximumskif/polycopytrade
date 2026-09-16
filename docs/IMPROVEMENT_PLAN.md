@@ -817,3 +817,34 @@ once a sourcing channel actually grows the quality pool.
       anymore, not a correctness bug); a real WS disconnect triggering the
       reconnect loop (only the connect/subscribe/message path was
       exercised end-to-end this pass, not a forced connection drop).
+
+## Track E.13 broaden pass — stopped mid-run, session pause (2026-09-15)
+
+40. **Paused, not abandoned.** Raised `TOP_N_PER_CATEGORY` 3→6 in
+    `src/research/sourceWallets.ts` to score ranks 4-6 per category (ranks
+    1-3 are already in `TRACKED_WALLETS` from the 2026-09-13 sweep, so
+    dedupe skips them automatically) — 54 new candidates to score. Along
+    the way, found and fixed a real bug: the script buffered ALL output
+    until every candidate finished, so a run killed partway through (each
+    candidate is a real rate-limited full-history pull, ~3 min each, 54 of
+    them ≈ 2-3 hours) would have shown nothing for the time spent — hit
+    this live when a foreground time limit killed an earlier attempt at
+    ~55 minutes with zero output. Fixed to print a progress line per
+    candidate as it finishes (commit `95b434f`); pushed and confirmed
+    working. Restarted properly in the background — **manually stopped
+    after 10/54 scored, at the user's request to pause for the day, not
+    because of any problem.** All 10 scored so far: `Jenzigo`,
+    `GCottrell93`, `RandomGenius-190`, `Michie`, `denizz`, `tdrhrhhd`
+    (POLITICS ALL, ranks 11-16), `foodenjoyer`, `pako`, `The Spirit of
+    Ukraine>UMA`, `CentralCasting` (ECONOMICS ALL, ranks 5-9) — **all 10
+    VETOED**, overwhelmingly on `dormant`, matching the exact pattern the
+    2026-09-13 sweep already established for this leaderboard-based
+    channel. **Not recorded in `wallets.ts`** (unlike that prior sweep) —
+    stopping mid-run for a pause, not backfilling provenance right now, so
+    a future re-run of `npm run source-wallets` will re-score these same
+    10 rather than skipping them via dedupe; a small, known, acceptable
+    cost given the session is pausing. **To resume**: just re-run
+    `npm run source-wallets` — it will redo POLITICS/ECONOMICS ranks
+    11-16/5-9 (already known-vetoed, wasted but cheap-ish) then continue
+    into the remaining 7 categories' ranks 4-6, which haven't been touched
+    yet.
