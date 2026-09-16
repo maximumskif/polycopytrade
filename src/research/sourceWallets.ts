@@ -28,7 +28,16 @@ import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 const CATEGORIES = ["POLITICS", "SPORTS", "ESPORTS", "CRYPTO", "CULTURE", "WEATHER", "ECONOMICS", "TECH", "FINANCE"] as const;
 const WINDOWS = ["MONTH", "ALL"] as const;
 const LIMIT_PER_SWEEP = 25;
-const TOP_N_PER_CATEGORY = 3;
+// Raised from 3 to 6 (2026-09-15, Track E.13 broaden pass): the first
+// sweep (2026-09-13) only scored each category's top 3 surviving
+// candidates, all of which are now in TRACKED_WALLETS (so dedupe()
+// already skips them) -- this reuses the SAME already-pulled leaderboard
+// data to score ranks 4-6 too, no extra leaderboard API calls, just more
+// scoreWallet() calls (the expensive part). Not raised further: each
+// sweep's per-wallet score cost is real rate-limited API time (~90 min for
+// 27 wallets last time), and the first sweep's 26/27 vetoed rate (mostly
+// dormant) sets a realistic expectation for this one too.
+const TOP_N_PER_CATEGORY = 6;
 
 type Category = (typeof CATEGORIES)[number];
 type Window = (typeof WINDOWS)[number];
@@ -108,7 +117,7 @@ async function main() {
   console.log(`Scoring top ${TOP_N_PER_CATEGORY} per category (${candidates.length} candidates)...\n`);
 
   const results: { candidate: Candidate; score: Awaited<ReturnType<typeof scoreWallet>> | null; error?: string }[] = [];
-  for (const candidate of candidates) {
+  for (const [i, candidate] of candidates.entries()) {
     const wallet: TrackedWallet = {
       address: candidate.entry.proxyWallet,
       label: `${candidate.entry.userName ?? candidate.entry.proxyWallet} (${candidate.category} ${candidate.window} leaderboard #${candidate.entry.rank}, pnl=$${candidate.entry.pnl.toFixed(0)})`,
@@ -118,8 +127,19 @@ async function main() {
     try {
       const score = await scoreWallet(wallet);
       results.push({ candidate, score });
+      // Printed as each candidate finishes -- scoring 50+ wallets can take
+      // hours (each is a real rate-limited full-history pull), and every
+      // prior version of this script buffered ALL output until the very
+      // end, which meant a killed/timed-out run lost 100% of its progress
+      // with nothing to show for it (hit live 2026-09-15 running this
+      // exact script under a foreground time limit). This progress line is
+      // purely additive -- the final sorted summary below is unchanged.
+      console.log(
+        `[${i + 1}/${candidates.length}] ${wallet.label} -> qualityScore=${score.qualityScore}${score.flags.length ? ` VETOED(${score.flags.join(",")})` : " clean"}`
+      );
     } catch (err) {
       results.push({ candidate, score: null, error: (err as Error).message });
+      console.log(`[${i + 1}/${candidates.length}] ${wallet.label} -> scoring failed: ${(err as Error).message}`);
     }
   }
 
