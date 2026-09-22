@@ -17,7 +17,7 @@ import { computeRollingWindowResults } from "../backtesting/rollingWindow";
 import type { BacktestConfig, BacktestTrial, StrategyResult, WalletFlag, WalletQualityScoreComponents, WalletScore } from "../domain/types";
 import type { TrackedWallet } from "../wallets";
 
-const DORMANT_DAYS = 30;
+export const DORMANT_DAYS = 30;
 const ONE_SHOT_MAX_EVENTS = 3;
 const ELECTION_SHARE_THRESHOLD = 0.7;
 const CONCENTRATION_THRESHOLD = 0.5;
@@ -142,6 +142,17 @@ export function computeQualityScore(
   const score01 = bothProfitabilityTermsWeak ? Math.min(rawScore01, PROFITABILITY_FLOOR_CAP) : rawScore01;
 
   return { score: Math.round(score01 * 100), components };
+}
+
+// True when a wallet's single most recent activity (any type) is already
+// older than DORMANT_DAYS. computeWalletScore's dormant flag is derived from
+// the max timestamp across ALL pulled activity, so a full pull can never
+// find anything newer than this -- the veto is guaranteed, and a caller can
+// skip the expensive full-history pull entirely. `latestTs` null means the
+// wallet has no activity at all (also guaranteed dormant: Infinity days).
+export function isCertainlyDormant(latestTs: number | null, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
+  if (latestTs === null) return true;
+  return (nowSeconds - latestTs) / 86400 > DORMANT_DAYS;
 }
 
 export function computeWalletScore(

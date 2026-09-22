@@ -21,8 +21,8 @@
 // Usage: npm run source-wallets
 
 import "dotenv/config";
-import { getLeaderboard, type LeaderboardEntry } from "../api/client";
-import { scoreWallet } from "../scoring/walletScore";
+import { getActivity, getLeaderboard, type LeaderboardEntry } from "../api/client";
+import { isCertainlyDormant, scoreWallet } from "../scoring/walletScore";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 
 const CATEGORIES = ["POLITICS", "SPORTS", "ESPORTS", "CRYPTO", "CULTURE", "WEATHER", "ECONOMICS", "TECH", "FINANCE"] as const;
@@ -116,7 +116,12 @@ async function main() {
   const candidates = shortlist(deduped);
   console.log(`Scoring top ${TOP_N_PER_CATEGORY} per category (${candidates.length} candidates)...\n`);
 
-  const results: { candidate: Candidate; score: Awaited<ReturnType<typeof scoreWallet>> | null; error?: string }[] = [];
+  const results: {
+    candidate: Candidate;
+    score: Awaited<ReturnType<typeof scoreWallet>> | null;
+    error?: string;
+    skippedDormant?: boolean;
+  }[] = [];
   for (const [i, candidate] of candidates.entries()) {
     const wallet: TrackedWallet = {
       address: candidate.entry.proxyWallet,
@@ -125,6 +130,19 @@ async function main() {
       source: `https://polymarket.com/leaderboard/${candidate.category.toLowerCase()}/${candidate.window.toLowerCase()}/profit`,
     };
     try {
+      // Cheap dormancy pre-check (1 call, newest-first) before the expensive
+      // full-history scoreWallet() pull (~3 min each). Added 2026-09-22 after
+      // the broaden pass's first 10/10 scored candidates came back vetoed,
+      // overwhelmingly on `dormant` -- each of those cost a full pull to
+      // learn something one call proves. Exact, not heuristic: see
+      // isCertainlyDormant. Skipped wallets are reported, not silently
+      // dropped, and count toward the vetoed total.
+      const latest = await getActivity(wallet.address, { limit: 1 });
+      if (isCertainlyDormant(latest.length ? latest[0].timestamp : null)) {
+        results.push({ candidate, score: null, skippedDormant: true });
+        console.log(`[${i + 1}/${candidates.length}] ${wallet.label} -> VETOED(dormant) via pre-check, full pull skipped`);
+        continue;
+      }
       const score = await scoreWallet(wallet);
       results.push({ candidate, score });
       // Printed as each candidate finishes -- scoring 50+ wallets can take
@@ -147,13 +165,17 @@ async function main() {
 
   let scored = 0;
   let vetoed = 0;
-  for (const { candidate, score, error } of results) {
+  let preVetoed = 0;
+  for (const { candidate, score, error, skippedDormant } of results) {
     const seenIn = [...candidate.categoriesSeenIn].join(", ");
     console.log(`[${candidate.entry.proxyWallet}] ${candidate.entry.userName ?? "(no username)"}`);
     console.log(
       `  seen in: ${seenIn}  best rank: ${candidate.category} ${candidate.window} #${candidate.entry.rank}  vol=$${candidate.entry.vol.toFixed(0)}  pnl=$${candidate.entry.pnl.toFixed(0)}`
     );
-    if (error) {
+    if (skippedDormant) {
+      preVetoed++;
+      console.log(`  VETOED -- dormant (pre-check: newest activity > 30 days old; full pull skipped)`);
+    } else if (error) {
       console.log(`  scoring failed: ${error}`);
     } else if (score) {
       scored++;
@@ -170,7 +192,8 @@ async function main() {
 
   console.log(
     `Summary: ${swept.length} raw entries -> ${deduped.size} new wallets -> ${candidates.length} shortlisted -> ` +
-      `${scored} scored (${scored - vetoed} clean / ${vetoed} vetoed)${results.length - scored ? `, ${results.length - scored} scoring errors` : ""}.`
+      `${preVetoed} pre-vetoed dormant, ${scored} fully scored (${scored - vetoed} clean / ${vetoed} vetoed)` +
+      `${results.length - scored - preVetoed ? `, ${results.length - scored - preVetoed} scoring errors` : ""}.`
   );
 }
 

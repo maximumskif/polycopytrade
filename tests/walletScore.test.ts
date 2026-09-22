@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeWalletScore, computeProfitConcentration, computeConsistencyScore, computeQualityScore } from "../src/scoring/walletScore";
+import {
+  computeWalletScore,
+  computeProfitConcentration,
+  computeConsistencyScore,
+  computeQualityScore,
+  isCertainlyDormant,
+  DORMANT_DAYS,
+} from "../src/scoring/walletScore";
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../src/backtesting/statistics";
 import { defaultBacktestConfig } from "../src/backtesting/engine";
 import type { Activity } from "../src/api/client";
@@ -363,4 +370,15 @@ test("computeWalletScore populates the new quality-score fields alongside the ex
   assert.ok(score.profitConcentrationTopEventShare >= 0 && score.profitConcentrationTopEventShare <= 1);
   assert.ok(score.profitConcentrationTop3EventShare >= score.profitConcentrationTopEventShare);
   assert.ok(score.qualityScoreComponents.roiLowerBound > 0.5); // baselineTrials is all winners at +50% ROI
+});
+
+test("isCertainlyDormant: latest activity older than DORMANT_DAYS is certainly dormant", () => {
+  const now = 1_800_000_000;
+  assert.equal(isCertainlyDormant(now - (DORMANT_DAYS + 1) * 86400, now), true);
+  assert.equal(isCertainlyDormant(now - (DORMANT_DAYS - 1) * 86400, now), false);
+  assert.equal(isCertainlyDormant(now, now), false);
+});
+
+test("isCertainlyDormant: no activity at all is certainly dormant", () => {
+  assert.equal(isCertainlyDormant(null), true);
 });
