@@ -9,14 +9,15 @@ fix: systemd user services with `Restart=always`.
 ## Install
 
 Unit files live in `ops/systemd/` (checked into the repo) with this
-machine's absolute paths already filled in — Node's nvm install path and the
-repo's location under `/mnt/c` (WSL mounts the Windows filesystem outside
-`$HOME`, so `%h`-relative paths don't work here).
+machine's paths already filled in — Node's nvm install path and the repo's
+location (`~/projects/polycopytrade`), both written with systemd's `%h`
+(home directory) specifier. Moved 2026-09-22 from the old `/mnt/c` checkout,
+which sat outside `$HOME` and needed absolute paths.
 
 ```
 mkdir -p ~/.config/systemd/user
-ln -s /mnt/c/Users/mdeff/polycopytrade/ops/systemd/polycopytrade-track.service ~/.config/systemd/user/
-ln -s /mnt/c/Users/mdeff/polycopytrade/ops/systemd/polycopytrade-depth.service ~/.config/systemd/user/
+ln -s ~/projects/polycopytrade/ops/systemd/polycopytrade-track.service ~/.config/systemd/user/
+ln -s ~/projects/polycopytrade/ops/systemd/polycopytrade-depth.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 ```
 

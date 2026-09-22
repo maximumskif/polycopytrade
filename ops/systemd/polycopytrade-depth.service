@@ -10,17 +10,17 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/mnt/c/Users/mdeff/polycopytrade
+WorkingDirectory=%h/projects/polycopytrade
 # See polycopytrade-track.service's comment -- npm's shebang needs `node`
 # resolvable via PATH, which systemd doesn't inherit from an interactive
 # nvm-sourced shell.
-Environment=PATH=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
-ExecStartPre=/bin/mkdir -p /mnt/c/Users/mdeff/polycopytrade/data
-ExecStart=/home/mdeffgay/.nvm/versions/node/v22.23.2/bin/npm run depth:collector
+Environment=PATH=%h/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
+ExecStartPre=/bin/mkdir -p %h/projects/polycopytrade/data
+ExecStart=%h/.nvm/versions/node/v22.23.2/bin/npm run depth:collector
 Restart=always
 RestartSec=5
-StandardOutput=append:/mnt/c/Users/mdeff/polycopytrade/data/depth-collector.systemd.log
-StandardError=append:/mnt/c/Users/mdeff/polycopytrade/data/depth-collector.systemd.log
+StandardOutput=append:%h/projects/polycopytrade/data/depth-collector.systemd.log
+StandardError=append:%h/projects/polycopytrade/data/depth-collector.systemd.log
 
 [Install]
 WantedBy=default.target
