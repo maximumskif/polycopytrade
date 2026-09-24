@@ -1114,3 +1114,33 @@ Track F stays gated on the user regardless.
       hand). **L3:** `npm run status` shows jobs + quality pool.
     - Not yet: K3 (score from daemon DB), L2 timers (need user OK),
       M1+M2 (agent in progress), N, O.
+
+49. ✅ **Done 2026-09-24. Tracks M1+M2 landed** (parallel agent;
+    cherry-picked as `38be70e`, `99a500f`). 269/269 tests.
+    - **M2 — `wallet_scores` table** (migration 0005, additive): one
+      append-only row per scoring run -- method (`full`/`shallow`/
+      `anchored`), history_start/pages, truncated, quality_score, flags,
+      events, win rate, ROI, net, median gap, days since last activity,
+      `is_quality` (via `isQualityWallet`), source, git commit.
+      "Confirmed" = non-shallow AND non-truncated, applied before taking
+      the latest per wallet (a newer shallow screen never hides a
+      confirmation; a newer failed confirmation does replace a pass).
+      `npm run status` reads the quality pool from it (label scan only
+      while the table is empty).
+    - **M1 — auto-confirmation**, one shared module
+      (`src/research/walletConfirmation.ts`) used by `source-wallets`,
+      `source-wallets-holders` and `confirm-shallow`: a shallow
+      `isQualityWallet` pass gets an anchored pull (2026-06-24, 40 pages);
+      if truncated, exactly one retry from the wallet's newest activity
+      minus 30 days rounded down to the 1st/16th (30-46 days back, from
+      the wallet's own data, recorded as `history_start`); still truncated
+      -> **unconfirmed-truncated, never a pass**. Output separates
+      confirmed / failed (with reason, ==50 named as the cap) /
+      unconfirmed / screened out, and prints a ready-to-paste `wallets.ts`
+      entry for each confirmed wallet; the pipeline never edits
+      `wallets.ts`. Live: ndb1 confirmed 63/100 clean (item 41: 62).
+    - Seeding the main DB's table: `npm run job -- seed-quality-pool`
+      re-confirms ndb1, HighTempTation, vito3corleone.
+    - Follow-ups: sourcing still dedupes only against `TRACKED_WALLETS`,
+      not `wallet_scores` (candidates get re-scored each run); no command
+      records a `full`-method score outside `source-wallets`.
