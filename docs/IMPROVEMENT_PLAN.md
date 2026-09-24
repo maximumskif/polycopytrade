@@ -1160,3 +1160,32 @@ Track F stays gated on the user regardless.
       screen's recent window is systematically optimistic (4 of 4
       strong-looking holders candidates across items 42/46 regressed to
       ~breakeven), so M1's auto-confirm is load-bearing.
+
+50. ✅ **Done 2026-09-24. Tracks N1, N2, O1, O2 landed** (parallel
+    agent, interrupted once by a usage limit and resumed; cherry-picked
+    as `ae71ab3`, `1502a6c`, `146ec73`). 293/293 tests.
+    - **N1 — pre-registration:** `npm run prereg -- create|evaluate|list|
+      show`. Registrations are **committed** under `docs/preregistrations/`
+      (their value is provable existence-before-the-run); tamper-checked
+      by a stored sha256 AND against the file's first committed version.
+      Rules are `<metric> <op> <n>[%] [at k=v]` joined by AND, each clause
+      must select exactly one result row; n/a counts as FAIL. `evaluate`
+      refuses on hash/first-commit mismatch, script/resolved-args
+      mismatch, window mismatch or data outside the window (catches a
+      reused discovery cache), a result older than the prereg, or a
+      second evaluation. `weather-favorites` and `volatility-breakout`
+      gained `--json`/`--asOf`/`--sensitivityBps`. Item 44 reconstructed
+      as a worked example (not committed as a registration: a file dated
+      today can't claim to predate that run).
+    - **N2 — multiple comparisons:** `src/research/comparisons.ts` prints
+      k and flags the best bucket as post hoc, with a clearly-labeled
+      Bonferroni rough guide; used by weather, volatility, and
+      favorite-harvesting. `statistics.ts` exports
+      `eventClusteredRoiCI(trials, confidence, resamples)` (95% path
+      unchanged).
+    - **O1/O2:** `scripts/agent-worktree.sh create|merge [--dry-run]|
+      remove|list` (merge cherry-picks in the main checkout, never
+      stashes the user's edits, runs tests); `docs/AGENTS.md` (worktrees,
+      file ownership, shared cache/limiter env vars, verification, report
+      format, research-discipline rules, commit early because agents get
+      interrupted).
