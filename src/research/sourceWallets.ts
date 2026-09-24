@@ -22,7 +22,7 @@
 
 import "dotenv/config";
 import { getActivity, getLeaderboard, type LeaderboardEntry } from "../api/client";
-import { isCertainlyDormant, scoreWallet } from "../scoring/walletScore";
+import { isCertainlyDormant, scoreWallet, scoreWalletShallow, scoreWalletWithActivity } from "../scoring/walletScore";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 
 const CATEGORIES = ["POLITICS", "SPORTS", "ESPORTS", "CRYPTO", "CULTURE", "WEATHER", "ECONOMICS", "TECH", "FINANCE"] as const;
@@ -121,6 +121,7 @@ async function main() {
     score: Awaited<ReturnType<typeof scoreWallet>> | null;
     error?: string;
     skippedDormant?: boolean;
+    shallow?: boolean;
   }[] = [];
   for (const [i, candidate] of candidates.entries()) {
     const wallet: TrackedWallet = {
@@ -138,13 +139,29 @@ async function main() {
       // isCertainlyDormant. Skipped wallets are reported, not silently
       // dropped, and count toward the vetoed total.
       const latest = await getActivity(wallet.address, { limit: 1 });
-      if (isCertainlyDormant(latest.length ? latest[0].timestamp : null)) {
+      const latestTs = latest.length ? latest[0].timestamp : null;
+      if (isCertainlyDormant(latestTs)) {
         results.push({ candidate, score: null, skippedDormant: true });
         console.log(`[${i + 1}/${candidates.length}] ${wallet.label} -> VETOED(dormant) via pre-check, full pull skipped`);
         continue;
       }
-      const score = await scoreWallet(wallet);
-      results.push({ candidate, score });
+      const full = await scoreWalletWithActivity(wallet);
+      let score = full.score;
+      const activity = full.activity;
+      // The full pull pages FORWARD from the oldest activity under a page
+      // budget, so a high-volume wallet can cap out before reaching its
+      // recent trades and get falsely flagged `dormant` (item 40's sweep hit
+      // this on 5 wallets that had just passed the pre-check above). The
+      // pre-check's newest timestamp makes the truncation exactly
+      // detectable; rescore from a newest-first window instead, marked
+      // shallow since that window isn't reproducible (see scoreWalletShallow).
+      const pulledLatestTs = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : null;
+      let shallow = false;
+      if (latestTs !== null && (pulledLatestTs === null || pulledLatestTs < latestTs)) {
+        score = (await scoreWalletShallow(wallet)).score;
+        shallow = true;
+      }
+      results.push({ candidate, score, shallow });
       // Printed as each candidate finishes -- scoring 50+ wallets can take
       // hours (each is a real rate-limited full-history pull), and every
       // prior version of this script buffered ALL output until the very
@@ -153,7 +170,8 @@ async function main() {
       // exact script under a foreground time limit). This progress line is
       // purely additive -- the final sorted summary below is unchanged.
       console.log(
-        `[${i + 1}/${candidates.length}] ${wallet.label} -> qualityScore=${score.qualityScore}${score.flags.length ? ` VETOED(${score.flags.join(",")})` : " clean"}`
+        `[${i + 1}/${candidates.length}] ${wallet.label} -> qualityScore=${score.qualityScore}${score.flags.length ? ` VETOED(${score.flags.join(",")})` : " clean"}` +
+          (shallow ? " [shallow: full pull truncated before recent activity]" : "")
       );
     } catch (err) {
       results.push({ candidate, score: null, error: (err as Error).message });
@@ -166,7 +184,7 @@ async function main() {
   let scored = 0;
   let vetoed = 0;
   let preVetoed = 0;
-  for (const { candidate, score, error, skippedDormant } of results) {
+  for (const { candidate, score, error, skippedDormant, shallow } of results) {
     const seenIn = [...candidate.categoriesSeenIn].join(", ");
     console.log(`[${candidate.entry.proxyWallet}] ${candidate.entry.userName ?? "(no username)"}`);
     console.log(
@@ -181,7 +199,10 @@ async function main() {
       scored++;
       const isVetoed = score.flags.length > 0;
       if (isVetoed) vetoed++;
-      console.log(`  qualityScore=${score.qualityScore}/100${isVetoed ? `  (VETOED -- ${score.flags.join(", ")})` : ""}`);
+      console.log(
+        `  qualityScore=${score.qualityScore}/100${isVetoed ? `  (VETOED -- ${score.flags.join(", ")})` : ""}` +
+          (shallow ? "  [shallow rescore -- full pull truncated; confirm with a deeper historyPages before trusting]" : "")
+      );
       console.log(
         `  events=${score.distinctEvents}  winRate=${pct(score.winRate)}  roi=${pct(score.roi)}  netPnl=$${score.netPnl.toFixed(2)}` +
           `  daysSinceLastActivity=${score.daysSinceLastActivity.toFixed(1)}`
