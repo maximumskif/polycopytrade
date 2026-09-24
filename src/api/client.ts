@@ -17,6 +17,9 @@ import { backoffDelayMs, sleep } from "../utils/retry";
 // name is a real credential-leak risk either way.
 import { redactUrl } from "../utils/redactUrl";
 import { validateSchema as validate } from "../utils/validateSchema";
+import { SharedSlotStore, type SlotReserver } from "../utils/sharedSlots";
+import { ApiResponseCache } from "./responseCache";
+import { isCacheableMarketLookup, isCacheablePriceHistory, type SettlementFields } from "./cachePolicy";
 import {
   ActivityResponseSchema,
   PublicSearchResponseSchema,
@@ -39,7 +42,68 @@ export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry, HoldersGroup 
 const DATA_API = "https://data-api.polymarket.com";
 const GAMMA_API = "https://gamma-api.polymarket.com";
 
-const rateLimiter = new RateLimiter(1100);
+// K1/K2 (2026-09-24) hermeticity guard: a stubbed fetch means fixture
+// responses, which must never be written into (or served from) the real
+// cache file, and tests must never touch the real shared slot file either.
+// NODE_TEST_CONTEXT is set by node's test runner for every test file's
+// process, covering tests that forget to stub. Tests that exercise the
+// cache/slots inject in-memory instances via the __set*ForTests seams.
+function underTest(): boolean {
+  return fetchImpl !== fetch || process.env.NODE_TEST_CONTEXT !== undefined;
+}
+
+let slotStoreOverride: SlotReserver | null | undefined;
+let defaultSlotStore: SharedSlotStore | null | undefined; // undefined = not opened yet, null = open failed
+function sharedSlots(): SlotReserver | null {
+  if (slotStoreOverride !== undefined) return slotStoreOverride;
+  if (!config.sharedRateLimitEnabled || underTest()) return null;
+  if (defaultSlotStore === undefined) {
+    try {
+      defaultSlotStore = new SharedSlotStore(config.sharedRateLimitPath);
+    } catch (err) {
+      console.error(`[rate-limit] can't open ${config.sharedRateLimitPath} (${(err as Error).message}); using in-process limiter`);
+      defaultSlotStore = null;
+    }
+  }
+  return defaultSlotStore;
+}
+
+const rateLimiter = new RateLimiter(1100, sharedSlots);
+
+let cacheOverride: ApiResponseCache | null | undefined;
+let defaultCache: ApiResponseCache | null | undefined;
+const cacheStats = { hits: 0, misses: 0, stored: 0 };
+function apiCache(): ApiResponseCache | null {
+  if (cacheOverride !== undefined) return cacheOverride;
+  if (!config.apiCacheEnabled || underTest()) return null;
+  if (defaultCache === undefined) {
+    try {
+      defaultCache = new ApiResponseCache(config.apiCachePath);
+      // One stderr line per process so a re-run shows what the cache saved.
+      process.once("exit", () => {
+        if (cacheStats.hits + cacheStats.misses > 0) {
+          console.error(`[api-cache] ${cacheStats.hits} hits, ${cacheStats.misses} misses, ${cacheStats.stored} stored`);
+        }
+      });
+    } catch (err) {
+      console.error(`[api-cache] can't open ${config.apiCachePath} (${(err as Error).message}); continuing uncached`);
+      defaultCache = null;
+    }
+  }
+  return defaultCache;
+}
+
+export function getApiCacheStats(): Readonly<typeof cacheStats> {
+  return { ...cacheStats };
+}
+export function __setApiCacheForTests(cache: ApiResponseCache | null | undefined): void {
+  cacheOverride = cache;
+  cacheStats.hits = cacheStats.misses = cacheStats.stored = 0;
+}
+export function __setSlotReserverForTests(reserver: SlotReserver | null | undefined): void {
+  slotStoreOverride = reserver;
+  rateLimiter.resetForTests();
+}
 
 export class PolymarketApiError extends Error {
   constructor(
@@ -143,11 +207,56 @@ async function requestJson(url: string): Promise<unknown> {
 // typed helper below, still going through the same rate-limit/timeout/retry
 // path. Unvalidated (no fixed schema owns this path — backtestLadder.ts
 // validates the one shape it needs itself via PricesHistoryResponseSchema).
+// Never cached: fetchRaw has no idea what it's fetching, so nothing can be
+// proven immutable about its responses (src/api/cachePolicy.ts).
 export const fetchRaw = requestJson;
 
-export async function getPricesHistory(clobTokenId: string, startTs: number, endTs: number, fidelity: number) {
+// K1 (2026-09-24): cache-first fetch for the request types cachePolicy.ts
+// can prove immutable. A hit never reaches requestJson, so it never spends
+// a rate-limit slot. The RAW response (pre-zod, so fields the schema
+// strips survive) is what's stored, and only after it validated; a hit is
+// re-validated against today's schema and treated as a miss if it no
+// longer fits (e.g. a field became required since it was cached).
+async function cachedRequest<T>(
+  url: string,
+  schema: { parse: (data: unknown) => T; safeParse: (data: unknown) => { success: boolean; data?: T } },
+  context: string,
+  isImmutable: (parsed: T) => boolean
+): Promise<T> {
+  const cache = apiCache();
+  if (cache) {
+    const hit = cache.get(url);
+    const parsed = hit ? schema.safeParse(hit.body) : null;
+    if (parsed?.success) {
+      cacheStats.hits++;
+      return parsed.data as T;
+    }
+    cacheStats.misses++;
+  }
+  const raw = await requestJson(url);
+  const parsed = validate(schema, raw, context);
+  if (cache && isImmutable(parsed)) {
+    cache.set(url, raw);
+    cacheStats.stored++;
+  }
+  return parsed;
+}
+
+// `opts.market`: the market `clobTokenId` belongs to, if the caller has it.
+// Only with it can the response be cached (a settled market + a window
+// safely in the past -- see isCacheablePriceHistory for the exact rule);
+// without it every call goes to the network as before.
+export async function getPricesHistory(
+  clobTokenId: string,
+  startTs: number,
+  endTs: number,
+  fidelity: number,
+  opts: { market?: SettlementFields | null } = {}
+) {
   const url = `https://clob.polymarket.com/prices-history?market=${clobTokenId}&startTs=${startTs}&endTs=${endTs}&fidelity=${fidelity}`;
-  return validate(PricesHistoryResponseSchema, await requestJson(url), "GET clob/prices-history");
+  return cachedRequest(url, PricesHistoryResponseSchema, "GET clob/prices-history", (res) =>
+    isCacheablePriceHistory({ tokenId: clobTokenId, endTs }, opts.market, res)
+  );
 }
 
 // Live order-book depth for one outcome token -- current state only, no
@@ -291,7 +400,9 @@ export async function getEventsByTag(
 // passed explicitly, confirmed by testing.
 export async function getMarketByConditionId(conditionId: string, closed: boolean): Promise<GammaMarket | null> {
   const qs = new URLSearchParams({ condition_ids: conditionId, closed: String(closed) });
-  const res = validate(MarketsLookupResponseSchema, await requestJson(`${GAMMA_API}/markets?${qs.toString()}`), "GET /markets");
+  const res = await cachedRequest(`${GAMMA_API}/markets?${qs.toString()}`, MarketsLookupResponseSchema, "GET /markets", (r) =>
+    isCacheableMarketLookup(conditionId, closed, r)
+  );
   return res[0] ?? null;
 }
 

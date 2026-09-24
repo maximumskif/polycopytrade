@@ -120,6 +120,7 @@ export function isSignalFinal(signal: BreakoutSignal, prefixLength: number, brea
 }
 
 async function detectBreakoutIncrementally(
+  market: GammaMarket,
   tokenId: string,
   startTs: number,
   endTs: number
@@ -127,7 +128,7 @@ async function detectBreakoutIncrementally(
   const series: PricePoint[] = [];
   for (let chunkStart = startTs; chunkStart < endTs; chunkStart += MAX_CHUNK_SECONDS) {
     const chunkEnd = Math.min(chunkStart + MAX_CHUNK_SECONDS, endTs);
-    const res = await getPricesHistory(tokenId, chunkStart, chunkEnd, 180);
+    const res = await getPricesHistory(tokenId, chunkStart, chunkEnd, 180, { market });
     for (const point of res.history ?? []) series.push(point);
     const signal = detectVolatilityBreakout(series, DETECTION_OPTS);
     if (signal && isSignalFinal(signal, series.length, DETECTION_OPTS.breakoutWindow)) return { signal, series };
@@ -227,7 +228,7 @@ export async function backtestVolatilityBreakoutMarket(
   const endTs = Math.floor(new Date(market.endDate).getTime() / 1000);
   if (!(endTs > startTs)) return null;
 
-  const found = await detectBreakoutIncrementally(tokenIds[0], startTs, endTs);
+  const found = await detectBreakoutIncrementally(market, tokenIds[0], startTs, endTs);
   if (!found) return null;
   return breakoutTrial({
     asset,

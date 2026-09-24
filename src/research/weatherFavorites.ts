@@ -414,7 +414,7 @@ async function pull(args: Args): Promise<PullCache> {
         if (latest === null) continue;
         const startTs = (earliest ?? latest) - stale;
         try {
-          const res = await getPricesHistory(tokenIds[0], startTs, latest + 60, 10);
+          const res = await getPricesHistory(tokenIds[0], startTs, latest + 60, 10, { market });
           cache.histories[tokenIds[0]] = res.history ?? [];
           fetched++;
         } catch (err) {

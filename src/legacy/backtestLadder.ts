@@ -107,7 +107,7 @@ export async function backtestMarket(
     chunkStart += MAX_CHUNK_SECONDS
   ) {
     const chunkEnd = Math.min(chunkStart + MAX_CHUNK_SECONDS, endTs);
-    const res = await getPricesHistory(yesTokenId, chunkStart, chunkEnd, 180);
+    const res = await getPricesHistory(yesTokenId, chunkStart, chunkEnd, 180, { market });
     for (const point of res.history ?? []) {
       const cheapness = Math.min(point.p, 1 - point.p);
       if (point.t < earlyWindowEnd) earlyContestedPeak = Math.max(earlyContestedPeak, cheapness);

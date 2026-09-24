@@ -67,7 +67,7 @@ export async function processNewFills(target: PaperTradeTarget): Promise<Process
       continue;
     }
 
-    const res = await getPricesHistory(tokenId, fill.timestamp - 30, fill.timestamp + target.delaySeconds + 60, 1);
+    const res = await getPricesHistory(tokenId, fill.timestamp - 30, fill.timestamp + target.delaySeconds + 60, 1, { market });
     const history = res.history ?? [];
     const followerPrice = priceAtOrAfter(history, fill.timestamp + target.delaySeconds);
 

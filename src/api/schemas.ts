@@ -63,6 +63,11 @@ export const GammaMarketSchema = z.object({
   // no downstream benefit.
   endDate: z.string().optional(),
   closed: z.boolean(),
+  // "resolved" once UMA settlement is final (seen live 2026-09-24; other
+  // values include "proposed"/"disputed"). Read only by
+  // src/api/cachePolicy.ts's isFinalizedMarket -- nullable/optional since
+  // older markets may not carry it.
+  umaResolutionStatus: z.string().nullable().optional(),
   volume: z.string().optional(),
   liquidity: z.string().optional(),
 });

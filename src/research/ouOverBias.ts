@@ -68,14 +68,14 @@ function parseJsonArray(raw: string | undefined): string[] {
 // early/thin opening tick — same "closing line" reasoning sportsbook
 // efficiency studies use. Walks backward from endDate in growing windows
 // since we don't know in advance how far back the last real tick is.
-async function closingOverPrice(tokenId: string, endTs: number): Promise<number | null> {
+async function closingOverPrice(market: GammaMarket, tokenId: string, endTs: number): Promise<number | null> {
   const windows = [
     [endTs - 2 * 3600, endTs - 60],
     [endTs - 12 * 3600, endTs - 60],
     [endTs - 48 * 3600, endTs - 60],
   ];
   for (const [start, end] of windows) {
-    const res = await getPricesHistory(tokenId, start, end, 5);
+    const res = await getPricesHistory(tokenId, start, end, 5, { market });
     const history = res.history ?? [];
     if (history.length > 0) return history[history.length - 1].p;
   }
@@ -95,7 +95,7 @@ async function collectOuLines(events: GammaEvent[]): Promise<OuLine[]> {
       if (!market.endDate) continue;
 
       const endTs = Math.floor(new Date(market.endDate).getTime() / 1000);
-      const overEntryPrice = await closingOverPrice(tokenIds[overIdx], endTs);
+      const overEntryPrice = await closingOverPrice(market, tokenIds[overIdx], endTs);
       if (overEntryPrice === null) continue; // no observable pre-game price, skip rather than guess
 
       lines.push({

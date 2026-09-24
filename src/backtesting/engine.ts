@@ -44,6 +44,14 @@ function applyCosts(usdcStaked: number, entryPrice: number, config: BacktestConf
 // a long-running daemon process, where caching a market as "still open"
 // forever would mean a paper order could never be detected as resolved for
 // the rest of the process's uptime.
+//
+// K1 (2026-09-24): now just an in-process front for the persistent,
+// cross-run cache inside getMarketByConditionId (src/api/client.ts), which
+// applies a STRICTER rule (src/api/cachePolicy.ts's isFinalizedMarket:
+// closed AND a clean 0/1 payout vector AND UMA-resolved) because its
+// entries outlive the process. This map keeps the looser `closed` rule --
+// within one process that's the pre-K1 behavior, and it saves the SQLite
+// read + JSON parse for repeat lookups in a single run.
 const marketCache = new Map<string, GammaMarket>();
 // Exported for reuse by src/paperTrading/engine.ts, which needs the exact
 // same "resolved, closed market, or null" lookup this file already does —

@@ -84,7 +84,7 @@ export async function estimateFollowerFill(fill: LeaderFill): Promise<FollowerFi
   const maxDelay = Math.max(...FOLLOWER_DELAYS_SECONDS);
   // Small padding on both sides -- CLOB candle boundaries don't line up
   // exactly with the requested startTs/endTs.
-  const res = await getPricesHistory(tokenId, fill.timestamp - 30, fill.timestamp + maxDelay + 60, 1);
+  const res = await getPricesHistory(tokenId, fill.timestamp - 30, fill.timestamp + maxDelay + 60, 1, { market });
   const history = res.history ?? [];
 
   const followerPriceByDelay: FollowerFillEstimate["followerPriceByDelay"] = {};
