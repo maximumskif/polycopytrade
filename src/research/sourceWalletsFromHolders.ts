@@ -41,7 +41,13 @@
 // or the tracking DB. To actually track one, add it to wallets.ts and run
 // `npm run wallets:add`.
 //
-// Usage: npm run source-wallets-holders
+// Usage: npm run source-wallets-holders [-- --tag=<gamma tag slug>]
+//
+// `--tag` (e.g. `--tag=soccer`) restricts the scan to one category's
+// events. Added 2026-09-24 (item 42): the quality pool's first-ever market
+// overlap was two soccer wallets, and the consensus/divergence tests need
+// more wallets in ONE category to overlap -- untagged, the top-by-volume
+// events spread across every category.
 
 import "dotenv/config";
 import { getActiveEventsByVolume, getTopHolders, getActivity } from "../api/client";
@@ -95,9 +101,9 @@ function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
 
-async function collectSightings(): Promise<Sighting[]> {
-  const events = await getActiveEventsByVolume(EVENTS_TO_SCAN);
-  console.log(`${events.length} active events by 24h volume.`);
+async function collectSightings(tagSlug?: string): Promise<Sighting[]> {
+  const events = await getActiveEventsByVolume(EVENTS_TO_SCAN, tagSlug);
+  console.log(`${events.length} active ${tagSlug ? `"${tagSlug}" ` : ""}events by 24h volume.`);
 
   const sightings: Sighting[] = [];
   for (const event of events) {
@@ -171,7 +177,11 @@ async function isRecentlyActive(address: string): Promise<boolean> {
 
 async function main() {
   console.log(`Scanning top ${EVENTS_TO_SCAN} active events by 24h volume, top ${MARKETS_PER_EVENT} markets each...`);
-  const sightings = await collectSightings();
+  const tagSlug = process.argv
+    .slice(2)
+    .find((a) => a.startsWith("--tag="))
+    ?.slice("--tag=".length);
+  const sightings = await collectSightings(tagSlug);
   console.log(`${sightings.length} raw (market, holder) sightings.`);
 
   const deduped = dedupe(sightings);

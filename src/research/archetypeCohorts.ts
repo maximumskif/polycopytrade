@@ -53,7 +53,7 @@ async function buildQualityPoolWithArchetypes(): Promise<PoolEntry[]> {
   for (const wallet of TRACKED_WALLETS) {
     let activity: Activity[];
     try {
-      activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10);
+      activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10, wallet.historyStart);
     } catch (err) {
       console.log(`[${wallet.label}] activity pull failed: ${(err as Error).message}`);
       continue;

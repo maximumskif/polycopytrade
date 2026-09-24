@@ -349,7 +349,8 @@ export async function getTopHolders(conditionId: string, limit = 20): Promise<Ho
 // The natural feed for getTopHolders() above: pairs a currently-hot market
 // with who's currently sized into it, rather than who made money in the
 // past. `order=volume24hr` confirmed live 2026-09-15.
-export async function getActiveEventsByVolume(limit = 20): Promise<GammaEvent[]> {
+export async function getActiveEventsByVolume(limit = 20, tagSlug?: string): Promise<GammaEvent[]> {
   const qs = new URLSearchParams({ closed: "false", order: "volume24hr", ascending: "false", limit: String(limit) });
+  if (tagSlug) qs.set("tag_slug", tagSlug);
   return validate(GammaEventsResponseSchema, await requestJson(`${GAMMA_API}/events?${qs.toString()}`), "GET /events (by volume24hr)");
 }

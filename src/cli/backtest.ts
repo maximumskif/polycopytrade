@@ -36,7 +36,7 @@ export async function main() {
     process.exit(1);
   }
 
-  const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10);
+  const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10, wallet.historyStart);
   const datasetCutoff = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : Math.floor(Date.now() / 1000);
 
   const config = defaultBacktestConfig({
