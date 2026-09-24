@@ -1000,3 +1000,27 @@ once a sourcing channel actually grows the quality pool.
     - Candidates not recorded in `wallets.ts` (same as item 31: this
       channel is read-only). G.19 items 1-2 stay parked.
     - Also this pass: `HighTempTation` copy-delay check -- see item 44.
+
+## Paper-trading candidacy — ndb1 vetted and declined (2026-09-24)
+
+45. ✅ **Done 2026-09-24. Decision: NOT paper-trading `ndb1`.** Of item
+    41's three new quality wallets it was the only live candidate
+    (`HighTempTation` fails copy delay, item 44; `vito3corleone` has 13
+    events and was already 23d quiet). Two checks:
+    - **Copy delay is fine:** `npm run follower-delay-demo -- ndb1 30`
+      puts a follower only +0.3c worse at +30s (0.643 -> 0.646) -- unlike
+      HighTempTation, delay isn't the problem. (The 28-fill sample's own
+      ROI is noise; slippage is the metric.)
+    - **The edge doesn't hold up by league.** `sportSegmentation.ts` now
+      takes a wallet filter (`npm run sport-segmentation -- ndb1`; default
+      still `0x1b20a0`). Sports overall: 8836 trials / 134 events, 69.9%
+      win, **ROI +7.5%, 95% CI [-13.7%, 28.0%] -- straddles zero.** And
+      **7664 of 8836 trials (53 events) are FIFA World Cup** (+8.0%, CI
+      [-22.9%, 39.3%]), a tournament that's over -- a paper-trade from
+      here would mostly see club soccer, where EPL is +1.6% (CI
+      [-75.7%, 74.3%], 24 events). NFL is the one CI-above-zero league
+      (+42.0%, [12.9%, 70.7%]) but only 12 events -- provisional, re-check
+      after the NFL season accrues more.
+    - **Net: the quality pool is 3 on paper but 0 actionable for copy
+      trading right now.** The one paper-traded wallet (`0x1b20a0...`)
+      has been quiet since 2026-08-10.

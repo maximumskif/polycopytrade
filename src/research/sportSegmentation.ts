@@ -29,7 +29,10 @@ import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../backtesting/statistics";
 import type { BacktestTrial } from "../domain/types";
 
-const TARGET_WALLET_FILTER = "0x1b20a0";
+// Defaults to the original target; any tracked wallet can be segmented via
+// `npm run sport-segmentation -- <address/label filter>` (added 2026-09-24
+// to vet ndb1 before paper-trading it, item 45).
+const TARGET_WALLET_FILTER = (process.argv[2] ?? "0x1b20a0").toLowerCase();
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
