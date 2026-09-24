@@ -14,16 +14,29 @@
 // way every other wallet in this project has been judged, not a raw
 // address dump.
 //
-// Read-only research script: prints candidates, adds nothing to wallets.ts
-// or the tracking DB. To actually track one, add it to wallets.ts (for
-// archetype/source provenance) and run `npm run wallets:add`.
+// Research script: prints candidates and adds nothing to wallets.ts or the
+// tracking daemon's tables. Since Track M1/M2 (2026-09-24) every score is
+// recorded in `wallet_scores`, shallow passes are auto-confirmed from a
+// pinned anchor (walletConfirmation.ts), and a ready-to-paste wallets.ts
+// entry is printed for each confirmed quality wallet. To actually track
+// one, paste it into wallets.ts and run `npm run wallets:add`.
 //
 // Usage: npm run source-wallets
 
 import "dotenv/config";
 import { getActivity, getLeaderboard, type LeaderboardEntry } from "../api/client";
-import { isCertainlyDormant, scoreWallet, scoreWalletShallow, scoreWalletWithActivity } from "../scoring/walletScore";
+import { isCertainlyDormant, scoreWalletShallow, scoreWalletWithActivity } from "../scoring/walletScore";
+import { runMigrations } from "../storage/migrate";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
+import {
+  isTruncated,
+  newestTimestamp,
+  printVerdicts,
+  recordAttempt,
+  screenAndConfirm,
+  type PipelineOutcome,
+  type ScoringAttempt,
+} from "./walletConfirmation";
 
 const CATEGORIES = ["POLITICS", "SPORTS", "ESPORTS", "CRYPTO", "CULTURE", "WEATHER", "ECONOMICS", "TECH", "FINANCE"] as const;
 const WINDOWS = ["MONTH", "ALL"] as const;
@@ -38,6 +51,8 @@ const LIMIT_PER_SWEEP = 25;
 // 27 wallets last time), and the first sweep's 26/27 vetoed rate (mostly
 // dormant) sets a realistic expectation for this one too.
 const TOP_N_PER_CATEGORY = 6;
+const SHALLOW_HISTORY_PAGES = 4; // scoreWalletShallow's default, named so it's recorded accurately
+const SOURCE = "source-wallets";
 
 type Category = (typeof CATEGORIES)[number];
 type Window = (typeof WINDOWS)[number];
@@ -47,10 +62,6 @@ interface Candidate {
   category: Category;
   window: Window;
   categoriesSeenIn: Set<Category>;
-}
-
-function pct(n: number): string {
-  return `${(n * 100).toFixed(1)}%`;
 }
 
 async function sweep(): Promise<{ entry: LeaderboardEntry; category: Category; window: Window }[]> {
@@ -106,6 +117,7 @@ function shortlist(deduped: Map<string, Candidate>): Candidate[] {
 }
 
 async function main() {
+  runMigrations();
   console.log(`Sweeping ${CATEGORIES.length} categories x ${WINDOWS.length} windows (PNL-ordered, top ${LIMIT_PER_SWEEP} each)...`);
   const swept = await sweep();
   console.log(`${swept.length} raw leaderboard entries pulled.`);
@@ -116,13 +128,7 @@ async function main() {
   const candidates = shortlist(deduped);
   console.log(`Scoring top ${TOP_N_PER_CATEGORY} per category (${candidates.length} candidates)...\n`);
 
-  const results: {
-    candidate: Candidate;
-    score: Awaited<ReturnType<typeof scoreWallet>> | null;
-    error?: string;
-    skippedDormant?: boolean;
-    shallow?: boolean;
-  }[] = [];
+  const outcomes: PipelineOutcome[] = [];
   for (const [i, candidate] of candidates.entries()) {
     const wallet: TrackedWallet = {
       address: candidate.entry.proxyWallet,
@@ -130,24 +136,24 @@ async function main() {
       archetype: "unclassified",
       source: `https://polymarket.com/leaderboard/${candidate.category.toLowerCase()}/${candidate.window.toLowerCase()}/profit`,
     };
+    const base = { address: wallet.address, label: wallet.label, provenance: wallet.source };
     try {
       // Cheap dormancy pre-check (1 call, newest-first) before the expensive
       // full-history scoreWallet() pull (~3 min each). Added 2026-09-22 after
       // the broaden pass's first 10/10 scored candidates came back vetoed,
       // overwhelmingly on `dormant` -- each of those cost a full pull to
       // learn something one call proves. Exact, not heuristic: see
-      // isCertainlyDormant. Skipped wallets are reported, not silently
-      // dropped, and count toward the vetoed total.
+      // isCertainlyDormant. Skipped wallets are reported (screened out), not
+      // silently dropped, and not recorded in wallet_scores (no score exists).
       const latest = await getActivity(wallet.address, { limit: 1 });
       const latestTs = latest.length ? latest[0].timestamp : null;
       if (isCertainlyDormant(latestTs)) {
-        results.push({ candidate, score: null, skippedDormant: true });
+        outcomes.push({ ...base, kind: "screened-out", reason: "dormant (pre-check: newest activity > 30 days old; full pull skipped)" });
         console.log(`[${i + 1}/${candidates.length}] ${wallet.label} -> VETOED(dormant) via pre-check, full pull skipped`);
         continue;
       }
+      const historyPages = wallet.historyPages ?? 10;
       const full = await scoreWalletWithActivity(wallet);
-      let score = full.score;
-      const activity = full.activity;
       // The full pull pages FORWARD from the oldest activity under a page
       // budget, so a high-volume wallet can cap out before reaching its
       // recent trades and get falsely flagged `dormant` (item 40's sweep hit
@@ -155,66 +161,58 @@ async function main() {
       // pre-check's newest timestamp makes the truncation exactly
       // detectable; rescore from a newest-first window instead, marked
       // shallow since that window isn't reproducible (see scoreWalletShallow).
-      const pulledLatestTs = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : null;
-      let shallow = false;
-      if (latestTs !== null && (pulledLatestTs === null || pulledLatestTs < latestTs)) {
-        score = (await scoreWalletShallow(wallet)).score;
-        shallow = true;
+      // The truncated full pull is still recorded (truncated=1) as provenance.
+      const fullAttempt: ScoringAttempt = {
+        method: "full",
+        historyStart: null,
+        historyPages,
+        truncated: isTruncated(latestTs, newestTimestamp(full.activity)),
+        fills: full.activity.length,
+        score: full.score,
+      };
+      let screen = fullAttempt;
+      if (fullAttempt.truncated) {
+        recordAttempt(fullAttempt, { source: SOURCE, label: wallet.label });
+        const shallow = await scoreWalletShallow(wallet, SHALLOW_HISTORY_PAGES);
+        screen = {
+          method: "shallow",
+          historyStart: null,
+          historyPages: SHALLOW_HISTORY_PAGES,
+          truncated: false,
+          fills: shallow.activity.length,
+          score: shallow.score,
+        };
       }
-      results.push({ candidate, score, shallow });
       // Printed as each candidate finishes -- scoring 50+ wallets can take
       // hours (each is a real rate-limited full-history pull), and every
       // prior version of this script buffered ALL output until the very
       // end, which meant a killed/timed-out run lost 100% of its progress
       // with nothing to show for it (hit live 2026-09-15 running this
-      // exact script under a foreground time limit). This progress line is
-      // purely additive -- the final sorted summary below is unchanged.
+      // exact script under a foreground time limit).
       console.log(
-        `[${i + 1}/${candidates.length}] ${wallet.label} -> qualityScore=${score.qualityScore}${score.flags.length ? ` VETOED(${score.flags.join(",")})` : " clean"}` +
-          (shallow ? " [shallow: full pull truncated before recent activity]" : "")
+        `[${i + 1}/${candidates.length}] ${wallet.label} -> qualityScore=${screen.score.qualityScore}` +
+          `${screen.score.flags.length ? ` VETOED(${screen.score.flags.join(",")})` : " clean"}` +
+          (screen.method === "shallow" ? " [shallow: full pull truncated before recent activity]" : "")
       );
+      // Track M1 (2026-09-24): a shallow pass is auto-confirmed from a
+      // pinned anchor here, instead of by a later hand-run confirm-shallow.
+      const outcome = await screenAndConfirm(base, screen, { source: SOURCE });
+      outcomes.push(outcome);
+      if (outcome.kind !== "screened-out") console.log(`    -> ${outcome.kind}${outcome.reason ? `: ${outcome.reason}` : ""}`);
     } catch (err) {
-      results.push({ candidate, score: null, error: (err as Error).message });
+      outcomes.push({ ...base, kind: "error", reason: (err as Error).message });
       console.log(`[${i + 1}/${candidates.length}] ${wallet.label} -> scoring failed: ${(err as Error).message}`);
     }
   }
 
-  results.sort((a, b) => (b.score?.qualityScore ?? -1) - (a.score?.qualityScore ?? -1));
+  printVerdicts(outcomes);
 
-  let scored = 0;
-  let vetoed = 0;
-  let preVetoed = 0;
-  for (const { candidate, score, error, skippedDormant, shallow } of results) {
-    const seenIn = [...candidate.categoriesSeenIn].join(", ");
-    console.log(`[${candidate.entry.proxyWallet}] ${candidate.entry.userName ?? "(no username)"}`);
-    console.log(
-      `  seen in: ${seenIn}  best rank: ${candidate.category} ${candidate.window} #${candidate.entry.rank}  vol=$${candidate.entry.vol.toFixed(0)}  pnl=$${candidate.entry.pnl.toFixed(0)}`
-    );
-    if (skippedDormant) {
-      preVetoed++;
-      console.log(`  VETOED -- dormant (pre-check: newest activity > 30 days old; full pull skipped)`);
-    } else if (error) {
-      console.log(`  scoring failed: ${error}`);
-    } else if (score) {
-      scored++;
-      const isVetoed = score.flags.length > 0;
-      if (isVetoed) vetoed++;
-      console.log(
-        `  qualityScore=${score.qualityScore}/100${isVetoed ? `  (VETOED -- ${score.flags.join(", ")})` : ""}` +
-          (shallow ? "  [shallow rescore -- full pull truncated; confirm with a deeper historyPages before trusting]" : "")
-      );
-      console.log(
-        `  events=${score.distinctEvents}  winRate=${pct(score.winRate)}  roi=${pct(score.roi)}  netPnl=$${score.netPnl.toFixed(2)}` +
-          `  daysSinceLastActivity=${score.daysSinceLastActivity.toFixed(1)}`
-      );
-    }
-    console.log("");
-  }
-
+  const count = (kind: PipelineOutcome["kind"]) => outcomes.filter((o) => o.kind === kind).length;
   console.log(
-    `Summary: ${swept.length} raw entries -> ${deduped.size} new wallets -> ${candidates.length} shortlisted -> ` +
-      `${preVetoed} pre-vetoed dormant, ${scored} fully scored (${scored - vetoed} clean / ${vetoed} vetoed)` +
-      `${results.length - scored - preVetoed ? `, ${results.length - scored - preVetoed} scoring errors` : ""}.`
+    `\nSummary: ${swept.length} raw entries -> ${deduped.size} new wallets -> ${candidates.length} shortlisted -> ` +
+      `${count("confirmed-quality")} confirmed quality / ${count("failed-confirmation")} failed confirmation / ` +
+      `${count("unconfirmed-truncated")} unconfirmed (truncated) / ${count("screened-out")} screened out` +
+      `${count("error") ? ` / ${count("error")} scoring errors` : ""}.`
   );
 }
 

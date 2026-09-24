@@ -34,12 +34,15 @@
 //    twice, on real candidates here). scoreWalletShallow() uses
 //    getActivityDeep instead (pages backward from NOW) -- a non-reproducible
 //    quick screen, not a trustworthy final number, but one that actually
-//    answers "is this wallet active" correctly. Promote a promising result
-//    to a full `npm run wallet-score` pass before trusting it further.
+//    answers "is this wallet active" correctly.
+// 6. Since Track M1/M2 (2026-09-24): any shallow result that passes
+//    isQualityWallet() is auto-confirmed from a pinned anchor
+//    (walletConfirmation.ts, the same logic as `npm run confirm-shallow`),
+//    and every score is recorded in `wallet_scores`.
 //
-// Read-only research script: prints candidates, adds nothing to wallets.ts
-// or the tracking DB. To actually track one, add it to wallets.ts and run
-// `npm run wallets:add`.
+// Adds nothing to wallets.ts or the tracking daemon's tables; prints a
+// ready-to-paste wallets.ts entry per confirmed quality wallet. To actually
+// track one, paste it into wallets.ts and run `npm run wallets:add`.
 //
 // Usage: npm run source-wallets-holders [-- --tag=<gamma tag slug>]
 //
@@ -52,7 +55,9 @@
 import "dotenv/config";
 import { getActiveEventsByVolume, getTopHolders, getActivity } from "../api/client";
 import { scoreWalletShallow } from "../scoring/walletScore";
+import { runMigrations } from "../storage/migrate";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
+import { printVerdicts, screenAndConfirm, type PipelineOutcome, type ScoringAttempt } from "./walletConfirmation";
 
 const EVENTS_TO_SCAN = 15;
 const MARKETS_PER_EVENT = 3; // caps ladder-style events with dozens of sub-markets
@@ -63,12 +68,13 @@ const HOLDERS_PER_MARKET_SIDE = 15;
 // scoreWalletShallow() pull is rate-limited to ~1/sec per unique market
 // resolved. This is a fast FIRST PASS to see if the channel surfaces
 // anything real at all -- a promising candidate gets a deeper, slower
-// `npm run wallet-score` re-check afterward (same "shallow scan first,
-// confirm on deeper pull" pattern this project already used for 0x_exit:
-// historyPages raised from 10 to 40 only once the shallow pass looked
-// worth it).
+// anchored re-check (same "shallow scan first, confirm on deeper pull"
+// pattern this project already used for 0x_exit: historyPages raised from
+// 10 to 40 only once the shallow pass looked worth it), which since
+// 2026-09-24 runs automatically on each isQualityWallet() pass (step 6).
 const MAX_CANDIDATES_TO_SCORE = 15;
 const SHALLOW_HISTORY_PAGES = 4;
+const SOURCE = "source-wallets-holders";
 
 // Real finding, first live run of this script (2026-09-15): shortlisting by
 // position size/market-count alone scored 4/4 candidates dormant. Holder
@@ -95,10 +101,6 @@ interface Candidate {
   name: string | null;
   bestSighting: Sighting;
   marketsSeenIn: Set<string>; // eventTitle:marketQuestion, for a human-readable "seen in N markets" count
-}
-
-function pct(n: number): string {
-  return `${(n * 100).toFixed(1)}%`;
 }
 
 async function collectSightings(tagSlug?: string): Promise<Sighting[]> {
@@ -176,6 +178,7 @@ async function isRecentlyActive(address: string): Promise<boolean> {
 }
 
 async function main() {
+  runMigrations();
   console.log(`Scanning top ${EVENTS_TO_SCAN} active events by 24h volume, top ${MARKETS_PER_EVENT} markets each...`);
   const tagSlug = process.argv
     .slice(2)
@@ -208,53 +211,48 @@ async function main() {
   console.log(`\n${candidates.length} of ${prefilterPool.length} checked passed the recency pre-filter.`);
   console.log(`Scoring ${candidates.length} candidates (multi-market convergence first, then largest single position)...\n`);
 
-  const results: { candidate: Candidate; score: Awaited<ReturnType<typeof scoreWalletShallow>>["score"] | null; error?: string }[] = [];
+  const outcomes: PipelineOutcome[] = [];
   for (const candidate of candidates) {
     const wallet: TrackedWallet = {
       address: candidate.address,
-      label: `${candidate.name ?? candidate.address} (top-holder sourced, seen in ${candidate.marketsSeenIn.size} hot market(s), best position ${candidate.bestSighting.amount.toFixed(0)} shares in "${candidate.bestSighting.marketQuestion}")`,
+      label: `${candidate.name ?? candidate.address} (top-holder sourced${tagSlug ? ` --tag=${tagSlug}` : ""}, seen in ${candidate.marketsSeenIn.size} hot market(s), best position ${candidate.bestSighting.amount.toFixed(0)} shares in "${candidate.bestSighting.marketQuestion}")`,
       archetype: "unclassified",
       source: "npm run source-wallets-holders (data-api /holders on active-by-volume24hr events)",
     };
+    const base = { address: wallet.address, label: wallet.label, provenance: wallet.source };
     console.log(`  scoring [${candidate.address}] ${candidate.name ?? "(no username)"}...`);
     try {
-      const { score } = await scoreWalletShallow(wallet, SHALLOW_HISTORY_PAGES);
-      console.log(`    -> qualityScore=${score.qualityScore}/100  flags=${score.flags.join(",") || "(none)"}`);
-      results.push({ candidate, score });
+      const { score, activity } = await scoreWalletShallow(wallet, SHALLOW_HISTORY_PAGES);
+      console.log(`    -> shallow qualityScore=${score.qualityScore}/100  flags=${score.flags.join(",") || "(none)"}`);
+      const screen: ScoringAttempt = {
+        method: "shallow",
+        historyStart: null,
+        historyPages: SHALLOW_HISTORY_PAGES,
+        truncated: false,
+        fills: activity.length,
+        score,
+      };
+      // Track M1 (2026-09-24): shallow passes (isQualityWallet, not the old
+      // ">= 50") are auto-confirmed from a pinned anchor right here -- item
+      // 42 did this by hand and 3 of 3 real-looking soccer passes failed.
+      const outcome = await screenAndConfirm(base, screen, { source: SOURCE, log: (line) => console.log(`  ${line}`) });
+      outcomes.push(outcome);
+      if (outcome.kind !== "screened-out") console.log(`      -> ${outcome.kind}${outcome.reason ? `: ${outcome.reason}` : ""}`);
     } catch (err) {
       console.log(`    -> scoring failed: ${(err as Error).message}`);
-      results.push({ candidate, score: null, error: (err as Error).message });
+      outcomes.push({ ...base, kind: "error", reason: (err as Error).message });
     }
   }
 
-  results.sort((a, b) => (b.score?.qualityScore ?? -1) - (a.score?.qualityScore ?? -1));
+  printVerdicts(outcomes);
 
-  let scored = 0;
-  let vetoed = 0;
-  for (const { candidate, score, error } of results) {
-    console.log(`[${candidate.address}] ${candidate.name ?? "(no username)"}`);
-    console.log(
-      `  seen in ${candidate.marketsSeenIn.size} hot market(s)  best position: ${candidate.bestSighting.amount.toFixed(0)} shares in "${candidate.bestSighting.marketQuestion}"`
-    );
-    if (error) {
-      console.log(`  scoring failed: ${error}`);
-    } else if (score) {
-      scored++;
-      const isVetoed = score.flags.length > 0;
-      if (isVetoed) vetoed++;
-      console.log(`  qualityScore=${score.qualityScore}/100${isVetoed ? `  (VETOED -- ${score.flags.join(", ")})` : ""}`);
-      console.log(
-        `  events=${score.distinctEvents}  winRate=${pct(score.winRate)}  roi=${pct(score.roi)}  netPnl=$${score.netPnl.toFixed(2)}` +
-          `  daysSinceLastActivity=${score.daysSinceLastActivity.toFixed(1)}`
-      );
-    }
-    console.log("");
-  }
-
+  const count = (kind: PipelineOutcome["kind"]) => outcomes.filter((o) => o.kind === kind).length;
   console.log(
-    `Summary: ${sightings.length} raw sightings -> ${deduped.size} new wallets -> ${prefilterPool.length} checked for recency -> ` +
-      `${candidates.length} passed (active within ${RECENCY_WINDOW_DAYS}d) -> ${scored} scored ` +
-      `(${scored - vetoed} clean / ${vetoed} vetoed)${results.length - scored ? `, ${results.length - scored} scoring errors` : ""}.`
+    `\nSummary: ${sightings.length} raw sightings -> ${deduped.size} new wallets -> ${prefilterPool.length} checked for recency -> ` +
+      `${candidates.length} passed (active within ${RECENCY_WINDOW_DAYS}d) -> ` +
+      `${count("confirmed-quality")} confirmed quality / ${count("failed-confirmation")} failed confirmation / ` +
+      `${count("unconfirmed-truncated")} unconfirmed (truncated) / ${count("screened-out")} screened out` +
+      `${count("error") ? ` / ${count("error")} scoring errors` : ""}.`
   );
 }
 
