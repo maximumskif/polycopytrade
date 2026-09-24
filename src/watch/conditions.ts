@@ -248,5 +248,7 @@ export function evaluateCondition(condition: WatchCondition, ctx: EvalContext): 
       return evalQualityPoolChanged(condition, ctx);
     case "paperResolvedEvents":
       return evalPaperResolvedEvents(condition, ctx);
+    default:
+      throw new Error(`unknown condition kind "${(condition as { kind: string }).kind}"`);
   }
 }
