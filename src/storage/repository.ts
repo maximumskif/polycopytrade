@@ -43,13 +43,28 @@ export function upsertWallet(wallet: TrackedWallet): void {
 // 0001_init.ts) so re-ingesting an overlapping /activity page is a no-op
 // for fills already stored, not a duplicate row (docs/AUDIT.md §8).
 // Returns how many rows were newly inserted.
-export function insertActivity(walletAddress: string, rows: Activity[]): number {
+//
+// `source` (K3, 2026-09-24): the tracking daemon writes the column's
+// default 'polymarket-data-api'; the scorer's gap-fill writes
+// SCORING_GAP_FILL_SOURCE. When the daemon later polls a row the scorer
+// stored first, the conflict re-tags it as daemon-seen (and counts it as
+// inserted -- it IS new to the daemon), so "the live poll saw this fill"
+// stays exactly as true as before K3 existed. listUncopiedBuyFills depends
+// on that.
+export const DAEMON_ACTIVITY_SOURCE = "polymarket-data-api";
+export const SCORING_GAP_FILL_SOURCE = "scoring-gap-fill";
+
+export function insertActivity(walletAddress: string, rows: Activity[], opts: { source?: string } = {}): number {
   const db = getDb();
   const collectedAt = nowSeconds();
+  const source = opts.source ?? DAEMON_ACTIVITY_SOURCE;
   const stmt = db.prepare(
-    `INSERT OR IGNORE INTO wallet_activity
-       (wallet_address, transaction_hash, condition_id, outcome, side, size, usdc_size, price, type, title, slug, timestamp, collected_at, raw_payload)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO wallet_activity
+       (wallet_address, transaction_hash, condition_id, outcome, side, size, usdc_size, price, type, title, slug, timestamp, collected_at, source, raw_payload)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (wallet_address, transaction_hash, condition_id, outcome, side, size, price, timestamp) DO UPDATE
+       SET source = excluded.source
+       WHERE wallet_activity.source = '${SCORING_GAP_FILL_SOURCE}' AND excluded.source != '${SCORING_GAP_FILL_SOURCE}'`
   );
   let inserted = 0;
   for (const a of rows) {
@@ -67,11 +82,85 @@ export function insertActivity(walletAddress: string, rows: Activity[]): number 
       a.slug,
       a.timestamp,
       collectedAt,
+      source,
       JSON.stringify(a)
     );
     inserted += Number(result.changes);
   }
   return inserted;
+}
+
+// ---------------------------------------------------------------------
+// K3: stored activity as a scoring source (migration 0006)
+// ---------------------------------------------------------------------
+
+export interface CoverageInterval {
+  fromTs: number;
+  toTs: number;
+}
+
+// The `wallets` row's own spelling of an address (addresses reach the
+// scorer in whatever case the caller had), or null when the wallet isn't
+// tracked -- wallet_activity has a foreign key to `wallets`, and adding a
+// `wallets` row would make the daemon start polling it, so untracked
+// wallets are never persisted by the scorer.
+export function findTrackedWalletAddress(address: string): string | null {
+  const row = getDb().prepare(`SELECT address FROM wallets WHERE lower(address) = lower(?)`).get(address) as
+    { address: string } | undefined;
+  return row?.address ?? null;
+}
+
+// Stored rows with timestamp >= fromTs, in (timestamp, id) order, as the
+// API's Activity shape -- raw_payload is JSON.stringify of the validated
+// API row, so this round-trips every field (eventSlug included).
+export function listStoredActivity(walletAddress: string, fromTs: number): Activity[] {
+  const rows = getDb()
+    .prepare(`SELECT raw_payload FROM wallet_activity WHERE wallet_address = ? AND timestamp >= ? ORDER BY timestamp ASC, id ASC`)
+    .all(walletAddress, fromTs) as { raw_payload: string }[];
+  return rows.map((r) => JSON.parse(r.raw_payload) as Activity);
+}
+
+export function listActivityCoverage(walletAddress: string): CoverageInterval[] {
+  const rows = getDb()
+    .prepare(`SELECT from_ts as fromTs, to_ts as toTs FROM wallet_activity_coverage WHERE wallet_address = ? ORDER BY from_ts`)
+    .all(walletAddress) as unknown as CoverageInterval[];
+  return rows.map((r) => ({ fromTs: r.fromTs, toTs: r.toTs }));
+}
+
+// Merges [fromTs, toTs] into the wallet's stored intervals (overlapping or
+// adjacent -- timestamps are integer seconds -- become one row). Only call
+// with a range the caller has PROVEN complete in wallet_activity. A no-op
+// for an empty range (fromTs > toTs).
+export function addActivityCoverage(walletAddress: string, fromTs: number, toTs: number): void {
+  if (fromTs > toTs) return;
+  const db = getDb();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const touching = db
+      .prepare(
+        `SELECT id, from_ts as fromTs, to_ts as toTs FROM wallet_activity_coverage
+         WHERE wallet_address = ? AND from_ts <= ? AND to_ts >= ?`
+      )
+      .all(walletAddress, toTs + 1, fromTs - 1) as unknown as ({ id: number } & CoverageInterval)[];
+    let lo = fromTs;
+    let hi = toTs;
+    for (const t of touching) {
+      lo = Math.min(lo, t.fromTs);
+      hi = Math.max(hi, t.toTs);
+    }
+    const del = db.prepare(`DELETE FROM wallet_activity_coverage WHERE id = ?`);
+    for (const t of touching) del.run(t.id);
+    db.prepare(`INSERT INTO wallet_activity_coverage (wallet_address, from_ts, to_ts, verified_at) VALUES (?, ?, ?, ?)`).run(
+      walletAddress,
+      lo,
+      hi,
+      nowSeconds()
+    );
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
 }
 
 export function recordApiError(err: ApiErrorRecord): void {
@@ -159,6 +248,13 @@ export function listWalletHealth(): WalletHealth[] {
 // row yet — the paper-trading engine's "what's new since last cycle" query.
 // A LEFT JOIN...IS NULL rather than NOT IN, so it stays index-friendly as
 // paper_orders grows.
+//
+// Only rows the daemon's live poll saw (K3, 2026-09-24): the scorer
+// backfills wallet_activity with a tracked wallet's OLD fills (months back,
+// to its scoring anchor), and without this filter the next paper cycle
+// would paper-copy every one of them as if it had just happened. Rows the
+// scorer stored ahead of the daemon get re-tagged on the daemon's next
+// poll (insertActivity), so a genuinely new fill is never lost to this.
 export function listUncopiedBuyFills(walletAddress: string): StoredActivity[] {
   const rows = getDb()
     .prepare(
@@ -167,6 +263,7 @@ export function listUncopiedBuyFills(walletAddress: string): StoredActivity[] {
        FROM wallet_activity wa
        LEFT JOIN paper_orders po ON po.source_activity_id = wa.id
        WHERE wa.wallet_address = ? AND wa.type = 'TRADE' AND wa.side = 'BUY' AND po.id IS NULL
+         AND wa.source != '${SCORING_GAP_FILL_SOURCE}'
        ORDER BY wa.timestamp ASC`
     )
     .all(walletAddress);

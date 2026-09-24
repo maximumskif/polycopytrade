@@ -22,6 +22,7 @@ import * as m0001 from "../src/storage/migrations/0001_init";
 import * as m0002 from "../src/storage/migrations/0002_paper_trading";
 import * as m0003 from "../src/storage/migrations/0003_orderbook_snapshots";
 import * as m0004 from "../src/storage/migrations/0004_drop_positions";
+import * as m0005 from "../src/storage/migrations/0005_wallet_scores";
 import type { NewWalletScoreRecord } from "../src/domain/types";
 import type { Activity } from "../src/api/schemas";
 import type { TrackedWallet } from "../src/wallets";
@@ -75,6 +76,7 @@ test("running migrations twice is a no-op the second time", () => {
     "0003_orderbook_snapshots",
     "0004_drop_positions",
     "0005_wallet_scores",
+    "0006_activity_coverage",
   ]);
   assert.deepEqual(second.applied, []);
 });
@@ -146,16 +148,40 @@ test("0005_wallet_scores applies on a DB already at 0004 without touching existi
   insertActivity(wallet.address, [makeActivity()]);
   const schemaOf = () =>
     db
-      .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND tbl_name != 'wallet_scores' ORDER BY name")
+      .prepare(
+        `SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'
+           AND tbl_name NOT IN ('wallet_scores', 'wallet_activity_coverage') AND name != 'idx_wallet_activity_wallet_ts' ORDER BY name`
+      )
       .all()
       .map((r: any) => `${r.type}:${r.name}:${r.sql}`);
   const before = schemaOf();
 
-  assert.deepEqual(runMigrations(db).applied, ["0005_wallet_scores"]);
+  assert.deepEqual(runMigrations(db).applied, ["0005_wallet_scores", "0006_activity_coverage"]);
   assert.deepEqual(schemaOf(), before, "no pre-existing table/index definition changed");
   assert.equal(listTrackedWallets().length, 1);
   assert.equal((db.prepare("SELECT COUNT(*) as n FROM wallet_activity").get() as { n: number }).n, 1);
   assert.equal(countWalletScores(), 0);
+});
+
+// Track K3 (2026-09-24): 0006 is additive too -- the live DB already holds
+// the daemon's rows, which must keep their default source (so they stay
+// paper-copyable) and get no coverage claimed for them retroactively.
+test("0006_activity_coverage applies on a DB already at 0005 without touching existing rows", () => {
+  db.exec("CREATE TABLE schema_migrations (id TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)");
+  for (const m of [m0001, m0002, m0003, m0004, m0005]) {
+    db.exec(m.sql);
+    db.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, 0)").run(m.id);
+  }
+  upsertWallet(wallet);
+  insertActivity(wallet.address, [makeActivity()]);
+
+  assert.deepEqual(runMigrations(db).applied, ["0006_activity_coverage"]);
+  const rows = db.prepare("SELECT source FROM wallet_activity").all() as { source: string }[];
+  assert.deepEqual(
+    rows.map((r) => r.source),
+    ["polymarket-data-api"]
+  );
+  assert.equal((db.prepare("SELECT COUNT(*) as n FROM wallet_activity_coverage").get() as { n: number }).n, 0);
 });
 
 function scoreRow(overrides: Partial<NewWalletScoreRecord> = {}): NewWalletScoreRecord {

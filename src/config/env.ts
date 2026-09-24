@@ -54,4 +54,9 @@ export const config = {
   sharedRateLimitPath: process.env.POLYCOPY_SHARED_RATELIMIT_PATH
     ? path.resolve(process.env.POLYCOPY_SHARED_RATELIMIT_PATH)
     : path.join(DATA_DIR, "api-ratelimit.db"),
+  // K3 (2026-09-24): score wallets from the daemon's stored wallet_activity
+  // (dbPath), fetching only the missing ranges from /activity
+  // (src/scoring/activitySource.ts). POLYCOPY_SCORE_FROM_DB=0 restores the
+  // pure-API pull.
+  scoreFromDb: flagFromEnv("POLYCOPY_SCORE_FROM_DB"),
 };

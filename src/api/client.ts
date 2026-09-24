@@ -325,12 +325,19 @@ export async function getActivityDeep(address: string, pages = 4): Promise<Activ
 // wallet's very first fill -- still reproducible (same anchor, same fills),
 // but reaches a high-volume wallet's recent trades within a sane page
 // budget, where paging from its origin would cap out years early.
+// The identity getActivityFromStart dedupes on. Exported (K3, 2026-09-24)
+// so src/scoring/activitySource.ts's replay of this pull drops exactly the
+// same rows.
+export function activityKey(a: Activity): string {
+  return `${a.transactionHash}:${a.conditionId}:${a.outcome}:${a.side}:${a.size}:${a.price}`;
+}
+
 export async function getActivityFromStart(address: string, pages = 10, fromTs = 1): Promise<Activity[]> {
   const out: Activity[] = [];
   const seen = new Set<string>();
   const addFresh = (batch: Activity[]) => {
     for (const a of batch) {
-      const key = `${a.transactionHash}:${a.conditionId}:${a.outcome}:${a.side}:${a.size}:${a.price}`;
+      const key = activityKey(a);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(a);

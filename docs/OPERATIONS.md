@@ -175,3 +175,30 @@ ownership, and the env vars that make a worktree share this checkout's
 rate limiter and cache. Out-of-sample tests are registered with
 `npm run prereg` before they run; the files are committed in
 `docs/preregistrations/` (see its README).
+
+## Scoring from the daemon's stored activity (K3, 2026-09-24)
+
+`scoreWalletWithActivity` (so `confirm-shallow`, the sourcing scripts'
+auto-confirm, `wallet-score`) no longer re-pulls a tracked wallet's whole
+window from `/activity`. It reads the wallet's rows from `wallet_activity`
+in the main db and fetches only the ranges `wallet_activity_coverage`
+(migration 0006) can't prove complete: the backfill below what's stored,
+holes the daemon left (it keeps only the newest 200 rows per poll), and
+anything newer than the last verified row. Result = exactly what a pure
+`getActivityFromStart(address, pages, historyStart)` returns (same page
+budget, so the same truncation verdict); rule in
+`src/scoring/activitySource.ts`. Live: HighTempTation's 40-page anchored
+load (7,303 rows) 32.8s cold -> 2.1s warm (1 request).
+
+- Fetched rows of TRACKED wallets are persisted with
+  `source = 'scoring-gap-fill'`; the paper-trading engine ignores that tag
+  (old backfilled fills are never paper-copied) until the daemon's own poll
+  sees the row. Untracked candidates aren't persisted (no `wallets` row is
+  ever created, so the daemon never starts polling them).
+- The daemon records what each poll proves in the coverage table, so a
+  re-score normally costs one request. It needs a restart to pick up the
+  new `pollWallet`.
+- Switch: `POLYCOPY_SCORE_FROM_DB=0` restores the pure-API pull.
+- Research scripts that read `wallet_activity` wholesale
+  (`consensus-signal`, `favorite-harvesting`) now also see backfilled
+  history of tracked wallets -- more real fills, not different ones.

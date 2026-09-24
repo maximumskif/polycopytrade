@@ -10,7 +10,8 @@
 // runs it through the Phase 2 engine) — the same pattern as
 // engine.ts/statistics.ts.
 
-import { getActivityFromStart, getActivityDeep, type Activity } from "../api/client";
+import { getActivityDeep, type Activity } from "../api/client";
+import { getScoringActivity } from "./activitySource";
 import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
 import { computeStrategyResult, MIN_SAMPLE_SIZE, mean } from "../backtesting/statistics";
 import { computeRollingWindowResults } from "../backtesting/rollingWindow";
@@ -253,7 +254,10 @@ async function scoreFromActivity(wallet: TrackedWallet, activity: Activity[]): P
 export async function scoreWalletWithActivity(
   wallet: TrackedWallet
 ): Promise<{ score: WalletScore; activity: Activity[]; trials: BacktestTrial[] }> {
-  const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10, wallet.historyStart);
+  // K3 (2026-09-24): same rows as getActivityFromStart(address, pages,
+  // historyStart), served from the daemon's stored activity where it's
+  // provably complete -- see src/scoring/activitySource.ts.
+  const activity = await getScoringActivity(wallet.address, wallet.historyPages ?? 10, wallet.historyStart);
   const { score, trials } = await scoreFromActivity(wallet, activity);
   return { score, activity, trials };
 }
