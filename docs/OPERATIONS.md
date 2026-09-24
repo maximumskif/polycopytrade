@@ -137,6 +137,34 @@ themselves; `systemctl --user list-units 'pct-job-*'` shows only live
 jobs. Recurring jobs (systemd timers, Track L2) are not set up -- they make
 unattended API calls and are gated on explicit approval.
 
+## Research watchlist (`npm run watch:check`, M3, 2026-09-24)
+
+"Re-check X once Y" follow-ups from `docs/IMPROVEMENT_PLAN.md` live in
+`src/watch/watchlist.ts` as typed entries: id, plan item, condition, and the
+command to run when it fires. `npm run watch:check` evaluates them against
+the daemon DB only (no API calls) and prints, per entry, `not-yet` /
+`FIRED` / `fired (actioned)` / `ERROR`, the measured value vs. threshold,
+and for FIRED entries the exact `npm run job -- watch-<id> -- ...` command.
+`npm run status` shows the count plus only FIRED/ERROR entries.
+
+- `-- --run` launches every FIRED entry's action through `npm run job` and
+  records it in `data/watch-state.json` (`POLYCOPY_WATCH_STATE_PATH`
+  overrides). An entry fires once per state: it stays "actioned" while the
+  condition holds with the same state, and fires again only after it is
+  seen unmet (re-armed) or its state changes (e.g. the quality pool's
+  member list). No-data readings and errors never re-arm. The job inherits
+  `POLYCOPY_SHARED_RATELIMIT_PATH`, `POLYCOPY_API_CACHE_PATH` and `DB_PATH`
+  if they're set, since systemd-run otherwise only passes PATH.
+- `-- --ack <id>` marks a FIRED entry handled without running anything
+  (entries with no command are human reviews).
+- `-- --db <path>` reads another DB read-only, e.g. the main checkout's
+  from a worktree: `npm run watch:check -- --db ~/projects/polycopytrade/data/polycopytrade.db`.
+
+On demand only. No timer runs it (Track L2 is gated on approval). Add a
+follow-up by appending an entry to `WATCHLIST`. A new kind of condition
+needs an evaluator in `src/watch/conditions.ts` and a test in
+`tests/watch.test.ts`.
+
 ## Shared API cache and rate limiter (K1/K2, 2026-09-24)
 
 Every process that talks to Polymarket (the daemons and every research job)
