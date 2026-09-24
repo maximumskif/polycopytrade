@@ -1082,3 +1082,35 @@ stores.
 
 Order: K1+K2 -> (L1+L3) || (M1+M2) as parallel agents -> L2, M3, N, O.
 Track F stays gated on the user regardless.
+
+48. ✅ **Done 2026-09-24. Tracks K1, K2, L1, L3 landed** (parallel
+    agents in separate worktrees; cherry-picked as `883fcc5`, `1dd732e`,
+    `048e30b`, `5d58923`). 247/247 tests.
+    - **K1 — persistent cache** (`data/api-cache.db`, `src/api/cachePolicy.ts`
+      decides everything): only "finalized" markets (closed, exactly one
+      outcome at 1 and the rest 0, UMA status `resolved` if present), the
+      `closed=true` market lookup returning exactly that market, and
+      price histories of a finalized market's own token whose window ended
+      >=24h ago and is non-empty (the CLOB thins history at resolution, so
+      only post-resolution fetches are stored). `/activity`, leaderboards,
+      holders, listings, books never cached. Hits skip the rate limiter.
+      Live: `follower-delay-demo -- bin8888 10` 93.7s cold -> 25.0s warm,
+      identical output; the remainder is uncached `/activity` + open-market
+      lookups.
+    - **K2 — cross-process rate limit** (`data/api-ratelimit.db`, per-host
+      slot reservation under `BEGIN IMMEDIATE`, falls back to per-process
+      after 500ms lock/open failure, retries after 30s). 3-process test at
+      the production 1.1s gap: arrival gaps min ~1087ms / median 1100ms;
+      disabled: min 0ms. Found+fixed a concurrent first-open "database is
+      locked" race on the WAL switch (`src/utils/openWalDb.ts`).
+      Env: `POLYCOPY_API_CACHE=0`, `POLYCOPY_SHARED_RATELIMIT=0`,
+      `*_PATH` overrides. Daemon restarted; it now shares the ~0.9 req/s
+      budget with research jobs (intended).
+    - **L1 — job runner:** `npm run job -- <name> -- <cmd...>` runs as a
+      transient systemd user unit (`pct-job-*`) via `ops/jobs/run-job.sh`,
+      recording `meta.json`/`output.log`/`exit.json` in
+      `data/runs/<ts>-<name>/`; `npm run jobs [--tail X]`, `npm run
+      job:stop`. States incl. `lost` (killed/WSL shutdown -- relaunch by
+      hand). **L3:** `npm run status` shows jobs + quality pool.
+    - Not yet: K3 (score from daemon DB), L2 timers (need user OK),
+      M1+M2 (agent in progress), N, O.
