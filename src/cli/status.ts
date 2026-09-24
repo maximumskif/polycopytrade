@@ -24,7 +24,7 @@ import "dotenv/config";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { runMigrations } from "../storage/migrate";
-import { listWalletHealth, getDepthCollectorHealth } from "../storage/repository";
+import { listWalletHealth, getDepthCollectorHealth, countWalletScores, listLatestWalletScores } from "../storage/repository";
 import { main as paperReportMain } from "./paperReport";
 import { fmtAgo } from "../utils/format";
 import { TRACKED_WALLETS } from "../wallets";
@@ -51,14 +51,17 @@ async function systemdStatus(unit: string): Promise<string> {
   }
 }
 
-// Quality-pool membership is read from wallets.ts labels, not computed:
+// Quality-pool membership is read from recorded scores, not computed:
 // isQualityWallet() (src/scoring/walletScore.ts) needs a fresh score, i.e.
 // live, rate-limited /activity pulls -- the same reason wallet-score isn't
-// re-run here. The convention (2026-09-24) is that a wallet confirmed to
-// pass isQualityWallet gets "QUALITY WALLET" in its label. Track M2's
-// planned `wallet_scores` table (score + window + date) should replace this
-// label scan once it exists. Negated phrasings ("not a QUALITY WALLET") are
-// excluded so a label noting a failed bar isn't counted.
+// re-run here. Since Track M2 (2026-09-24) the source is the
+// `wallet_scores` table: each wallet's latest CONFIRMED row (reproducible
+// method, not truncated -- see listConfirmedQualityWallets) with
+// is_quality set. Only while that table is still empty (e.g. a DB that
+// predates migration 0005 and hasn't had a scoring run since) does this
+// fall back to the old convention of "QUALITY WALLET" in wallets.ts
+// labels. Negated phrasings ("not a QUALITY WALLET") are excluded so a
+// label noting a failed bar isn't counted.
 export function isLabeledQualityWallet(label: string): boolean {
   return /QUALITY WALLET/.test(label) && !/\bnot\s+(a\s+)?QUALITY WALLET/i.test(label);
 }
@@ -78,6 +81,30 @@ async function printJobs() {
   console.log(`${running.length} running, ${runs.length} runs total in data/runs/ -- \`npm run jobs\` for more`);
   console.log(RUN_ROW_HEADER);
   for (const r of [...running, ...finished]) console.log(formatRunRow(r, now));
+}
+
+function printQualityPool() {
+  if (countWalletScores() === 0) {
+    console.log("\n=== quality pool (wallet_scores empty -- falling back to wallets.ts labels; not re-scored here) ===");
+    const quality = TRACKED_WALLETS.filter((w) => isLabeledQualityWallet(w.label));
+    console.log(`${quality.length} of ${TRACKED_WALLETS.length} wallets in src/wallets.ts labeled QUALITY WALLET`);
+    for (const w of quality) console.log(`  ${w.label.split(" ")[0]} (${w.archetype})`);
+    return;
+  }
+  console.log("\n=== quality pool (latest confirmed wallet_scores row per wallet -- not re-scored here) ===");
+  const confirmed = listLatestWalletScores({ confirmedOnly: true });
+  const quality = confirmed.filter((r) => r.isQuality);
+  console.log(`${quality.length} of ${confirmed.length} wallets with a confirmed score pass isQualityWallet`);
+  for (const r of quality) {
+    const window =
+      r.method === "anchored" && r.historyStart !== null
+        ? `anchored ${new Date(r.historyStart * 1000).toISOString().slice(0, 10)}`
+        : r.method;
+    console.log(
+      `  ${r.address}  ${r.qualityScore}/100  win ${(r.winRate * 100).toFixed(1)}%  roi ${(r.roi * 100).toFixed(1)}%  ` +
+        `${r.distinctEvents} events  [${window}, ${r.historyPages}p, scored ${fmtAgo(r.scoredAt)}]${r.label && r.label !== r.address ? `  ${r.label.split(" ")[0]}` : ""}`
+    );
+  }
 }
 
 export async function main() {
@@ -114,10 +141,7 @@ export async function main() {
   console.log("\n=== background jobs ===");
   await printJobs();
 
-  console.log("\n=== quality pool (from wallets.ts labels -- not re-scored here) ===");
-  const quality = TRACKED_WALLETS.filter((w) => isLabeledQualityWallet(w.label));
-  console.log(`${quality.length} of ${TRACKED_WALLETS.length} wallets in src/wallets.ts labeled QUALITY WALLET`);
-  for (const w of quality) console.log(`  ${w.label.split(" ")[0]} (${w.archetype})`);
+  printQualityPool();
 
   console.log("\n=== paper trading ===");
   await paperReportMain();

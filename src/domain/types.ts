@@ -268,3 +268,33 @@ export interface NewOrderbookSnapshot {
   bidsJson: string;
   asksJson: string;
 }
+
+// Track M2 (2026-09-24): one scoring run of one wallet, as stored in
+// `wallet_scores` (migration 0005). See that migration for what each
+// `method` means and why `truncated` matters.
+export type WalletScoreMethod = "full" | "shallow" | "anchored";
+
+export interface NewWalletScoreRecord {
+  address: string;
+  label: string | null;
+  scoredAt: number;
+  method: WalletScoreMethod;
+  historyStart: number | null;
+  historyPages: number;
+  truncated: boolean;
+  qualityScore: number;
+  flags: WalletFlag[];
+  distinctEvents: number;
+  winRate: number;
+  roi: number;
+  netPnl: number;
+  medianGapSeconds: number | null;
+  daysSinceLastActivity: number | null;
+  isQuality: boolean;
+  source: string;
+  gitCommit: string | null;
+}
+
+export interface WalletScoreRecord extends NewWalletScoreRecord {
+  id: number;
+}

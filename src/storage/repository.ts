@@ -15,6 +15,8 @@ import type {
   PaperOrder,
   PaperOrderStatus,
   NewOrderbookSnapshot,
+  NewWalletScoreRecord,
+  WalletScoreRecord,
 } from "../domain/types";
 import type { TrackedWallet } from "../wallets";
 
@@ -285,4 +287,104 @@ export function getDepthCollectorHealth(): { lastCapturedAt: number | null; tota
     totalSnapshots: number;
   };
   return row;
+}
+
+// ---------------------------------------------------------------------
+// Track M2: wallet_scores (migration 0005)
+// ---------------------------------------------------------------------
+
+// Infinity (WalletScore's "undefined" for medianGapSeconds /
+// daysSinceLastActivity) isn't representable in SQLite REAL -- stored as
+// NULL, and callers map it back via the record's `| null` type.
+function finiteOrNull(x: number | null): number | null {
+  return x !== null && Number.isFinite(x) ? x : null;
+}
+
+export function insertWalletScore(record: NewWalletScoreRecord): number {
+  const result = getDb()
+    .prepare(
+      `INSERT INTO wallet_scores
+         (address, label, scored_at, method, history_start, history_pages, truncated, quality_score, flags, distinct_events,
+          win_rate, roi, net_pnl, median_gap_seconds, days_since_last_activity, is_quality, source, git_commit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      record.address.toLowerCase(),
+      record.label,
+      record.scoredAt,
+      record.method,
+      record.historyStart,
+      record.historyPages,
+      record.truncated ? 1 : 0,
+      record.qualityScore,
+      JSON.stringify(record.flags),
+      record.distinctEvents,
+      record.winRate,
+      record.roi,
+      record.netPnl,
+      finiteOrNull(record.medianGapSeconds),
+      finiteOrNull(record.daysSinceLastActivity),
+      record.isQuality ? 1 : 0,
+      record.source,
+      record.gitCommit
+    );
+  return Number(result.lastInsertRowid);
+}
+
+function rowToWalletScoreRecord(r: any): WalletScoreRecord {
+  return {
+    id: r.id,
+    address: r.address,
+    label: r.label,
+    scoredAt: r.scored_at,
+    method: r.method,
+    historyStart: r.history_start,
+    historyPages: r.history_pages,
+    truncated: r.truncated === 1,
+    qualityScore: r.quality_score,
+    flags: JSON.parse(r.flags),
+    distinctEvents: r.distinct_events,
+    winRate: r.win_rate,
+    roi: r.roi,
+    netPnl: r.net_pnl,
+    medianGapSeconds: r.median_gap_seconds,
+    daysSinceLastActivity: r.days_since_last_activity,
+    isQuality: r.is_quality === 1,
+    source: r.source,
+    gitCommit: r.git_commit,
+  };
+}
+
+// Latest row per wallet, by insertion order (id) rather than scored_at so
+// two rows written within the same second still order deterministically.
+// `confirmedOnly` restricts to reproducible, reached-the-present rows
+// (method != 'shallow' AND NOT truncated) BEFORE taking the latest -- so a
+// newer shallow screen never masks the last real confirmation, but a newer
+// failed confirmation does replace an older pass.
+export function listLatestWalletScores(opts: { confirmedOnly?: boolean } = {}): WalletScoreRecord[] {
+  const where = opts.confirmedOnly ? `WHERE method != 'shallow' AND truncated = 0` : "";
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM wallet_scores WHERE id IN (SELECT MAX(id) FROM wallet_scores ${where} GROUP BY address)
+       ORDER BY quality_score DESC, address`
+    )
+    .all();
+  return rows.map(rowToWalletScoreRecord);
+}
+
+// The quality pool as the scoring pipeline recorded it: wallets whose
+// latest CONFIRMED row passed isQualityWallet().
+export function listConfirmedQualityWallets(): WalletScoreRecord[] {
+  return listLatestWalletScores({ confirmedOnly: true }).filter((r) => r.isQuality);
+}
+
+export function listWalletScoreHistory(address: string): WalletScoreRecord[] {
+  return getDb()
+    .prepare(`SELECT * FROM wallet_scores WHERE address = ? ORDER BY id`)
+    .all(address.toLowerCase())
+    .map(rowToWalletScoreRecord);
+}
+
+export function countWalletScores(): number {
+  return (getDb().prepare(`SELECT COUNT(*) as n FROM wallet_scores`).get() as { n: number }).n;
 }
