@@ -1144,3 +1144,19 @@ Track F stays gated on the user regardless.
     - Follow-ups: sourcing still dedupes only against `TRACKED_WALLETS`,
       not `wallet_scores` (candidates get re-scored each run); no command
       records a `full`-method score outside `source-wallets`.
+
+46. ✅ **Done 2026-09-24. Clean negative: NFL holders pass adds zero
+    quality wallets.** Follow-up to item 45 (NFL was ndb1's only league
+    with a CI above zero, 12 events). `npm run source-wallets-holders --
+    --tag=nfl`: 15 events / 843 sightings / 447 new wallets -> 15 active
+    -> 15 shallow-scored (12 "clean"). Five sat at exactly 50 (the cap,
+    item 47); `LimitOrderLarry` 63 on $301 net; `TKD44` and `Cannae`
+    net negative. The one real-looking candidate, `neutralwave23`
+    (shallow 56, 529 events, ROI +45.0%), confirmed from a 2026-08-25
+    anchor at **50/100 (cap), 4354 events, 46.5% win, ROI +2.2%** --
+    another lucky shallow window. Logs: `data/*item46.log`.
+    - Same pattern as item 42: holders-based sourcing finds active
+      wallets, but on confirmation they're breakeven. The shallow
+      screen's recent window is systematically optimistic (4 of 4
+      strong-looking holders candidates across items 42/46 regressed to
+      ~breakeven), so M1's auto-confirm is load-bearing.
