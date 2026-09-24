@@ -965,3 +965,14 @@ once a sourcing channel actually grows the quality pool.
       70-85c @24h bucket is evaluated. **Pass = event-clustered 95% CI
       lower bound > 0 at 50bps AND ROI > 0 at 300bps.** Anything else =
       fail, and the bucket is dropped. Result appended below when done.
+    - **Out-of-sample result (2026-07-01..08-12, 215 events / 43 dates):
+      FAIL -- bucket dropped.** 70-85c @24h: 285 trials / 164 events,
+      76.1% win vs. 77.8% breakeven after costs, **ROI -2.3%, 95% CI
+      [-7.2%, 3.1%]** (date-clustered [-7.1%, 2.9%]). The discovery
+      window's +10.8% did not replicate -- a textbook best-of-8 post-hoc
+      artifact, which is exactly what pre-registering caught. The 85-99c
+      band is flat again (+0.8%, [-0.7%, 2.3%]). **Verdict: no tradeable
+      favorite-longshot edge in daily temperature markets at a fixed 24h
+      lead; weather favorites closed.** HighTempTation's own +9.3% must
+      come from entry timing/information a fixed-lead snapshot can't
+      replicate, and item 44's delay check says a copier can't capture it.
