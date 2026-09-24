@@ -240,7 +240,7 @@ async function scoreFromActivity(wallet: TrackedWallet, activity: Activity[]): P
 export async function scoreWalletWithActivity(
   wallet: TrackedWallet
 ): Promise<{ score: WalletScore; activity: Activity[]; trials: BacktestTrial[] }> {
-  const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10);
+  const activity = await getActivityFromStart(wallet.address, wallet.historyPages ?? 10, wallet.historyStart);
   const { score, trials } = await scoreFromActivity(wallet, activity);
   return { score, activity, trials };
 }

@@ -203,7 +203,12 @@ export async function getActivityDeep(address: string, pages = 4): Promise<Activ
 // (transactionHash + outcome + side + size + price) because the boundary
 // fill at the old window's last timestamp is re-fetched as the first row of
 // the next window.
-export async function getActivityFromStart(address: string, pages = 10): Promise<Activity[]> {
+//
+// `fromTs` (unix seconds) anchors the pull at a fixed point instead of the
+// wallet's very first fill -- still reproducible (same anchor, same fills),
+// but reaches a high-volume wallet's recent trades within a sane page
+// budget, where paging from its origin would cap out years early.
+export async function getActivityFromStart(address: string, pages = 10, fromTs = 1): Promise<Activity[]> {
   const out: Activity[] = [];
   const seen = new Set<string>();
   const addFresh = (batch: Activity[]) => {
@@ -215,7 +220,7 @@ export async function getActivityFromStart(address: string, pages = 10): Promise
     }
   };
 
-  let startTs = 1;
+  let startTs = fromTs;
   let pagesUsed = 0;
   while (pagesUsed < pages) {
     let offset = 0;
@@ -310,7 +315,8 @@ export async function resolveProxyWallet(usernameOrSlug: string): Promise<string
 // sources have always used, and the first WEEK/MONTH/ALL beyond what those
 // scrapes covered by hand.
 export async function getLeaderboard(
-  category: "OVERALL" | "POLITICS" | "SPORTS" | "ESPORTS" | "CRYPTO" | "CULTURE" | "MENTIONS" | "WEATHER" | "ECONOMICS" | "TECH" | "FINANCE",
+  category:
+    "OVERALL" | "POLITICS" | "SPORTS" | "ESPORTS" | "CRYPTO" | "CULTURE" | "MENTIONS" | "WEATHER" | "ECONOMICS" | "TECH" | "FINANCE",
   timePeriod: "WEEK" | "MONTH" | "ALL",
   orderBy: "PNL" | "VOL" = "PNL",
   opts: { limit?: number; offset?: number } = {}

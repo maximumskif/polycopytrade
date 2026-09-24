@@ -848,3 +848,51 @@ once a sourcing channel actually grows the quality pool.
     11-16/5-9 (already known-vetoed, wasted but cheap-ish) then continue
     into the remaining 7 categories' ranks 4-6, which haven't been touched
     yet.
+
+## Track E.13 broaden pass — finished, false-dormant bug fixed (2026-09-24)
+
+41. ✅ **Done 2026-09-24. Completes item 40.** Re-ran `npm run
+    source-wallets` end to end (the 2026-09-22 partial run's log was lost
+    to a WSL reboot). 54 candidates: **22 skipped by the 1-call dormancy
+    pre-check, 32 fully scored (9 clean / 23 vetoed)**. All 32 recorded in
+    `wallets.ts` for provenance + dedupe; the 22 pre-check skips are not
+    (cheap to re-check, could reactivate).
+    - **Real bug found and fixed first** (commit `38f1aaf`): five wallets
+      in the earlier partial run passed the dormancy pre-check yet
+      `scoreWallet()` flagged them `dormant` -- the same forward-paging
+      truncation as item 31 (`getActivityFromStart` pages from a wallet's
+      OLDEST fill and caps out years before the present on high-volume
+      wallets). The pre-check's newest timestamp makes this exactly
+      detectable: `sourceWallets.ts` now rescores via
+      `scoreWalletShallow()` when the full pull's newest fill is older,
+      marked `[shallow]`. It fired on **24 of 32** scored wallets -- the
+      old "leaderboard channel = overwhelmingly dormant" pattern from the
+      2026-09-13 sweep and item 40 was substantially this bug, not reality.
+    - **Shallow screens are not trusted directly.** Added a reproducible
+      confirmation path: `TrackedWallet.historyStart` /
+      `getActivityFromStart(..., fromTs)` pin the forward pull to a fixed
+      anchor (still reproducible, but reaches recent trades), and
+      `npm run confirm-shallow -- <addr...>` re-scores from 2026-06-24
+      with 40 pages and re-checks truncation. Of 5 shallow wallets that
+      cleared the bar, **only 2 survived**: `coinman2` and `0x32b4...`
+      were still truncated at 40 pages (~20K fills in <3 months) with
+      bot-speed median gaps (0s / 2s) the recent-2000-fill shallow window
+      had hidden -- ruled out on copyability; `0xdc3E...` had only one
+      event since the anchor -- ruled out as one-shot.
+    - **Quality pool grew by 3** (qualityScore>=50, zero veto flags):
+      `ndb1` (SPORTS #18, confirmed 62/100, 71.9% win, ROI 12.1%, 224
+      events, $1.73M net, medianGap 7s), `HighTempTation` (WEATHER #9,
+      confirmed 74/100, 99.3% win, ROI 9.3%, 2267 events -- a
+      near-certainty favorite harvester, so copy delay may erase its thin
+      per-trade edge), `vito3corleone` (SPORTS #19, full-history 57/100,
+      39.4% win, ROI 47.7%, only 13 events, 23d since last trade -- thin).
+      Not added to paper trading yet.
+    - **G.19 check (overlap precondition for consensus/divergence):** the
+      three sports-side quality wallets' real fills -- `0x1b20a0...`
+      (72 markets), `ndb1` (902 since anchor), `vito3corleone` (16) --
+      give the **first-ever overlap** in this project: `ndb1` x
+      `vito3corleone` share 4 soccer markets (late Aug 2026). Still far
+      below `MIN_SAMPLE_SIZE=20`, so G.19 items 1-2 are NOT re-run yet --
+      the pool needs more wallets in the same category (-> item 42).
+      Separately: `0x1b20a0...`, the only paper-traded wallet, last traded
+      2026-08-10 (45 days) -- itself now dormant by the scorer's bar.

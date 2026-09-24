@@ -31,6 +31,11 @@ export interface TrackedWallet {
   // 10 because their near-100% win rate at 4 pages was a look-ahead artifact
   // — see README Phase 1c.
   historyPages?: number;
+  // Unix seconds to start the forward history pull from, instead of the
+  // wallet's first-ever fill. For high-volume wallets whose full history
+  // can't reach the present within `historyPages` (item 41) -- scores stay
+  // reproducible because the anchor is pinned here, not "now minus N".
+  historyStart?: number;
 }
 
 export const TRACKED_WALLETS: TrackedWallet[] = [
@@ -604,13 +609,15 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x17db3fcd93ba12d38382a0cade24b200185c5f6d",
-    label: "fengdubiying (ESPORTS all-time #4 — scored: 83.6% win, dormant, ROI 27.4%, 86 events — RULED OUT, dormant despite decent numbers)",
+    label:
+      "fengdubiying (ESPORTS all-time #4 — scored: 83.6% win, dormant, ROI 27.4%, 86 events — RULED OUT, dormant despite decent numbers)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/esports/all/profit",
   },
   {
     address: "0xed107a85a4585a381e48c7f7ca4144909e7dd2e5",
-    label: "qmarktea2 (ECONOMICS all-time #2 — scored: 95.2% win, dormant, ROI 3.5%, 171 events — RULED OUT, near-breakeven despite high win rate)",
+    label:
+      "qmarktea2 (ECONOMICS all-time #2 — scored: 95.2% win, dormant, ROI 3.5%, 171 events — RULED OUT, near-breakeven despite high win rate)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/economics/all/profit",
   },
@@ -668,13 +675,15 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x063aeee10fbfd55b6def10da28e87a601e7deb4b",
-    label: "noovd (CULTURE all-time #4 — scored: 15.8% win, dormant, ROI 14.1%, 67 events — RULED OUT, low win rate rescued by payout odds, not a real signal)",
+    label:
+      "noovd (CULTURE all-time #4 — scored: 15.8% win, dormant, ROI 14.1%, 67 events — RULED OUT, low win rate rescued by payout odds, not a real signal)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/culture/all/profit",
   },
   {
     address: "0x241f846866c2de4fb67cdb0ca6b963d85e56ef50",
-    label: "Pestle (ECONOMICS all-time #1 — scored: 8.2% win, dormant, ROI -16.0%, 279 events — RULED OUT, badly negative on a well-powered sample)",
+    label:
+      "Pestle (ECONOMICS all-time #1 — scored: 8.2% win, dormant, ROI -16.0%, 279 events — RULED OUT, badly negative on a well-powered sample)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/economics/all/profit",
   },
@@ -693,7 +702,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x006cc834cc092684f1b56626e23bedb3835c16ea",
-    label: "unnamed (SPORTS all-time #14 — scored: 39.5% win, dormant, ROI 19.5%, 382 events — RULED OUT, below hit-rate bar despite positive ROI)",
+    label:
+      "unnamed (SPORTS all-time #14 — scored: 39.5% win, dormant, ROI 19.5%, 382 events — RULED OUT, below hit-rate bar despite positive ROI)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/sports/all/profit",
   },
@@ -705,7 +715,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0x63ce342161250d705dc0b16df89036c8e5f9ba9a",
-    label: "0x8dxd (CRYPTO all-time #1 — scored: 48.5% win, dormant+uncopyable-high-freq, ROI 0.3%, 54 events — RULED OUT, breakeven and bot-speed)",
+    label:
+      "0x8dxd (CRYPTO all-time #1 — scored: 48.5% win, dormant+uncopyable-high-freq, ROI 0.3%, 54 events — RULED OUT, breakeven and bot-speed)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/crypto/all/profit",
   },
@@ -730,7 +741,8 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
   },
   {
     address: "0xcc500cbcc8b7cf5bd21975ebbea34f21b5644c82",
-    label: "justdance (CRYPTO all-time #3 — scored: 77.2% win, dormant+uncopyable-high-freq, ROI -24.0%, 43 events — RULED OUT, net negative despite high win rate)",
+    label:
+      "justdance (CRYPTO all-time #3 — scored: 77.2% win, dormant+uncopyable-high-freq, ROI -24.0%, 43 events — RULED OUT, net negative despite high win rate)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/crypto/all/profit",
   },
@@ -739,5 +751,225 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     label: "bossoskil1 (ESPORTS all-time #1 — scored: 28.5% win, dormant, ROI -7.4%, 27 events — RULED OUT)",
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
+  // Added 2026-09-24 (IMPROVEMENT_PLAN.md items 40/41): the category-
+  // leaderboard broaden pass, ranks 4-6 per category (54 candidates). 22
+  // were skipped by the 1-call dormancy pre-check and are NOT recorded here
+  // (cheap to re-check, and could become active again). The 32 below were
+  // fully scored; most were first rescored shallow because the full
+  // from-origin pull ran out of pages before reaching recent activity
+  // (sourceWallets.ts truncation check). Shallow screens that cleared the
+  // bar were re-scored from a pinned `historyStart` anchor
+  // (`npm run confirm-shallow`) before being trusted.
+  {
+    address: "0x5966db1fe50763c9e3c014d756369bad07e1f804",
+    label: "0x5966Db1f… (ESPORTS all-time #12 — shallow screen: 72/100, 89.4% win, ROI 41.4%, 25 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
+  {
+    address: "0x6011655c4afb76f36dd1b08a137a1ba73466b31e",
+    label:
+      "HighTempTation (WEATHER all-time #9 — CONFIRMED on pinned-anchor pull (historyStart 2026-06-24, 40 pages, reached present): 74/100 clean, 99.3% win, ROI 9.3%, 2267 events, netPnl=$76.6K, medianGapSeconds=12 — QUALITY WALLET, but a near-certainty favorite harvester: thin per-trade edge, copy delay may erase it)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- see item 41
+  },
+  {
+    address: "0xa278b41b5afda5d18da683eb7f851a7b2dc13369",
+    label: "caspar1248 (TECH monthly #1 — shallow screen: 69/100, 52.7% win, ROI 41.4%, 289 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/month/profit",
+  },
+  {
+    address: "0xc9a24fa249cf907c598544a4d46c077c1edf77d3",
+    label: "0x7A3f9C2D… (ESPORTS monthly #4 — scored: 68/100, 77.4% win, ROI 48.2%, 11 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/month/profit",
+  },
+  {
+    address: "0x6979b1a23c14e5cf0c6d29310080841d19d4c2a3",
+    label: "CryptoVagabond (CULTURE all-time #5 — scored: 67/100, 87.0% win, ROI 1104.8%, 7 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/culture/all/profit",
+  },
+  {
+    address: "0xfea31bc088000ff909be1dfd8d0e3f2c7ef2d227",
+    label:
+      "ndb1 (SPORTS all-time #18 — CONFIRMED on pinned-anchor pull (historyStart 2026-06-24, 40 pages, reached present): 62/100 clean, 71.9% win, ROI 12.1%, 224 events, netPnl=$1.73M, medianGapSeconds=7 — QUALITY WALLET)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/sports/all/profit",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- full-from-origin pull cannot reach the present, see item 41
+  },
+  {
+    address: "0xd570e634aeb745d6501566dba5f81a555cc7e4f8",
+    label: "0xd9670ea7… (ESPORTS monthly #2 — scored: 66/100, 65.1% win, ROI 35.6%, 31 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/month/profit",
+  },
+  {
+    address: "0x55be7aa03ecfbe37aa5460db791205f7ac9ddca3",
+    label:
+      "coinman2 (CRYPTO all-time #5 — shallow 66 clean, but pinned-anchor confirm (40 pages, still truncated): ~20K fills in <3 months, medianGapSeconds=0 — RULED OUT, uncopyable bot-speed)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/crypto/all/profit",
+  },
+  {
+    address: "0x6bab41a0dc40d6dd4c1a915b8c01969479fd1292",
+    label: "Dropper (TECH all-time #5 — shallow screen: 63/100, 48.5% win, ROI 7.5%, 41 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/all/profit",
+  },
+  {
+    address: "0x31864feb9d25dee93728c6225ba891530967e9ca",
+    label: "johnbaster (ESPORTS all-time #13 — shallow screen: 62/100, 68.2% win, ROI 3.9%, 37 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
+  {
+    address: "0x8c0b024c17831a0dde038547b7e791ae6a0d7aa5",
+    label: "THEHIGHLIFE (ESPORTS all-time #8 — shallow screen: 61/100, 46.2% win, ROI 7.1%, 65 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/esports/all/profit",
+  },
+  {
+    address: "0x32b484581fc5606de9c1e43af4636b6be9bc8b21",
+    label:
+      "0x32b48458… (FINANCE all-time #8 — shallow 59 clean, but pinned-anchor confirm (40 pages, still truncated): ~20K fills in <3 months, medianGapSeconds=2 — RULED OUT, uncopyable bot-speed)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/finance/all/profit",
+  },
+  {
+    address: "0x34dd4a4b70eaf79a17878f7938263c801d4dfd83",
+    label:
+      "vito3corleone (SPORTS all-time #19 — scored (full history, reproducible): 57/100 clean, 39.4% win, ROI 47.7%, 13 events, netPnl=$4.70M, 23d since last activity — QUALITY WALLET (thin 13-event sample, low win rate carried by big payouts))",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/sports/all/profit",
+  },
+  {
+    address: "0x111f73e91f85b6fe4de1ddec3de2fe32122e355b",
+    label: "Papeasy (CRYPTO monthly #1 — shallow screen: 57/100, 0.0% win, ROI 0.0%, 0 events, insufficient-sample — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/crypto/month/profit",
+  },
+  {
+    address: "0x1058f156b207cafe61d102e97bf6796931d301c1",
+    label:
+      "TheyAreTakingTheHobitsToIsengard (ECONOMICS monthly #4 — scored: 57/100, 82.4% win, ROI 58.5%, 219 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/month/profit",
+  },
+  {
+    address: "0x0c0e270cf879583d6a0142fc817e05b768d0434e",
+    label:
+      "The Spirit of Ukraine>UMA (ECONOMICS all-time #8 — shallow screen: 54/100, 100.0% win, ROI 0.7%, 10 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/all/profit",
+  },
+  {
+    address: "0x5ecde7348ea5100af4360dd7a6e0a3fb1d420787",
+    label:
+      "0xdc3E831cad (TECH monthly #4 — shallow 50 clean (ROI -5.6%), pinned-anchor confirm: only 1 event since 2026-06-24 — RULED OUT, one-shot recent activity)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/month/profit",
+  },
+  {
+    address: "0x0f37cb80dee49d55b5f6d9e595d52591d6371410",
+    label: "Hans323 (WEATHER all-time #7 — shallow screen: 50/100, 65.0% win, ROI -2.0%, 138 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+  },
+  {
+    address: "0x8afa03dd6974e44d00c4d14dcccb00c0ddf6adb6",
+    label: "stupid22 (WEATHER monthly #1 — shallow screen: 50/100, 98.4% win, ROI -1.1%, 14 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/month/profit",
+  },
+  {
+    address: "0x4f1d5ae26fc31472966e951af3183308736d8de2",
+    label: "e46m3 (TECH monthly #2 — shallow screen: 47/100, 61.9% win, ROI 5.0%, 13 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/tech/month/profit",
+  },
+  {
+    address: "0x8f7a4b414417911e7e9bd738399874792cdbdb40",
+    label: "duderr (WEATHER all-time #6 — shallow screen: 47/100, 44.2% win, ROI -3.7%, 85 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+  },
+  {
+    address: "0x71edffd0d70a1da823ff07a3c6fc81457294d338",
+    label: "pako (ECONOMICS all-time #6 — shallow screen: 44/100, 89.7% win, ROI 10.8%, 21 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/all/profit",
+  },
+  {
+    address: "0xb40e89677d59665d5188541ad860450a6e2a7cc9",
+    label:
+      "Poligarch (WEATHER all-time #5 — shallow screen: 44/100, 43.8% win, ROI 5.4%, 12 events, clean but below qualityScore 50 bar — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/weather/all/profit",
+  },
+  {
+    address: "0xc3ca1a42fd9217b2d02fb05980c1803af462688e",
+    label:
+      "ThePrinceThatWasPromised (ECONOMICS monthly #5 — scored: 41/100, 88.7% win, ROI 34.4%, 15 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/month/profit",
+  },
+  {
+    address: "0x90ed5bffbffbfc344aa1195572d89719a398b5bc",
+    label:
+      "failstober (CULTURE all-time #6 — shallow screen: 39/100, 17.8% win, ROI 49.5%, 21 events, clean but below qualityScore 50 bar — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/culture/all/profit",
+  },
+  {
+    address: "0xbaa2bcb5439e985ce4ccf815b4700027d1b92c73",
+    label:
+      "denizz (POLITICS all-time #15 — shallow screen: 35/100, 12.8% win, ROI 1.5%, 9 events, clean but below qualityScore 50 bar — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/politics/all/profit",
+  },
+  {
+    address: "0x7b02b2bac2a30ed5e40b7094e734f4c3dc2a4991",
+    label: "foodenjoyer (ECONOMICS all-time #4 — shallow screen: 35/100, 81.3% win, ROI 16.9%, 4 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/all/profit",
+  },
+  {
+    address: "0x94a428cfa4f84b264e01f70d93d02bc96cb36356",
+    label:
+      "GCottrell93 (POLITICS all-time #12 — shallow screen: 34/100, 20.3% win, ROI -21.9%, 16 events, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/politics/all/profit",
+  },
+  {
+    address: "0x0feb1bf966bc7f954c2da0293ae2fdc572c5db5d",
+    label:
+      "CentralCasting (ECONOMICS all-time #7 — shallow screen: 29/100, 23.7% win, ROI 41.9%, 9 events, highly-concentrated, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/economics/all/profit",
+  },
+  {
+    address: "0xd7f85d0eb0fe0732ca38d9107ad0d4d01b1289e4",
+    label: "tdrhrhhd (POLITICS all-time #16 — shallow screen: 22/100, 5.7% win, ROI 12.8%, 5 events, election-only — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/politics/all/profit",
+  },
+  {
+    address: "0x349606c1b77f3ba668879cbc9347f15a44cf8fc4",
+    label:
+      "skk1ch (CULTURE all-time #10 — shallow screen: 16/100, 2.6% win, ROI -96.0%, 9 events, highly-concentrated, uncopyable-high-freq — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/culture/all/profit",
+  },
+  {
+    address: "0xde242261bcd8d4320113f12230da34d705ca25a8",
+    label: "PolymaREKT (FINANCE all-time #7 — shallow screen: 8/100, 0.1% win, ROI -95.4%, 17 events, highly-concentrated — RULED OUT)",
+    archetype: "unclassified",
+    source: "https://polymarket.com/leaderboard/finance/all/profit",
   },
 ];
