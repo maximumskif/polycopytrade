@@ -1024,3 +1024,19 @@ once a sourcing channel actually grows the quality pool.
     - **Net: the quality pool is 3 on paper but 0 actionable for copy
       trading right now.** The one paper-traded wallet (`0x1b20a0...`)
       has been quiet since 2026-08-10.
+
+## Scoring hygiene — one quality-wallet definition, cap excluded (2026-09-24)
+
+47. ✅ **Done 2026-09-24.** The "quality wallet" bar (zero veto flags +
+    `qualityScore>=50`) was duplicated in `smartMoneyDivergence.ts` and
+    `archetypeCohorts.ts`, and `>=50` admitted wallets pinned exactly AT
+    the profitability-floor cap -- i.e. both profitability terms below
+    neutral, the case the cap (G.18) exists to exclude. Already flagged
+    once (G.19 item 2's 2026-09-13 note: `SDTrading`, net -1.7% ROI,
+    passed as 50/100) and hit hard in item 42 (6 of 12 "clean" soccer
+    wallets sat at exactly 50). Now a single exported
+    `isQualityWallet(score)` in `src/scoring/walletScore.ts` (zero flags
+    AND `qualityScore > PROFITABILITY_FLOOR_CAP*100`), used by both
+    scripts; the cap itself is now an exported module constant. 2 new
+    tests, 218/218 pass. Effect on item 41's pool: none (ndb1 62,
+    HighTempTation 74, vito3corleone 57 are all above 50).

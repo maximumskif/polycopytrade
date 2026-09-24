@@ -6,6 +6,7 @@ import {
   computeConsistencyScore,
   computeQualityScore,
   isCertainlyDormant,
+  isQualityWallet,
   DORMANT_DAYS,
 } from "../src/scoring/walletScore";
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../src/backtesting/statistics";
@@ -381,4 +382,14 @@ test("isCertainlyDormant: latest activity older than DORMANT_DAYS is certainly d
 
 test("isCertainlyDormant: no activity at all is certainly dormant", () => {
   assert.equal(isCertainlyDormant(null), true);
+});
+
+test("isQualityWallet rejects a score pinned at the profitability cap, accepts one above it", () => {
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 50 }), false);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 51 }), true);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 49 }), false);
+});
+
+test("isQualityWallet rejects any veto flag regardless of score", () => {
+  assert.equal(isQualityWallet({ flags: ["dormant"], qualityScore: 90 }), false);
 });

@@ -12,7 +12,7 @@
 // time.
 //
 // Reuses smartMoneyDivergence.ts's quality-pool bar exactly (cheapPrefilter
-// + zero veto flags + qualityScore>=50) rather than reinventing it -- same
+// + zero veto flags + qualityScore above the 50 profitability cap, via isQualityWallet) rather than reinventing it -- same
 // "quality pool," just also grouped by archetype after classification
 // instead of run through market-agreement clustering. Every reported cohort
 // result goes through the same computeStrategyResult eventKey-grouped
@@ -23,17 +23,12 @@ import "dotenv/config";
 import { getActivityFromStart, type Activity } from "../api/client";
 import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../backtesting/statistics";
-import { computeWalletScore } from "../scoring/walletScore";
+import { computeWalletScore, isQualityWallet, PROFITABILITY_FLOOR_CAP } from "../scoring/walletScore";
 import { classifyArchetype, type Archetype } from "../scoring/archetypeClassifier";
 import { cheapPrefilter } from "./smartMoneyDivergence";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 import type { BacktestTrial, WalletScore } from "../domain/types";
 
-// Matches smartMoneyDivergence.ts's own QUALITY_SCORE_MIN (not exported
-// there, redefined here rather than pulled in -- this project tolerates
-// this exact kind of small duplication across independent research scripts,
-// see docs/IMPROVEMENT_PLAN.md item 26).
-const QUALITY_SCORE_MIN = 50;
 const MIN_COHORT_WALLETS = 2;
 
 interface PoolEntry {
@@ -75,7 +70,7 @@ async function buildQualityPoolWithArchetypes(): Promise<PoolEntry[]> {
     const strategyResult = computeStrategyResult(trials, config);
     const score = computeWalletScore(wallet, activity, trials, strategyResult);
 
-    if (score.flags.length > 0 || score.qualityScore < QUALITY_SCORE_MIN) {
+    if (!isQualityWallet(score)) {
       console.log(
         `[${wallet.label}] qualityScore=${score.qualityScore} flags=${score.flags.join(",") || "(none)"} -- excluded from quality pool`
       );
@@ -101,7 +96,7 @@ export async function main() {
   console.log(`Building quality-scored, archetype-classified pool from ${TRACKED_WALLETS.length} tracked wallets...`);
   const pool = await buildQualityPoolWithArchetypes();
 
-  console.log(`\n=== Quality pool: ${pool.length} wallets, zero veto flags, qualityScore>=${QUALITY_SCORE_MIN} ===`);
+  console.log(`\n=== Quality pool: ${pool.length} wallets, zero veto flags, qualityScore>${PROFITABILITY_FLOOR_CAP * 100} ===`);
 
   const wholePoolTrials = pool.flatMap((e) => e.trials);
   const wholeResult = computeStrategyResult(wholePoolTrials, defaultBacktestConfig({ strategyName: "archetype-cohorts-whole-pool" }));
@@ -145,7 +140,9 @@ export async function main() {
     if (result.distinctEvents < MIN_SAMPLE_SIZE) {
       console.log(`  [below MIN_SAMPLE_SIZE=${MIN_SAMPLE_SIZE} independent events -- provisional, do not act on this]`);
     }
-    console.log(`  vs. whole pool: cohort roi=${pct(result.roi)} vs whole-pool roi=${pct(wholeResult.roi)} (point estimates only, not a significance test)`);
+    console.log(
+      `  vs. whole pool: cohort roi=${pct(result.roi)} vs whole-pool roi=${pct(wholeResult.roi)} (point estimates only, not a significance test)`
+    );
   }
 }
 

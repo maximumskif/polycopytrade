@@ -23,6 +23,9 @@ const ELECTION_SHARE_THRESHOLD = 0.7;
 const CONCENTRATION_THRESHOLD = 0.5;
 const HIGH_FREQUENCY_MEDIAN_GAP_SECONDS = 5;
 const HIGH_FREQUENCY_MIN_FILLS = 50;
+// computeQualityScore's profitability-floor cap, as a 0-1 fraction -- see
+// the comment where it's applied.
+export const PROFITABILITY_FLOOR_CAP = 0.5;
 const CONSISTENCY_WINDOW_SECONDS = 7 * 86400; // weekly, matching Phase 1f's original hand-built "net P&L by week" cadence
 
 function median(xs: number[]): number {
@@ -137,11 +140,21 @@ export function computeQualityScore(
   // one weak term (e.g. 0x1b20a0's wide-CI roiLowerBound=0.37 but
   // riskAdjustedReturn=0.54) is a real, uncertain-but-live candidate, not
   // the "clearly not profitable" case this guards against.
-  const PROFITABILITY_FLOOR_CAP = 0.5;
   const bothProfitabilityTermsWeak = components.roiLowerBound < 0.5 && components.riskAdjustedReturn < 0.5;
   const score01 = bothProfitabilityTermsWeak ? Math.min(rawScore01, PROFITABILITY_FLOOR_CAP) : rawScore01;
 
   return { score: Math.round(score01 * 100), components };
+}
+
+// The project's single definition of a "quality" wallet: zero veto flags
+// and a qualityScore strictly ABOVE the profitability-floor cap. The old
+// `>= 50` bar (duplicated in smartMoneyDivergence.ts/archetypeCohorts.ts)
+// admitted wallets sitting exactly AT the cap -- i.e. both profitability
+// terms below neutral -- which is the "clearly not profitable" case the cap
+// exists to exclude (SDTrading, net -1.7% ROI, passed that way; item 42's
+// soccer pass had 6 of 12 "clean" wallets pinned at exactly 50).
+export function isQualityWallet(score: Pick<WalletScore, "flags" | "qualityScore">): boolean {
+  return score.flags.length === 0 && score.qualityScore > PROFITABILITY_FLOOR_CAP * 100;
 }
 
 // True when a wallet's single most recent activity (any type) is already

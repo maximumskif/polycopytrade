@@ -80,7 +80,7 @@ import { getActivityFromStart, type Activity } from "../api/client";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 import { buildTrials, defaultBacktestConfig } from "../backtesting/engine";
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../backtesting/statistics";
-import { computeWalletScore } from "../scoring/walletScore";
+import { computeWalletScore, isQualityWallet, PROFITABILITY_FLOOR_CAP } from "../scoring/walletScore";
 import { categorize } from "./categorize";
 import type { BacktestConfig, BacktestTrial, WalletScore } from "../domain/types";
 
@@ -103,7 +103,6 @@ const HIGH_FREQUENCY_MIN_FILLS = 50;
 export const ACCUMULATION_WINDOW_SECONDS = 72 * 3600; // 3 days
 export const MIN_QUALITY_WALLETS_AGREEING = 2;
 export const DIVERGENCE_THRESHOLD = 0.03; // 3 cents -- "flat" price move
-const QUALITY_SCORE_MIN = 50; // matches computeQualityScore's own profitability-floor cap boundary
 
 function median(xs: number[]): number {
   if (xs.length === 0) return Infinity;
@@ -191,7 +190,10 @@ interface PoolTrial {
 // resolution treatment or price-move filtering here -- that's applied by
 // the caller so tests can inspect the full candidate set including the
 // non-divergent ("trend-following") clusters too.
-export function findAccumulationClusters(poolTrials: PoolTrial[], windowSeconds: number = ACCUMULATION_WINDOW_SECONDS): AccumulationCluster[] {
+export function findAccumulationClusters(
+  poolTrials: PoolTrial[],
+  windowSeconds: number = ACCUMULATION_WINDOW_SECONDS
+): AccumulationCluster[] {
   const byMarket = new Map<string, PoolTrial[]>();
   for (const item of poolTrials) {
     const key = `${item.trial.conditionId}:${item.trial.outcome}`;
@@ -280,7 +282,9 @@ function printResult(label: string, trials: BacktestTrial[], entryRule: string):
     `  trials=${r.trialCount}  distinctEvents=${r.distinctEvents}  effectiveIndependentSampleCount=${r.effectiveIndependentSampleCount.toFixed(1)}`
   );
   console.log(`  winRate=${pct(r.winRate)}  netPnl=$${r.netPnl.toFixed(2)}  roi=${pct(r.roi)}`);
-  console.log(`  95% ROI CI: ${r.roiBootstrapCI ? `[${pct(r.roiBootstrapCI[0])}, ${pct(r.roiBootstrapCI[1])}]` : "n/a (too few independent events)"}`);
+  console.log(
+    `  95% ROI CI: ${r.roiBootstrapCI ? `[${pct(r.roiBootstrapCI[0])}, ${pct(r.roiBootstrapCI[1])}]` : "n/a (too few independent events)"}`
+  );
   if (r.distinctEvents < MIN_SAMPLE_SIZE) console.log(`  [below MIN_SAMPLE_SIZE=${MIN_SAMPLE_SIZE} independent events -- provisional]`);
 }
 
@@ -324,8 +328,8 @@ async function buildQualityPool(): Promise<QualityPoolEntry[]> {
       console.log(`  -> excluded from quality pool (real flags present)`);
       continue;
     }
-    if (score.qualityScore < QUALITY_SCORE_MIN) {
-      console.log(`  -> excluded from quality pool (qualityScore below ${QUALITY_SCORE_MIN})`);
+    if (!isQualityWallet(score)) {
+      console.log(`  -> excluded from quality pool (qualityScore not above the ${PROFITABILITY_FLOOR_CAP * 100} profitability cap)`);
       continue;
     }
     pool.push({ wallet, score, trials: trials.filter((t) => t.resolved) });
@@ -341,7 +345,7 @@ export async function main() {
   );
   const pool = await buildQualityPool();
 
-  console.log(`\n=== Quality pool: ${pool.length} wallets, zero veto flags, qualityScore>=${QUALITY_SCORE_MIN} ===`);
+  console.log(`\n=== Quality pool: ${pool.length} wallets, zero veto flags, qualityScore>${PROFITABILITY_FLOOR_CAP * 100} ===`);
   for (const entry of pool) {
     console.log(
       `  ${entry.wallet.label.padEnd(40)} qualityScore=${entry.score.qualityScore}  events=${entry.score.distinctEvents}  ` +
