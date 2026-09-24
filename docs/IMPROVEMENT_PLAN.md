@@ -896,3 +896,37 @@ once a sourcing channel actually grows the quality pool.
       the pool needs more wallets in the same category (-> item 42).
       Separately: `0x1b20a0...`, the only paper-traded wallet, last traded
       2026-08-10 (45 days) -- itself now dormant by the scorer's bar.
+
+## Track G.19 — volatility breakout re-run on engine stats (2026-09-24)
+
+43. ✅ **Done 2026-09-24. Resolves item 19's volatility sub-item: the
+    earlier +10.4% result does NOT survive a proper sample.** Done by a
+    parallel agent in a separate worktree (commits `073ce02`, `3928ec6`).
+    `src/research/volatilityBreakout.ts` no longer touches
+    `legacy/backtestLadder.ts`: trials are `BacktestTrial`s keyed by event
+    slug (one monthly ladder = one event) and go through
+    `computeStrategyResult` for the event-clustered bootstrap CI and
+    `MIN_SAMPLE_SIZE` gating. `--eventsPerAsset=N` (default 15) replaces
+    the fixed 4. **Real bug found:** gamma search marks an event "closed"
+    once some rungs close, so the old run included still-live Sep-2026
+    ladders but only their already-resolved-Yes rungs -- a selection bias
+    that plausibly inflated the old number. Now only ladders with a past
+    endDate and rungs settled at 0/1 count. The price-history fetch stops
+    early once a signal can't change (`isSignalFinal`, property-tested
+    against full-series detection). 203/203 tests.
+    - **Live (29 min, 15 BTC ladders Apr 2025-Aug 2026 + 5 WTI Apr-Aug
+      2026 -- WTI has no more closed monthly ladders):** 214 trials / **20
+      independent events** (exactly `MIN_SAMPLE_SIZE`; 15 if same-month
+      BTC+WTI are merged as one cluster), 54.2% win, **ROI +8.7%, 95% CI
+      [-20.9%, +45.2%] -- straddles zero.** BTC +17.8% [-25.6%, +65.3%]
+      (15 events), WTI -3.5% (5 events).
+    - **The old 5-15c bucket is noise:** +90.1% ROI on ~5 wins across 11
+      events, CI [-100%, +303%]. Only 65-85c has a CI above zero
+      (+15.1%, [+4.3%, +26.0%], 19 events) -- but it's one of 8 buckets
+      examined post hoc and under the sample floor; a hypothesis to test
+      out-of-sample, not a finding. 35-45c comes out significantly
+      negative, consistent with multiple-comparison noise.
+    - **Verdict: no evidence of an edge. Not pursuing further** unless a
+      larger independent sample appears (older 2024 BTC ladders, or
+      ETH/SOL/gold ladders -- correlated with BTC, so fewer effective
+      samples than their count suggests).
