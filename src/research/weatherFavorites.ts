@@ -43,7 +43,12 @@
 //
 // Usage: npm run weather-favorites -- [--days=40] [--eventsPerDay=5]
 //   [--leadHours=24,6] [--anchor=end|close] [--slippageBps=50] [--feeBps=0]
-//   [--cache=/path/to/pull.json]
+//   [--cache=/path/to/pull.json] [--asOf=YYYY-MM-DD] [--sensitivityBps=150,300]
+//   [--json=/path/to/result.json]
+// --asOf pins "today" (the window is asOf-skipDays-days+1 .. asOf-skipDays),
+// so a pre-registered window (npm run prereg) is reproducible on any day;
+// --sensitivityBps adds slippage-sensitivity rows to --json's output (a
+// machine-readable result, src/research/researchResult.ts).
 
 import { z } from "zod";
 import { fetchRaw, getPricesHistory } from "../api/client";
@@ -53,6 +58,15 @@ import { simulateBankroll, wilsonLowerBound } from "../backtesting/bankrollSimul
 import { validateSchema } from "../utils/validateSchema";
 import type { BacktestConfig, BacktestTrial, StrategyResult } from "../domain/types";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  countComparisons,
+  describeComparisons,
+  multipleComparisonReport,
+  type ComparisonCandidate,
+  type ComparisonDimension,
+} from "./comparisons";
+import { isoDate, parseBpsList, resultRow, spanOf, writeResearchResult, type DateWindow, type ResultRow } from "./researchResult";
+import type { RowKeySpace } from "./preregistration";
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 
@@ -291,6 +305,9 @@ export interface Args {
   feeBps: number;
   maxStaleHours: number;
   cache: string | null;
+  asOf: string | null;
+  sensitivityBps: number[];
+  json: string | null;
 }
 
 export function parseArgs(argv: string[]): Args {
@@ -318,6 +335,37 @@ export function parseArgs(argv: string[]): Args {
     feeBps: int("feeBps", 0, 0),
     maxStaleHours: int("maxStaleHours", 3, 0),
     cache: get("cache") ?? null,
+    asOf: get("asOf") === undefined ? null : isoDate(get("asOf")!),
+    sensitivityBps: parseBpsList(get("sensitivityBps"), "sensitivityBps"),
+    json: get("json") ?? null,
+  };
+}
+
+// Calendar days the pull walks: skipDays..skipDays+days-1 days before
+// asOf (default: today, UTC). Newest date first.
+export function windowDates(args: Pick<Args, "days" | "skipDays" | "asOf">, now = new Date()): string[] {
+  const today = args.asOf ? Date.parse(`${args.asOf}T00:00:00Z`) : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const out: string[] = [];
+  for (let d = args.skipDays; d < args.skipDays + args.days; d++) out.push(new Date(today - d * 86400_000).toISOString().slice(0, 10));
+  return out;
+}
+
+export function requestedWindow(args: Pick<Args, "days" | "skipDays" | "asOf">, now = new Date()): DateWindow {
+  return spanOf(windowDates(args, now))!;
+}
+
+// The 85-99c roll-up is reported (and emitted) alongside the four bands.
+export const ROLLUP_BUCKET = { label: "85-99", min: 0.85, max: 0.99 };
+export const GROUPINGS = ["event", "city-date", "date"] as const;
+
+// Every result-row key --json can produce for these args (npm run prereg
+// checks a rule against it at create time).
+export function resultKeySpace(args: Args): RowKeySpace {
+  return {
+    bucket: [...PRICE_BUCKETS.map((b) => b.label), ROLLUP_BUCKET.label],
+    leadHours: args.leadHours,
+    slippageBps: [...new Set([args.slippageBps, ...args.sensitivityBps])],
+    grouping: [...GROUPINGS],
   };
 }
 
@@ -390,9 +438,7 @@ async function pull(args: Args): Promise<PullCache> {
     if (args.cache) writeFileSync(args.cache, JSON.stringify(cache));
   };
 
-  const today = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
-  for (let d = args.skipDays; d < args.skipDays + args.days; d++) {
-    const dateIso = new Date(today - d * 86400_000).toISOString().slice(0, 10);
+  for (const dateIso of windowDates(args)) {
     const already = cache.events.filter((e) => e.endDate?.startsWith(dateIso)).length;
     if (already >= args.eventsPerDay) continue;
     let dayEvents: WxEvent[];
@@ -454,6 +500,8 @@ export async function main() {
   const costs = { feeBps: args.feeBps, slippageBps: args.slippageBps };
   const days = new Set(data.events.map((e) => dateKey(e.slug))).size;
   console.log(`\nPulled ${data.events.length} temperature events across ${days} dates, ${histories.size} price histories.`);
+  const candidates: ComparisonCandidate[] = [];
+  const rows: ResultRow[] = [];
 
   for (const leadHours of args.leadHours) {
     const config = defaultBacktestConfig({
@@ -469,6 +517,22 @@ export async function main() {
       );
     const trials = build(costs);
     const grossTrials = build({ feeBps: 0, slippageBps: 0 });
+    if (args.json) {
+      for (const slippageBps of new Set([args.slippageBps, ...args.sensitivityBps])) {
+        const costed = slippageBps === args.slippageBps ? trials : build({ feeBps: args.feeBps, slippageBps });
+        for (const b of [...PRICE_BUCKETS, ROLLUP_BUCKET]) {
+          const inB = costed.filter((t) => t.entryPrice >= b.min && t.entryPrice < b.max);
+          const groupings: Record<(typeof GROUPINGS)[number], BacktestTrial[]> = {
+            event: inB,
+            "city-date": regroup(inB, cityDateKey),
+            date: regroup(inB, dateKey),
+          };
+          for (const g of GROUPINGS) {
+            rows.push(resultRow({ bucket: b.label, leadHours, slippageBps, grouping: g }, computeStrategyResult(groupings[g], config)));
+          }
+        }
+      }
+    }
 
     console.log(`\n=== lead ${leadHours}h before ${args.anchor} (fee ${args.feeBps}bps, slippage ${args.slippageBps}bps) ===`);
     for (const b of PRICE_BUCKETS) {
@@ -479,7 +543,9 @@ export async function main() {
         continue;
       }
       const gross = computeStrategyResult(grossInB, config).roi;
-      console.log(row(b.label, computeStrategyResult(inB, config), gross));
+      const bucketResult = computeStrategyResult(inB, config);
+      candidates.push({ label: `${b.label} @${leadHours}h`, result: bucketResult, trials: inB });
+      console.log(row(b.label, bucketResult, gross));
       console.log(row("  city-date", computeStrategyResult(regroup(inB, cityDateKey), config)));
       console.log(row("  date", computeStrategyResult(regroup(inB, dateKey), config)));
       const avgPrice = inB.reduce((s, t) => s + t.entryPrice, 0) / inB.length;
@@ -514,6 +580,27 @@ export async function main() {
     );
     console.log(row("  city-date", computeStrategyResult(regroup(fav85, cityDateKey), config)));
     console.log(row("  date", computeStrategyResult(regroup(fav85, dateKey), config)));
+  }
+
+  // The 85-99 roll-up and the city-date/date regroupings are robustness
+  // views of the same cells, not extra shots -- k counts bucket x lead.
+  const dims: ComparisonDimension[] = [
+    { name: "buckets", count: PRICE_BUCKETS.length },
+    { name: args.leadHours.length === 1 ? "lead" : "leads", count: args.leadHours.length },
+  ];
+  console.log("");
+  for (const line of multipleComparisonReport(dims, candidates)) console.log(line);
+
+  if (args.json) {
+    writeResearchResult(args.json, {
+      script: "weather-favorites",
+      argv: process.argv.slice(2),
+      args: { ...args },
+      requestedWindow: requestedWindow(args),
+      observedWindow: spanOf(data.events.map((e) => e.endDate?.slice(0, 10)).filter((d): d is string => !!d)),
+      comparisons: { k: countComparisons(dims), description: describeComparisons(dims) },
+      rows,
+    });
   }
 }
 

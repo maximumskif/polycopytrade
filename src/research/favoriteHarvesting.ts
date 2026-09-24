@@ -36,6 +36,7 @@ import { resolveMarket, outcomeWon, defaultBacktestConfig } from "../backtesting
 import { computeStrategyResult, MIN_SAMPLE_SIZE } from "../backtesting/statistics";
 import { simulateBankroll, wilsonLowerBound } from "../backtesting/bankrollSimulation";
 import { categorize } from "./categorize";
+import { multipleComparisonReport, type ComparisonCandidate } from "./comparisons";
 import type { BacktestTrial } from "../domain/types";
 
 interface PriceBucket {
@@ -173,6 +174,7 @@ async function main() {
   }
 
   const allTrials: BacktestTrial[] = [];
+  const candidates: ComparisonCandidate[] = [];
 
   console.log(`Scanning ${buckets.length} price bucket(s), up to ${maxMarkets} distinct markets each...\n`);
 
@@ -185,6 +187,7 @@ async function main() {
     allTrials.push(...trials);
 
     const result = computeStrategyResult(trials, baseConfig(`favorite-harvesting-${bucket.label}`));
+    candidates.push({ label: `${bucket.label}c`, result, trials });
     console.log(
       `  trials=${result.trialCount} distinctEvents=${result.distinctEvents} effectiveIndependentSampleCount=${result.effectiveIndependentSampleCount.toFixed(1)}`
     );
@@ -229,6 +232,15 @@ async function main() {
     );
     console.log(`category breakdown:`, combined.categoryBreakdown);
   }
+
+  // A --bucket deep dive runs one comparison here, but the bucket was
+  // picked from a full sweep -- it inherits that sweep's k (items 32-34:
+  // 80-85c was the best of 5 and regressed from +7.2% to +2.9%).
+  const note = bucketLabel
+    ? `--bucket deep dive: if ${bucketLabel}c was chosen from an earlier ${PRICE_BUCKETS.length}-bucket sweep, treat it as best of ${PRICE_BUCKETS.length}, not 1`
+    : undefined;
+  console.log("");
+  for (const line of multipleComparisonReport([{ name: "price buckets", count: buckets.length }], candidates, { note })) console.log(line);
 }
 
 main().catch((err) => {

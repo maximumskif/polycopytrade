@@ -35,6 +35,9 @@ import { getPricesHistory, searchEvents, type GammaEvent, type GammaMarket } fro
 import { defaultBacktestConfig } from "../backtesting/engine";
 import { computeStrategyResult, MIN_SAMPLE_SIZE, stdev } from "../backtesting/statistics";
 import type { BacktestTrial, StrategyResult } from "../domain/types";
+import { countComparisons, describeComparisons, multipleComparisonReport, type ComparisonCandidate } from "./comparisons";
+import { isoDate, parseBpsList, resultRow, spanOf, withSlippage, writeResearchResult, type ResultRow } from "./researchResult";
+import type { RowKeySpace } from "./preregistration";
 
 export interface PricePoint {
   t: number;
@@ -268,13 +271,54 @@ export function regroupByMonth(trials: BacktestTrial[], monthByEventKey: Map<str
 
 export const DEFAULT_EVENTS_PER_ASSET = 15;
 
-// Usage: npm run volatility-breakout [-- --eventsPerAsset=15]
-// Same --flag=value argv style as favoriteHarvesting.ts.
-export function parseArgs(argv: string[]): { eventsPerAsset: number } {
-  const arg = argv.find((a) => a.startsWith("--eventsPerAsset="));
-  const parsed = arg ? parseInt(arg.split("=")[1], 10) : DEFAULT_EVENTS_PER_ASSET;
-  if (!Number.isFinite(parsed) || parsed < 1) throw new Error(`--eventsPerAsset must be a positive integer, got "${arg}"`);
-  return { eventsPerAsset: parsed };
+export interface Args {
+  eventsPerAsset: number;
+  asOf: string | null;
+  sensitivityBps: number[];
+  json: string | null;
+}
+
+// Usage: npm run volatility-breakout [-- --eventsPerAsset=15] [--asOf=YYYY-MM-DD]
+//   [--sensitivityBps=100,300] [--json=/path/to/result.json]
+// Same --flag=value argv style as favoriteHarvesting.ts. --asOf selects the
+// newest ladders that had ENDED by that date (default: now), so an
+// out-of-sample run on older ladders is reproducible; --json writes a
+// machine-readable result (src/research/researchResult.ts) for `npm run
+// prereg`, with extra rows re-priced at each --sensitivityBps (trials are
+// otherwise cost-free, slippageBps=0).
+export function parseArgs(argv: string[]): Args {
+  const get = (name: string) => {
+    const a = argv.find((x) => x.startsWith(`--${name}=`));
+    return a === undefined ? undefined : a.slice(name.length + 3);
+  };
+  const raw = get("eventsPerAsset");
+  const parsed = raw !== undefined ? parseInt(raw, 10) : DEFAULT_EVENTS_PER_ASSET;
+  if (!Number.isFinite(parsed) || parsed < 1) throw new Error(`--eventsPerAsset must be a positive integer, got "${raw}"`);
+  const asOf = get("asOf");
+  return {
+    eventsPerAsset: parsed,
+    asOf: asOf === undefined ? null : isoDate(asOf),
+    sensitivityBps: parseBpsList(get("sensitivityBps"), "sensitivityBps"),
+    json: get("json") ?? null,
+  };
+}
+
+export const GROUPINGS = ["event", "month"] as const;
+
+// Every result-row key --json can produce (npm run prereg checks rules
+// against it at create time).
+export function resultKeySpace(args: Args): RowKeySpace {
+  return {
+    bucket: ["all", ...(Object.keys(LADDER_QUERIES) as LadderAsset[]), ...PRICE_BUCKETS.map((b) => b.label)],
+    grouping: [...GROUPINGS],
+    slippageBps: [...new Set([0, ...args.sensitivityBps])],
+  };
+}
+
+// "2026-08" -> first/last day of that month.
+function monthBounds(month: string): { start: string; end: string } {
+  const [y, m] = month.split("-").map(Number);
+  return { start: `${month}-01`, end: new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10) };
 }
 
 function pct(n: number): string {
@@ -291,8 +335,9 @@ function report(label: string, r: StrategyResult): void {
 }
 
 export async function main() {
-  const { eventsPerAsset } = parseArgs(process.argv.slice(2));
-  const nowMs = Date.now();
+  const args = parseArgs(process.argv.slice(2));
+  const { eventsPerAsset } = args;
+  const nowMs = args.asOf ? Date.parse(`${args.asOf}T00:00:00Z`) : Date.now();
   const config = defaultBacktestConfig({
     strategyName: "volatility-breakout",
     strategyVersion: "2.0.0",
@@ -340,13 +385,55 @@ export async function main() {
   }
 
   console.log(`\n=== By entry-price bucket (event-grouped) ===`);
+  const candidates: ComparisonCandidate[] = [];
   for (const b of PRICE_BUCKETS) {
     const inBucket = trials.filter((t) => t.entryPrice >= b.min && t.entryPrice < b.max);
-    if (inBucket.length > 0) report(b.label, computeStrategyResult(inBucket, config));
+    if (inBucket.length === 0) continue;
+    const result = computeStrategyResult(inBucket, config);
+    candidates.push({ label: b.label, result, trials: inBucket });
+    report(b.label, result);
   }
 
   console.log(`\n=== Stricter: grouped by calendar month (same-month BTC+WTI ladders = one cluster) ===`);
   report("all", computeStrategyResult(regroupByMonth(trials, monthByEventKey), config));
+
+  // Every price bucket was looked at, including empty ones; the BTC/WTI
+  // split is a breakdown of "all", reported but not counted as a bucket.
+  const dims = [{ name: "price buckets", count: PRICE_BUCKETS.length }];
+  console.log("");
+  for (const line of multipleComparisonReport(dims, candidates)) console.log(line);
+
+  if (args.json) {
+    const rows: ResultRow[] = [];
+    const cells: { bucket: string; trials: BacktestTrial[] }[] = [
+      { bucket: "all", trials },
+      ...(Object.keys(LADDER_QUERIES) as LadderAsset[]).map((a) => ({ bucket: a, trials: trials.filter((t) => t.category === a) })),
+      ...PRICE_BUCKETS.map((b) => ({ bucket: b.label, trials: trials.filter((t) => t.entryPrice >= b.min && t.entryPrice < b.max) })),
+    ];
+    for (const slippageBps of new Set([0, ...args.sensitivityBps])) {
+      for (const cell of cells) {
+        const costed = cell.trials.map((t) => withSlippage(t, slippageBps));
+        rows.push(resultRow({ bucket: cell.bucket, grouping: "event", slippageBps }, computeStrategyResult(costed, config)));
+        rows.push(
+          resultRow(
+            { bucket: cell.bucket, grouping: "month", slippageBps },
+            computeStrategyResult(regroupByMonth(costed, monthByEventKey), config)
+          )
+        );
+      }
+    }
+    const months = [...new Set(trials.map((t) => monthByEventKey.get(t.eventKey)).filter((m): m is string => !!m))];
+    const observed = spanOf(months);
+    writeResearchResult(args.json, {
+      script: "volatility-breakout",
+      argv: process.argv.slice(2),
+      args: { ...args },
+      requestedWindow: null, // selected by count ("newest N ladders ended by asOf"), not by date
+      observedWindow: observed ? { start: monthBounds(observed.start).start, end: monthBounds(observed.end).end } : null,
+      comparisons: { k: countComparisons(dims), description: describeComparisons(dims) },
+      rows,
+    });
+  }
 }
 
 if (require.main === module) {

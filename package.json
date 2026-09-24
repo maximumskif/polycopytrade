@@ -44,7 +44,8 @@
     "favorite-harvesting": "tsx src/research/favoriteHarvesting.ts",
     "funding-source-clustering": "tsx src/research/fundingSourceClustering.ts",
     "confirm-shallow": "tsx src/research/confirmShallow.ts",
-    "weather-favorites": "tsx src/research/weatherFavorites.ts"
+    "weather-favorites": "tsx src/research/weatherFavorites.ts",
+    "prereg": "tsx src/cli/prereg.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

@@ -55,6 +55,18 @@ function maxDrawdownPct(trialsInEntryOrder: BacktestTrial[], totalStaked: number
 // correlation. A block/cluster bootstrap over events reflects the real
 // effective sample size instead.
 function bootstrapRoiCI(trials: BacktestTrial[]): [number, number] | null {
+  return eventClusteredRoiCI(trials, 0.95);
+}
+
+// The same event-clustered bootstrap at an arbitrary two-sided confidence
+// level -- exported for research/comparisons.ts's Bonferroni-style rough
+// guide (e.g. a 1 - 0.05/16 interval when 16 buckets were compared). Wide
+// levels put very few resamples in each tail, so callers asking for more
+// than 95% should pass more resamples. At confidence=0.95 and the default
+// resample count this is exactly the computation computeStrategyResult
+// reports (the epsilon only guards float error in the tail index).
+export function eventClusteredRoiCI(trials: BacktestTrial[], confidence: number, resamples = BOOTSTRAP_RESAMPLES): [number, number] | null {
+  if (!(confidence > 0 && confidence < 1)) throw new Error(`confidence must be in (0, 1), got ${confidence}`);
   if (trials.length < MIN_SAMPLE_SIZE) return null;
   const eventGroups = new Map<string, BacktestTrial[]>();
   for (const t of trials) {
@@ -68,7 +80,7 @@ function bootstrapRoiCI(trials: BacktestTrial[]): [number, number] | null {
   if (events.length < 2) return null;
 
   const rois: number[] = [];
-  for (let i = 0; i < BOOTSTRAP_RESAMPLES; i++) {
+  for (let i = 0; i < resamples; i++) {
     let staked = 0;
     let net = 0;
     for (let j = 0; j < events.length; j++) {
@@ -81,8 +93,9 @@ function bootstrapRoiCI(trials: BacktestTrial[]): [number, number] | null {
     rois.push(staked > 0 ? net / staked : 0);
   }
   rois.sort((a, b) => a - b);
-  const lo = rois[Math.floor(BOOTSTRAP_RESAMPLES * 0.025)];
-  const hi = rois[Math.floor(BOOTSTRAP_RESAMPLES * 0.975)];
+  const tail = (1 - confidence) / 2;
+  const lo = rois[Math.min(resamples - 1, Math.floor(resamples * tail + 1e-9))];
+  const hi = rois[Math.min(resamples - 1, Math.floor(resamples * (1 - tail) + 1e-9))];
   return [lo, hi];
 }
 
