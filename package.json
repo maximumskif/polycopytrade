@@ -40,7 +40,8 @@
     "archetype-cohorts": "tsx src/research/archetypeCohorts.ts",
     "favorite-harvesting": "tsx src/research/favoriteHarvesting.ts",
     "funding-source-clustering": "tsx src/research/fundingSourceClustering.ts",
-    "confirm-shallow": "tsx src/research/confirmShallow.ts"
+    "confirm-shallow": "tsx src/research/confirmShallow.ts",
+    "weather-favorites": "tsx src/research/weatherFavorites.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
