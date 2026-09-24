@@ -976,3 +976,27 @@ once a sourcing channel actually grows the quality pool.
       lead; weather favorites closed.** HighTempTation's own +9.3% must
       come from entry timing/information a fixed-lead snapshot can't
       replicate, and item 44's delay check says a copier can't capture it.
+
+## Track E.13/G.19 — soccer-targeted holders sourcing (2026-09-24)
+
+42. ✅ **Done 2026-09-24. Clean negative: zero quality wallets added.**
+    Motivated by item 41's first-ever quality-wallet market overlap
+    (`ndb1` x `vito3corleone`, 4 soccer markets): G.19's consensus/
+    divergence tests need more wallets in ONE category. Added
+    `--tag=<gamma slug>` to `npm run source-wallets-holders` (commit
+    `b4c23f3`) and ran `--tag=soccer`: 15 events / 1216 sightings / 621
+    new wallets -> 15 active in 14d -> 15 shallow-scored (12 "clean").
+    - **"Clean" was mostly hollow.** 6 of 12 sat at exactly 50 -- the
+      profitability-floor cap (G.18), i.e. both profitability terms weak,
+      not quality; `MeistersApprenticeship` scored 60 on $28 net. Rule of
+      thumb going forward: **qualityScore==50 is a cap, not a pass.**
+    - **The 3 real-looking ones all failed confirmation** (`npm run
+      confirm-shallow`, which gained `--from=YYYY-MM-DD` because 40 pages
+      from 2026-06-24 only spanned ~2 weeks for these wallets): `Cannae`
+      ROI -1.0% (-$31K, 286 events); `SnakeBall` medianGap 1s, bot-speed;
+      `Zzzz87` -- shallow 71/100 at +24% ROI, but from a 2026-08-25 anchor
+      (reached present, 842 events) it's **50/100, ROI +4.8%** -- the
+      shallow window was a lucky streak. Logs: `data/*item42.log`.
+    - Candidates not recorded in `wallets.ts` (same as item 31: this
+      channel is read-only). G.19 items 1-2 stay parked.
+    - Also this pass: `HighTempTation` copy-delay check -- see item 44.

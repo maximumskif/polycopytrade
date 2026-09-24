@@ -8,7 +8,12 @@
 // still older than the wallet's actual newest activity, the page budget ran
 // out before the present and the result is reported as such, not trusted.
 //
-// Usage: npm run confirm-shallow -- <address> [<address> ...]
+// Usage: npm run confirm-shallow -- [--from=YYYY-MM-DD] <address> [<address> ...]
+//
+// `--from` overrides the default anchor for very high-volume wallets whose
+// 40 pages can't span ~3 months (item 42: three soccer wallets hit ~20K
+// fills within two weeks of the default). Record whatever anchor was used
+// as that wallet's `historyStart`.
 import "dotenv/config";
 import { getActivity } from "../api/client";
 import { scoreWalletWithActivity } from "../scoring/walletScore";
@@ -25,13 +30,20 @@ function pct(x: number): string {
 }
 
 async function main() {
-  const addresses = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const fromArg = args.find((a) => a.startsWith("--from="))?.slice("--from=".length);
+  const historyStart = fromArg ? Math.floor(Date.parse(`${fromArg}T00:00:00Z`) / 1000) : CONFIRM_HISTORY_START;
+  if (!Number.isFinite(historyStart)) {
+    console.error(`--from must be YYYY-MM-DD, got "${fromArg}"`);
+    process.exit(1);
+  }
+  const addresses = args.filter((a) => !a.startsWith("--"));
   if (!addresses.length) {
-    console.error("usage: npm run confirm-shallow -- <address> [<address> ...]");
+    console.error("usage: npm run confirm-shallow -- [--from=YYYY-MM-DD] <address> [<address> ...]");
     process.exit(1);
   }
   console.log(
-    `Confirming ${addresses.length} wallet(s) from anchor ${new Date(CONFIRM_HISTORY_START * 1000).toISOString()}, ` +
+    `Confirming ${addresses.length} wallet(s) from anchor ${new Date(historyStart * 1000).toISOString()}, ` +
       `historyPages=${CONFIRM_HISTORY_PAGES}\n`
   );
   for (const address of addresses) {
@@ -41,7 +53,7 @@ async function main() {
       archetype: "unclassified",
       source: "confirm-shallow",
       historyPages: CONFIRM_HISTORY_PAGES,
-      historyStart: CONFIRM_HISTORY_START,
+      historyStart,
     };
     try {
       const latest = await getActivity(address, { limit: 1 });
