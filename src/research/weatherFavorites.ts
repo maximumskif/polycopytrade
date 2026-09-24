@@ -339,21 +339,53 @@ async function closedWeatherEventsOn(dateIso: string): Promise<WxEvent[]> {
   return out;
 }
 
+// Histories are cached per token for ONE price window, so a cache is only
+// reusable when that window covers the requested one (same anchor, lead
+// range and staleness inside it) -- otherwise priceAt would silently find
+// nothing and trials would just vanish.
+interface CacheWindow {
+  anchor: "end" | "close";
+  minLead: number;
+  maxLead: number;
+  maxStaleHours: number;
+}
 interface PullCache {
+  window?: CacheWindow;
   events: WxEvent[];
   histories: Record<string, PricePoint[]>;
 }
 
+export function cacheWindowCovers(cached: CacheWindow, wanted: CacheWindow): boolean {
+  return (
+    cached.anchor === wanted.anchor &&
+    cached.minLead <= wanted.minLead &&
+    cached.maxLead + cached.maxStaleHours >= wanted.maxLead + wanted.maxStaleHours
+  );
+}
+
 async function pull(args: Args): Promise<PullCache> {
-  const cache: PullCache = { events: [], histories: {} };
-  if (args.cache && existsSync(args.cache)) {
-    Object.assign(cache, JSON.parse(readFileSync(args.cache, "utf8")) as PullCache);
-    console.log(`Loaded cache ${args.cache}: ${cache.events.length} events, ${Object.keys(cache.histories).length} histories`);
-  }
-  const have = new Set(cache.events.map((e) => e.slug));
   const maxLead = Math.max(...args.leadHours);
   const minLead = Math.min(...args.leadHours);
-  const stale = args.maxStaleHours * 3600;
+  const window: CacheWindow = { anchor: args.anchor, minLead, maxLead, maxStaleHours: args.maxStaleHours };
+  const cache: PullCache = { window, events: [], histories: {} };
+  if (args.cache && existsSync(args.cache)) {
+    const loaded = JSON.parse(readFileSync(args.cache, "utf8")) as PullCache;
+    if (loaded.window && !cacheWindowCovers(loaded.window, window)) {
+      throw new Error(
+        `cache ${args.cache} was pulled for ${JSON.stringify(loaded.window)}, which doesn't cover ${JSON.stringify(window)} -- use another --cache file`
+      );
+    }
+    Object.assign(cache, loaded, { window: loaded.window ?? window });
+    console.log(`Loaded cache ${args.cache}: ${cache.events.length} events, ${Object.keys(cache.histories).length} histories`);
+    if (loaded.window && (loaded.window.minLead !== minLead || loaded.window.maxLead !== maxLead)) {
+      console.log(
+        `  (cached window ${JSON.stringify(loaded.window)}; analysis-only reuse is fine, but newly pulled events keep that window)`
+      );
+    }
+  }
+  const have = new Set(cache.events.map((e) => e.slug));
+  const fetchWindow = cache.window ?? window;
+  const stale = fetchWindow.maxStaleHours * 3600;
   const save = () => {
     if (args.cache) writeFileSync(args.cache, JSON.stringify(cache));
   };
@@ -377,8 +409,8 @@ async function pull(args: Args): Promise<PullCache> {
         if (settledWinnerIndex(market) === null) continue;
         const tokenIds: string[] = JSON.parse(market.clobTokenIds ?? "[]");
         if (tokenIds.length !== 2 || cache.histories[tokenIds[0]]) continue;
-        const earliest = entryTimestamp(market, event.endDate, args.anchor, maxLead);
-        const latest = entryTimestamp(market, event.endDate, args.anchor, minLead);
+        const earliest = entryTimestamp(market, event.endDate, args.anchor, fetchWindow.maxLead);
+        const latest = entryTimestamp(market, event.endDate, args.anchor, fetchWindow.minLead);
         if (latest === null) continue;
         const startTs = (earliest ?? latest) - stale;
         try {

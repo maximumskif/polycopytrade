@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   bucketFor,
+  cacheWindowCovers,
   cityDateKey,
   dateKey,
   entryTimestamp,
@@ -203,4 +204,13 @@ test("parseArgs defaults and validation", () => {
   assert.throws(() => parseArgs(["--anchor=foo"]));
   assert.throws(() => parseArgs(["--leadHours=x"]));
   assert.throws(() => parseArgs(["--days=0"]));
+});
+
+test("cacheWindowCovers: reusable only for the same anchor and a lead range inside the pulled window", () => {
+  const pulled = { anchor: "end" as const, minLead: 6, maxLead: 24, maxStaleHours: 3 };
+  assert.equal(cacheWindowCovers(pulled, pulled), true);
+  assert.equal(cacheWindowCovers(pulled, { ...pulled, minLead: 12, maxLead: 12 }), true);
+  assert.equal(cacheWindowCovers(pulled, { ...pulled, minLead: 2 }), false);
+  assert.equal(cacheWindowCovers(pulled, { ...pulled, maxLead: 48 }), false);
+  assert.equal(cacheWindowCovers(pulled, { ...pulled, anchor: "close" }), false);
 });
