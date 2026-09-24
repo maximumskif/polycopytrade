@@ -1271,3 +1271,23 @@ Track F stays gated on the user regardless.
     (also faster). New test: same trials, any order -> identical interval.
     308/308 tests. Scores recorded before this commit carry run-to-run
     noise of a point or two; re-confirm anything within ~2 of 50.
+
+53. ✅ **Done 2026-09-24. Track M3 landed** (parallel agent; merged via
+    `scripts/agent-worktree.sh merge`, 3 commits). 321/321 tests.
+    `npm run watch:check` evaluates a typed watchlist
+    (`src/watch/watchlist.ts` -- TS, not JSON, so `tsc` checks condition
+    kinds/params) with zero API calls, from the daemon DB and
+    `wallet_scores`. Five seeded entries, all `not-yet` on 2026-09-24:
+    `ndb1-nfl-events` (~12, need 20 -> sport-segmentation),
+    `quality-overlap` (0 shared markets in one category from daemon
+    history, need 20 -> G.19), `0x1b20a0-resumed` (last trade
+    2026-08-10), `quality-pool-changed` (baseline ndb1/HighTempTation/
+    vito3corleone -> human review), `paper-resolved-events` (5, need
+    20). `--run` launches fired actions through `npm run job` (forwarding
+    the shared cache/limiter/DB env vars); `--ack <id>` marks handled.
+    Fires once per state: re-arms only after a real reading shows the
+    condition unmet or the state (e.g. pool membership) changes;
+    errors/no-data never re-arm. State in `data/watch-state.json`.
+    `npm run status` shows fired/errored entries plus a count. On-demand
+    only -- a timer is L2 (needs the user's OK). When a watched script is
+    re-run by hand, update that entry's baseline in `watchlist.ts`.
