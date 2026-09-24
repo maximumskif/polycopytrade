@@ -166,3 +166,12 @@ per-process spacing on its own (one `[rate-limit]` log line) and retries the
 shared file after 30s. Keep `data/` on the Linux filesystem (`~/projects`),
 not `/mnt/c` — SQLite's WAL locking isn't reliable over the Windows mount.
 A running daemon picks this up only after a restart.
+
+## Parallel agents and pre-registrations
+
+Agents work in git worktrees made by `scripts/agent-worktree.sh`, never in
+this checkout. See `docs/AGENTS.md` for the worktree/merge workflow, file
+ownership, and the env vars that make a worktree share this checkout's
+rate limiter and cache. Out-of-sample tests are registered with
+`npm run prereg` before they run; the files are committed in
+`docs/preregistrations/` (see its README).
