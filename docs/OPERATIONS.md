@@ -136,3 +136,33 @@ Units are launched with `--collect`, so finished/failed ones unload
 themselves; `systemctl --user list-units 'pct-job-*'` shows only live
 jobs. Recurring jobs (systemd timers, Track L2) are not set up -- they make
 unattended API calls and are gated on explicit approval.
+
+## Shared API cache and rate limiter (K1/K2, 2026-09-24)
+
+Every process that talks to Polymarket (the daemons and every research job)
+now uses two SQLite files next to the main db:
+
+- `data/api-cache.db` — persistent cache of responses that can never change
+  (settled-market lookups, price histories of settled markets whose window
+  ended >24h ago; rule in `src/api/cachePolicy.ts`). A re-run of a job is
+  served from it without spending rate-limit slots. Safe to delete at any
+  time (it's only a cache); it just refills.
+- `data/api-ratelimit.db` — one row per API host holding the last reserved
+  request slot, so the ~1.1s per-host gap holds across ALL processes, not
+  per process. Consequence: a heavy research job now shares data-api's
+  budget with `track:daemon`'s polling instead of silently doubling the
+  combined rate. Safe to delete while nothing is running.
+
+Both default to the checkout's own `data/`. Processes only coordinate if
+they point at the same slot file — when running jobs from a git worktree
+alongside the main checkout's daemon, set
+`POLYCOPY_SHARED_RATELIMIT_PATH=~/projects/polycopytrade/data/api-ratelimit.db`
+(and optionally `POLYCOPY_API_CACHE_PATH` to share the cache too).
+
+Switches: `POLYCOPY_API_CACHE=0` disables the cache (no reads, no writes);
+`POLYCOPY_SHARED_RATELIMIT=0` reverts to the old per-process limiter. If the
+slot file is unavailable or locked for >500ms, the limiter falls back to
+per-process spacing on its own (one `[rate-limit]` log line) and retries the
+shared file after 30s. Keep `data/` on the Linux filesystem (`~/projects`),
+not `/mnt/c` — SQLite's WAL locking isn't reliable over the Windows mount.
+A running daemon picks this up only after a restart.
