@@ -1,0 +1,14 @@
+# Track L2 (2026-09-24, approved by the user): weekly category-rotating holders sourcing
+# Oneshot: launches the work through `npm run job` (a transient
+# pct-job-* unit that logs to data/runs/) and exits, so the timer's
+# service finishes immediately and the run shows up in `npm run jobs`.
+# Same PATH workaround as polycopytrade-track.service.
+
+[Unit]
+Description=polycopytrade: weekly category-rotating holders sourcing
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/polycopytrade
+Environment=PATH=%h/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v22.23.2/bin/npm run -s job -- source-rotate -- %h/.nvm/versions/node/v22.23.2/bin/npm run -s source-rotate

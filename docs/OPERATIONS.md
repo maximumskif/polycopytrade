@@ -230,3 +230,32 @@ load (7,303 rows) 32.8s cold -> 2.1s warm (1 request).
 - Research scripts that read `wallet_activity` wholesale
   (`consensus-signal`, `favorite-harvesting`) now also see backfilled
   history of tracked wallets -- more real fills, not different ones.
+
+## Scheduled runs (Track L2, enabled 2026-09-24 with the user's OK)
+
+Three systemd user timers, each starting a oneshot service that launches
+its work through `npm run job` (so every run is logged under `data/runs/`
+and listed by `npm run jobs` / `npm run status`):
+
+| Timer | When | Runs | API cost |
+|---|---|---|---|
+| `polycopytrade-watch.timer` | daily 08:00 | `watch:check -- --run` | none itself; fired actions may call the API |
+| `polycopytrade-rescore.timer` | Mon 03:00 | `rescore-pool` (re-confirm every confirmed quality wallet) | light with K1/K3 warm |
+| `polycopytrade-source.timer` | Wed 03:00 | `source-rotate` (holders pass, one gamma tag per week: soccer, nfl, mlb, tennis, nba, esports, politics, crypto) | ~1-2 h at ~1 req/s |
+
+`Persistent=true` catches up a missed run at the next WSL start;
+`RandomizedDelaySec=10min` jitters the start. All API calls go through the
+shared rate limiter (K2), so a scheduled run and the daemon share the
+budget.
+
+```
+# install (already done on this box)
+for f in polycopytrade-{rescore,source,watch}.{service,timer}; do
+  ln -sf ~/projects/polycopytrade/ops/systemd/$f ~/.config/systemd/user/$f; done
+systemctl --user daemon-reload
+systemctl --user enable --now polycopytrade-{rescore,source,watch}.timer
+
+systemctl --user list-timers 'polycopytrade-*'          # next/last runs
+systemctl --user start polycopytrade-watch.service      # run one now
+systemctl --user disable --now polycopytrade-source.timer   # pause one
+```

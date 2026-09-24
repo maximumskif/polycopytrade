@@ -1,0 +1,14 @@
+# Track L2 (2026-09-24): schedule for polycopytrade-rescore.service.
+# Persistent=true runs a missed trigger at the next boot/WSL start (WSL is
+# often off overnight); RandomizedDelaySec spreads the start a little.
+
+[Unit]
+Description=polycopytrade: weekly re-confirmation of the quality pool (timer)
+
+[Timer]
+OnCalendar=Mon *-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
