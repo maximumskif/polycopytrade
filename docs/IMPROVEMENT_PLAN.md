@@ -1189,3 +1189,34 @@ Track F stays gated on the user regardless.
       file ownership, shared cache/limiter env vars, verification, report
       format, research-discipline rules, commit early because agents get
       interrupted).
+
+51. ✅ **Done 2026-09-24. Track K3 landed** (parallel agent, interrupted
+    once and resumed; cherry-picked as `f3ed71f`). 307/307 tests.
+    - **Scoring reads the daemon's `wallet_activity`, fetching only gaps.**
+      Migration 0006 adds `wallet_activity_coverage` (per-wallet time
+      ranges proven complete -- stored rows alone can't show holes, since
+      the daemon keeps only the newest 200 per poll and the DB was reset
+      2026-09-22). Only provers write ranges: the scorer per fetched page
+      (a full page counts up to 1s before its newest row) and `pollWallet`
+      (a full 200-row poll proves everything after its oldest row; a short
+      poll proves all history). `replayFromStartPull` replays
+      `getActivityFromStart`'s exact paging (page budget, offset-cap
+      window restarts, shared `activityKey` dedupe) over stored rows,
+      fetching a page only where coverage is missing -- so truncation
+      happens at the same point and results are identical to a pure pull.
+      Used by `scoreWalletWithActivity` (so confirm-shallow, auto-confirm,
+      wallet-score); `POLYCOPY_SCORE_FROM_DB=0` disables.
+    - **Live:** vito3corleone 630 rows identical across pure / DB-cold /
+      DB-warm; HighTempTation 32.8s cold -> **2.1s warm, 1 request**
+      (7303 rows, identical to a pure pull).
+    - **Paper-trading guard:** backfilled rows are only persisted for
+      tracked wallets, tagged `source='scoring-gap-fill'`, and
+      `listUncopiedBuyFills` skips them; if the daemon later sees the same
+      fill, `insertActivity` re-tags it to the daemon source (unique-key
+      upsert), so copying behaves as before K3.
+    - Daemon restarted: 41 wallets had coverage within 45s.
+    - Side effect: `consensus-signal`/`favorite-harvesting` read all of
+      `wallet_activity` and will now also see backfilled history.
+    - **Found, not yet fixed: `statistics.ts`'s bootstrap CI uses unseeded
+      `Math.random`** -- identical rows scored vito3corleone 57/58/59
+      across runs, which matters right at the 50 cap.
