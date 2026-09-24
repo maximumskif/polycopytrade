@@ -303,11 +303,13 @@ export async function main() {
   for (const asset of Object.keys(LADDER_QUERIES) as LadderAsset[]) {
     const { query, slugFragment } = LADDER_QUERIES[asset];
     const events = selectClosedMonthlyLadders(await searchEvents(query, 100, "closed"), slugFragment, eventsPerAsset, nowMs);
-    console.log(`${asset}: ${events.length} closed monthly ladders (${events.map((e) => e.endDate!.slice(0, 7)).join(", ")})`);
+    // Month the ladder is ABOUT: endDates are the first instant of the
+    // next month (e.g. 2026-09-01T04:00Z for August), so step back a day.
     for (const event of events) {
-      // Month the ladder is ABOUT: endDates are the first instant of the
-      // next month (e.g. 2026-09-01T04:00Z for August), so step back a day.
       monthByEventKey.set(event.slug, new Date(new Date(event.endDate!).getTime() - 24 * 3600 * 1000).toISOString().slice(0, 7));
+    }
+    console.log(`${asset}: ${events.length} closed monthly ladders (${events.map((e) => monthByEventKey.get(e.slug)).join(", ")})`);
+    for (const event of events) {
       let found = 0;
       for (const market of event.markets ?? []) {
         try {
