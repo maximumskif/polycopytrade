@@ -930,3 +930,38 @@ once a sourcing channel actually grows the quality pool.
       larger independent sample appears (older 2024 BTC ladders, or
       ETH/SOL/gold ladders -- correlated with BTC, so fewer effective
       samples than their count suggests).
+
+## Track G — weather favorite-longshot test (2026-09-24)
+
+44. ✅ **Done 2026-09-24.** Motivated by item 41's `HighTempTation`
+    (99.3% win / +9.3% ROI buying near-certain weather outcomes) and a
+    copy-delay check showing that edge is NOT copyable: `npm run
+    follower-delay-demo -- hightemptation 30` (30 sampled fills) put the
+    leader's entry at 0.928 / ROI 13.7% vs. a follower's 0.970 / 4.8% at
+    +5s and **0.995 / 0.5% at +30s** -- paper trading's own delay. So:
+    is the underlying mispricing directly tradeable? Built by a parallel
+    agent (commits `9d1fb79`, `be4428d`): `src/research/weatherFavorites.ts`
+    (`npm run weather-favorites`) pulls closed gamma `tag_slug=weather`
+    temperature events day by day (5/day by fixed slug hash), reads each
+    settled market's CLOB price at a fixed lead before endDate (never
+    after closedTime, never a future point, <=3h stale), buys the
+    favorite side $1 if it's in a price band; trials keyed by event slug
+    through `computeStrategyResult`, plus stricter city-date and date
+    groupings. 216/216 tests. Pull cached in `data/weather-favorites/`.
+    - **Live (200 events, 2026-08-13..09-21, 50bps slippage): the band
+      HighTempTation trades is NOT an edge.** 85-99c combined: 24h lead
+      -0.1% [-1.8%, 1.6%], 6h lead +1.3% [-0.8%, 3.3%]. The one
+      CI-above-zero bucket (95-99c @6h, +1.9% [0.8%, 2.5%]) rests on 1
+      loss in 218 trials, dies at 150bps slippage, and its later half's
+      CI straddles zero. Consistent with items 32-34.
+    - **Unplanned lead: 70-85c @24h, +10.8% [7.4%, 13.9%], 426 trials /
+      139 events** (almost all "No" on a 1-degree range quoted 15-30c
+      Yes) -- robust across groupings, both time halves, and 300bps
+      slippage (+8.1%). But it was a context bucket, best of 8 post-hoc
+      comparisons, so it is a hypothesis only.
+    - **Out-of-sample test, pre-registered here BEFORE running:** same
+      script and defaults, `--leadHours=24 --skipDays=43 --days=43` =
+      2026-07-01..08-12, disjoint from the discovery window. Only the
+      70-85c @24h bucket is evaluated. **Pass = event-clustered 95% CI
+      lower bound > 0 at 50bps AND ROI > 0 at 300bps.** Anything else =
+      fail, and the bucket is dropped. Result appended below when done.
