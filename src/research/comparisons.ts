@@ -120,7 +120,14 @@ export function multipleComparisonReport(
   );
   const confidence = bonferroniConfidence(k);
   const adjusted = (opts.adjustedCI ?? ((t, c) => eventClusteredRoiCI(t, c, ADJUSTED_CI_RESAMPLES)))(best.trials, confidence);
-  const verdict = adjusted === null ? "n/a (too few trials/events)" : adjusted[0] > 0 ? "still clears zero" : "no longer clears zero";
+  const verdict =
+    adjusted === null
+      ? "n/a (too few trials/events)"
+      : adjusted[0] > 0
+        ? "still clears zero"
+        : r.roiBootstrapCI && r.roiBootstrapCI[0] > 0
+          ? "no longer clears zero"
+          : "does not clear zero (nor does the 95% CI)";
   lines.push(
     `  rough guide only (Bonferroni, ${(confidence * 100).toFixed(2)}% = 1-${FAMILY_ALPHA}/${k} event-clustered CI): ` +
       `${ciText(adjusted)} -> ${verdict}. Not a substitute for out-of-sample data.`

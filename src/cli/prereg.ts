@@ -61,6 +61,12 @@ const SCRIPTS: Record<string, ScriptSpec> = {
   },
 };
 
+// Paths for messages: relative when under the cwd, absolute otherwise.
+function display(p: string): string {
+  const rel = path.relative(process.cwd(), p);
+  return rel.startsWith("..") ? p : rel;
+}
+
 function fail(msg: string): never {
   console.error(`prereg: ${msg}`);
   process.exit(1);
@@ -184,12 +190,12 @@ function create(slug: string | undefined, opts: Record<string, string>): void {
   mkdirSync(PREREG_DIR, { recursive: true });
   const file = path.join(PREREG_DIR, `${now.toISOString().slice(0, 10)}-${slug}.json`);
   writeFileSync(file, JSON.stringify(prereg, null, 2) + "\n", { flag: "wx" });
-  console.log(`Registered ${path.relative(process.cwd(), file)}`);
+  console.log(`Registered ${display(file)}`);
   console.log(`  ${opts.script} ${args.join(" ")}`);
   console.log(`  window ${fmtWindow(window)}; pass = ${opts.rule}${Object.keys(select).length ? ` [select ${opts.select}]` : ""}`);
   console.log(`  sha256 ${prereg.registrationSha256}`);
   console.log(`Commit it NOW, before running (the commit is the proof it came first):`);
-  console.log(`  git add ${path.relative(process.cwd(), file)} && git commit -m "Pre-register ${slug}"`);
+  console.log(`  git add ${display(file)} && git commit -m "Pre-register ${slug}"`);
 }
 
 function evaluate(slug: string | undefined, opts: Record<string, string>): void {
@@ -233,7 +239,9 @@ function evaluate(slug: string | undefined, opts: Record<string, string>): void 
     verdict,
     clauses: outcome.clauses,
     result: {
-      file: path.relative(REPO_ROOT, path.resolve(opts.result)),
+      file: path.relative(REPO_ROOT, path.resolve(opts.result)).startsWith("..")
+        ? path.resolve(opts.result)
+        : path.relative(REPO_ROOT, path.resolve(opts.result)),
       sha256: sha256(resultText),
       generatedAt: result.generatedAt,
       gitCommit: result.gitCommit,
@@ -254,7 +262,7 @@ function evaluate(slug: string | undefined, opts: Record<string, string>): void 
     console.log(`  ${c.pass ? "pass" : "FAIL"}  ${c.clause}  [observed ${obs}; ${canonicalJson(c.selector)}]${c.note ? ` ${c.note}` : ""}`);
   }
   for (const w of warnings) console.log(`  warning: ${w}`);
-  console.log(`Stamped ${path.relative(process.cwd(), file)} -- commit it (git add ... && git commit -m "Evaluate ${slug}: ${verdict}")`);
+  console.log(`Stamped ${display(file)} -- commit it (git add ... && git commit -m "Evaluate ${slug}: ${verdict}")`);
 }
 
 function list(): void {
