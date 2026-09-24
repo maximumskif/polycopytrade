@@ -53,16 +53,24 @@ function underTest(): boolean {
 }
 
 let slotStoreOverride: SlotReserver | null | undefined;
-let defaultSlotStore: SharedSlotStore | null | undefined; // undefined = not opened yet, null = open failed
+let defaultSlotStore: SharedSlotStore | null = null;
+let slotStoreRetryAt = 0;
+let warnedSlotStoreOpen = false;
+// A failed open (e.g. a lock held past busy_timeout) is retried after 30s
+// rather than giving up for the process's lifetime -- the daemon runs for
+// days, and one bad moment at startup shouldn't cost it coordination.
 function sharedSlots(): SlotReserver | null {
   if (slotStoreOverride !== undefined) return slotStoreOverride;
   if (!config.sharedRateLimitEnabled || underTest()) return null;
-  if (defaultSlotStore === undefined) {
+  if (!defaultSlotStore && Date.now() >= slotStoreRetryAt) {
     try {
       defaultSlotStore = new SharedSlotStore(config.sharedRateLimitPath);
     } catch (err) {
-      console.error(`[rate-limit] can't open ${config.sharedRateLimitPath} (${(err as Error).message}); using in-process limiter`);
-      defaultSlotStore = null;
+      if (!warnedSlotStoreOpen) {
+        console.error(`[rate-limit] can't open ${config.sharedRateLimitPath} (${(err as Error).message}); using in-process limiter`);
+        warnedSlotStoreOpen = true;
+      }
+      slotStoreRetryAt = Date.now() + 30_000;
     }
   }
   return defaultSlotStore;

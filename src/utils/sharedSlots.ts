@@ -5,9 +5,8 @@
 // one process thought it was sending. Here every process reserves its
 // request's time slot in a shared SQLite row per host instead.
 
-import { DatabaseSync, type StatementSync } from "node:sqlite";
-import fs from "node:fs";
-import path from "node:path";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { openWalDb } from "./openWalDb";
 
 // A stored slot this far past "now" can't be a real backlog (that would
 // take hundreds of processes queued on one host) -- it's a stale row from
@@ -37,18 +36,13 @@ export class SharedSlotStore implements SlotReserver {
   private readonly now: () => number;
 
   constructor(file: string, opts: { busyTimeoutMs?: number; now?: () => number } = {}) {
-    if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
     this.now = opts.now ?? Date.now;
-    this.db = new DatabaseSync(file);
-    this.db.exec("PRAGMA journal_mode = WAL");
-    // Slots are worthless after a crash anyway, so skip the per-commit
-    // fsync -- WAL + NORMAL is still consistent after an application crash.
-    this.db.exec("PRAGMA synchronous = NORMAL");
-    // Short on purpose: node:sqlite is synchronous, so waiting on the lock
-    // blocks this process's event loop. A reservation transaction holds the
-    // lock for well under a millisecond; 500ms of contention means
-    // something is wrong, and RateLimiter should fall back instead.
-    this.db.exec(`PRAGMA busy_timeout = ${opts.busyTimeoutMs ?? 500}`);
+    // Short busy timeout on purpose: node:sqlite is synchronous, so waiting
+    // on the lock blocks this process's event loop. A reservation
+    // transaction holds the lock for well under a millisecond; 500ms of
+    // contention means something is wrong, and RateLimiter should fall
+    // back instead.
+    this.db = openWalDb(file, opts.busyTimeoutMs ?? 500);
     this.db.exec(`CREATE TABLE IF NOT EXISTS rate_limit_slots (
       host         TEXT PRIMARY KEY,
       last_slot_ms INTEGER NOT NULL

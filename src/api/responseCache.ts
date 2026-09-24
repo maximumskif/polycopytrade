@@ -9,9 +9,8 @@
 // SQLite file (config.apiCachePath), never the daemon's db, so a research
 // job's cache writes can't hold the lock the tracking daemon needs.
 
-import { DatabaseSync, type StatementSync } from "node:sqlite";
-import fs from "node:fs";
-import path from "node:path";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { openWalDb } from "../utils/openWalDb";
 
 // Two URLs asking the same question must map to one row: params sorted
 // (by name, then value), host lower-cased and default port dropped (both
@@ -38,16 +37,10 @@ export class ApiResponseCache {
 
   // ":memory:" for tests -- never touches a real file.
   constructor(file: string) {
-    if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
-    this.db = new DatabaseSync(file);
-    // WAL: concurrent research processes read while one writes. NORMAL
-    // sync is crash-safe in WAL mode (at worst the last few inserts are
-    // lost on power failure, i.e. refetched) and skips an fsync per insert.
+    // WAL: concurrent research processes read while one writes.
     // busy_timeout: a writer that finds another process mid-write waits
     // briefly instead of failing -- same lesson as src/storage/db.ts.
-    this.db.exec("PRAGMA journal_mode = WAL");
-    this.db.exec("PRAGMA synchronous = NORMAL");
-    this.db.exec("PRAGMA busy_timeout = 2000");
+    this.db = openWalDb(file, 2000);
     this.db.exec(`CREATE TABLE IF NOT EXISTS api_responses (
       cache_key  TEXT PRIMARY KEY,
       body       TEXT NOT NULL,
