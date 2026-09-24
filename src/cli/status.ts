@@ -62,6 +62,15 @@ async function systemdStatus(unit: string): Promise<string> {
 // fall back to the old convention of "QUALITY WALLET" in wallets.ts
 // labels. Negated phrasings ("not a QUALITY WALLET") are excluded so a
 // label noting a failed bar isn't counted.
+// Display name for a wallet_scores row: its recorded label if that isn't
+// just the address, else the wallets.ts name (rows recorded before
+// confirm-shallow looked names up only carry the address).
+function walletName(address: string, label: string | null): string {
+  if (label && label !== address) return `  ${label.split(" ")[0]}`;
+  const tracked = TRACKED_WALLETS.find((w) => w.address.toLowerCase() === address.toLowerCase());
+  return tracked ? `  ${tracked.label.split(" ")[0]}` : "";
+}
+
 export function isLabeledQualityWallet(label: string): boolean {
   return /QUALITY WALLET/.test(label) && !/\bnot\s+(a\s+)?QUALITY WALLET/i.test(label);
 }
@@ -102,7 +111,7 @@ function printQualityPool() {
         : r.method;
     console.log(
       `  ${r.address}  ${r.qualityScore}/100  win ${(r.winRate * 100).toFixed(1)}%  roi ${(r.roi * 100).toFixed(1)}%  ` +
-        `${r.distinctEvents} events  [${window}, ${r.historyPages}p, scored ${fmtAgo(r.scoredAt)}]${r.label && r.label !== r.address ? `  ${r.label.split(" ")[0]}` : ""}`
+        `${r.distinctEvents} events  [${window}, ${r.historyPages}p, scored ${fmtAgo(r.scoredAt)}]${walletName(r.address, r.label)}`
     );
   }
 }

@@ -22,6 +22,7 @@
 // recorded and printed in the wallets.ts entry.
 import "dotenv/config";
 import { runMigrations } from "../storage/migrate";
+import { TRACKED_WALLETS } from "../wallets";
 import {
   CONFIRM_HISTORY_PAGES,
   CONFIRM_HISTORY_START,
@@ -56,11 +57,16 @@ async function main() {
   );
   const outcomes: PipelineOutcome[] = [];
   for (const address of addresses) {
-    const base = { address, label: address, provenance: "npm run confirm-shallow" };
+    // A tracked wallet's name (first word of its wallets.ts label) makes the
+    // wallet_scores row and `npm run status` readable; fall back to the
+    // address for untracked candidates.
+    const tracked = TRACKED_WALLETS.find((w) => w.address.toLowerCase() === address.toLowerCase());
+    const label = tracked ? tracked.label.split(" ")[0] : address;
+    const base = { address, label, provenance: "npm run confirm-shallow" };
     try {
       console.log(`[${address}]`);
       const { verdict } = await confirmWallet(
-        { address, label: address },
+        { address, label },
         {
           historyStart,
           onAttempt: (a) => {
