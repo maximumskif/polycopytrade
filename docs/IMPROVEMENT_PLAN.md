@@ -13,6 +13,46 @@ numbering schemes never collide in conversation.
 Nothing here is started yet — this is the plan to review before any of it
 begins.
 
+## Current status (updated as work lands)
+
+**Active** (as of 2026-09-24, items 41-52): Tracks K-O -- infrastructure
+for unattended/background work (see "Tracks K-O" near the end). Landed:
+K1-K3 (persistent API cache, cross-process rate limit, scoring from the
+daemon DB), L1+L3 (`npm run job`/`jobs`, status rollup), M1+M2
+(`wallet_scores` + auto-confirmation), N1+N2 (`npm run prereg`,
+multiple-comparison reporting), O1+O2 (`scripts/agent-worktree.sh`,
+`docs/AGENTS.md`). In progress: M3 (watchlist triggers). Track E
+sourcing continues through category-targeted holders passes (items 42,
+46 -- both clean negatives).
+
+**Blocked, needs user input**:
+- Track H Phase D (Solana wallet scoring, item 29): needs a
+  `BIRDEYE_API_KEY`, or a real wallet address with actual token swaps to
+  test Helius's `events.swap` shape against.
+- Track F (live execution code, item 17): explicitly gated on a separate,
+  explicit go-ahead from the user — not started, not implied by anything
+  else being done.
+- Track L2 (systemd timers for recurring rescoring/sourcing/watch checks):
+  makes unattended API calls -- needs the user's OK before enabling.
+
+**Revisit once the quality pool grows** (as of item 52: 3 confirmed quality
+wallets per `isQualityWallet` -- ndb1, HighTempTation, vito3corleone --
+but 0 actionable for copy trading: HighTempTation's edge dies to copy
+delay (item 44), ndb1's is World-Cup-driven with a CI straddling zero
+(item 45), vito3corleone has 13 events. Only same-category overlap is 4
+soccer markets, need >= 20):
+- G.19 item 1 — consensus signal restricted to quality wallets.
+- G.19 item 2 follow-up — smart-money divergence, starved twice already
+  (2026-09-10, 2026-09-13), same root cause both times.
+
+**Closed, don't revisit without a specific reason**:
+- Track G.20 (funding-source clustering, items 36-38) — 41/95 resolved,
+  clean negative, stopped at the user's call.
+- Track I (fine-comb code review, items 24-26) — done.
+- Volatility-breakout strategy (item 43) — no edge on a proper sample.
+- Weather favorite-longshot (item 44) — pre-registered out-of-sample test
+  failed.
+
 ## Track A — Safety net (do first, low risk)
 
 1. ✅ **Done 2026-09-05.** **Add CI.** Zero CI exists today despite 83 passing
