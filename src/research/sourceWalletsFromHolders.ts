@@ -56,6 +56,7 @@ import "dotenv/config";
 import { getActiveEventsByVolume, getTopHolders, getActivity } from "../api/client";
 import { scoreWalletShallow } from "../scoring/walletScore";
 import { runMigrations } from "../storage/migrate";
+import { recentlyConfirmedAddresses, RESCORE_AFTER_DAYS } from "./recentlyScored";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 import { printVerdicts, screenAndConfirm, type PipelineOutcome, type ScoringAttempt } from "./walletConfirmation";
 
@@ -134,8 +135,9 @@ async function collectSightings(tagSlug?: string): Promise<Sighting[]> {
   return sightings;
 }
 
-function dedupe(sightings: Sighting[]): Map<string, Candidate> {
+function dedupe(skipRecent: Set<string>, sightings: Sighting[]): Map<string, Candidate> {
   const tracked = new Set(TRACKED_WALLETS.map((w) => w.address.toLowerCase()));
+  for (const addr of skipRecent) tracked.add(addr);
   const byAddress = new Map<string, Candidate>();
   for (const s of sightings) {
     const addr = s.address.toLowerCase();
@@ -187,8 +189,12 @@ async function main() {
   const sightings = await collectSightings(tagSlug);
   console.log(`${sightings.length} raw (market, holder) sightings.`);
 
-  const deduped = dedupe(sightings);
-  console.log(`${deduped.size} distinct wallets not already in TRACKED_WALLETS.`);
+  const skipRecent = recentlyConfirmedAddresses();
+  const deduped = dedupe(skipRecent, sightings);
+  console.log(
+    `${deduped.size} distinct wallets not already in TRACKED_WALLETS or confirmed-scored in the last ${RESCORE_AFTER_DAYS} days ` +
+      `(${skipRecent.size} recently confirmed; --rescore to include them).`
+  );
 
   const prefilterPool = shortlist(deduped, RECENCY_PREFILTER_POOL_SIZE);
   console.log(
