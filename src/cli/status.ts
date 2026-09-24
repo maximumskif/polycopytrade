@@ -30,6 +30,9 @@ import { fmtAgo } from "../utils/format";
 import { TRACKED_WALLETS } from "../wallets";
 import { loadRunsWithState, RUNS_DIR } from "../jobs/systemd";
 import { formatRunRow, RUN_ROW_HEADER } from "./jobs";
+import { getDb } from "../storage/db";
+import { config } from "../config/env";
+import { printWatchSummary } from "../watch/check";
 
 const execFileAsync = promisify(execFile);
 
@@ -151,6 +154,8 @@ export async function main() {
   await printJobs();
 
   printQualityPool();
+
+  printWatchSummary(getDb(), config.dbPath); // Track M3
 
   console.log("\n=== paper trading ===");
   await paperReportMain();
