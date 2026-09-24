@@ -1040,3 +1040,45 @@ once a sourcing channel actually grows the quality pool.
     scripts; the cap itself is now an exported module constant. 2 new
     tests, 218/218 pass. Effect on item 41's pool: none (ndb1 62,
     HighTempTation 74, vito3corleone 57 are all above 50).
+
+## Tracks K-O — infrastructure for unattended/background work (planned 2026-09-24)
+
+Motivation, from the 2026-09-24 session (items 41-47): (1) every job
+re-fetches immutable API data -- the only cache is engine.ts's in-memory
+closed-market map, lost per process; (2) `RateLimiter` is per-process, so
+parallel jobs/agents compete uncoordinated; (3) jobs were ad-hoc shells
+with logs in /tmp (lost on a WSL reboot -- item 40's log was); every step
+of screen -> confirm -> record -> write-up needed a human-driven session;
+(4) wallet scoring re-pulls full histories the tracking daemon already
+stores.
+
+- **Track K — shared data layer.** K1: persistent SQLite cache
+  (`data/api-cache.db`) for provably-immutable responses only (closed
+  settled markets, past-window price histories of closed markets).
+  K2: cross-process per-host rate limiting (slot reservation in SQLite,
+  falls back to in-process). K3: score wallets from the daemon's stored
+  activity, gap-filling from the API. **K1+K2 in progress 2026-09-24
+  (parallel agent, branch `k1-k2-shared-cache`).**
+- **Track L — background job runner.** L1: `npm run job -- <name> <cmd>`
+  as a systemd user unit, output + command + commit + exit code in
+  `data/runs/<date>-<name>/`; `npm run jobs`. L2: systemd timers --
+  weekly pool re-score (`isQualityWallet`), weekly category-rotating
+  holders sourcing, monthly watch re-checks. L3: `npm run status` shows
+  jobs, quality-pool size, paper-trading summary. (L2 makes unattended
+  API calls -- confirm with the user before enabling timers.)
+- **Track M — automated wallet pipeline.** M1: sourcing auto-confirms
+  shallow passes (`confirm-shallow`, retrying with a later `--from` when
+  truncated). M2: `wallet_scores` table (score + window + date) instead
+  of hand-edited `wallets.ts` labels. M3: watchlist triggers (e.g. ndb1
+  NFL events >= 20 -> re-segment; same-category quality overlap >= 20
+  markets -> run G.19 consensus).
+- **Track N — research discipline as tooling.** N1: pre-registration
+  helper (`data/preregistrations/`: hypothesis, window, pass rule,
+  stamped result) -- item 44 showed it catches post-hoc artifacts. N2:
+  scripts report how many buckets/variants were compared.
+- **Track O — parallel-agent workflow.** O1: launch sessions from the repo
+  so worktree isolation works; `scripts/agent-worktree.sh`. O2:
+  `docs/AGENTS.md` (file ownership, verification, report format).
+
+Order: K1+K2 -> (L1+L3) || (M1+M2) as parallel agents -> L2, M3, N, O.
+Track F stays gated on the user regardless.
