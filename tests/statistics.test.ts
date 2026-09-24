@@ -140,3 +140,18 @@ test("categoryBreakdown groups net P&L and win rate per category", () => {
   assert.equal(r.categoryBreakdown.politics.n, 1);
   assert.equal(r.categoryBreakdown.politics.winRate, 1);
 });
+
+test("bootstrap CI is deterministic: same trials in any order give the identical interval", () => {
+  const config = defaultBacktestConfig({ walletAddresses: ["0xabc"], datasetCutoff: 2_000_000_000 });
+  const trials: BacktestTrial[] = [];
+  for (let i = 0; i < 40; i++) {
+    const won = i % 3 !== 0;
+    trials.push(trial({ eventKey: `event-${i % 25}`, entryTimestamp: 1_000 + i, won, netReturn: won ? 0.6 : -1 }));
+  }
+  const a = computeStrategyResult(trials, config).roiBootstrapCI;
+  const b = computeStrategyResult([...trials].reverse(), config).roiBootstrapCI;
+  const c = computeStrategyResult(trials, config).roiBootstrapCI;
+  assert.ok(a);
+  assert.deepEqual(b, a);
+  assert.deepEqual(c, a);
+});

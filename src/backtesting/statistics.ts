@@ -10,6 +10,20 @@ import type { BacktestConfig, BacktestTrial, StrategyResult } from "../domain/ty
 // meetsMinimumSample rather than reported as if they were reliable.
 export const MIN_SAMPLE_SIZE = 20;
 const BOOTSTRAP_RESAMPLES = 2000;
+const BOOTSTRAP_SEED = 0x5eed2026;
+
+// mulberry32: tiny, fast, well-distributed 32-bit PRNG -- plenty for
+// bootstrap index draws, and seedable, unlike Math.random.
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 // Exported so other modules that need the same basic stats (e.g.
 // scoring/walletScore.ts's consistency check, research/volatilityBreakout.ts's
@@ -74,21 +88,31 @@ export function eventClusteredRoiCI(trials: BacktestTrial[], confidence: number,
     if (group) group.push(t);
     else eventGroups.set(t.eventKey, [t]);
   }
-  const events = [...eventGroups.values()];
+  // Deterministic since 2026-09-24 (item 52): Math.random made identical
+  // trials score differently run to run (vito3corleone 57/58/59), which
+  // can flip a wallet across the qualityScore 50 cap. Events are ordered by
+  // key (so trial arrival order -- e.g. DB vs API row order -- can't change
+  // which event a draw picks) and drawn with a fixed-seed PRNG. Per-event
+  // sums are precomputed once; each draw then just adds two numbers.
+  const events = [...eventGroups.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([, group]) => ({
+      staked: group.reduce((sum, t) => sum + t.usdcStaked, 0),
+      net: group.reduce((sum, t) => sum + t.netReturn, 0),
+    }));
   // A single cluster can't be resampled into a meaningful interval — every
   // draw is the same event repeated, so the "CI" would just be a point.
   if (events.length < 2) return null;
 
+  const random = mulberry32(BOOTSTRAP_SEED);
   const rois: number[] = [];
   for (let i = 0; i < resamples; i++) {
     let staked = 0;
     let net = 0;
     for (let j = 0; j < events.length; j++) {
-      const event = events[Math.floor(Math.random() * events.length)];
-      for (const t of event) {
-        staked += t.usdcStaked;
-        net += t.netReturn;
-      }
+      const event = events[Math.floor(random() * events.length)];
+      staked += event.staked;
+      net += event.net;
     }
     rois.push(staked > 0 ? net / staked : 0);
   }

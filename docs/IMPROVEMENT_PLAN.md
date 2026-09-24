@@ -1220,3 +1220,14 @@ Track F stays gated on the user regardless.
     - **Found, not yet fixed: `statistics.ts`'s bootstrap CI uses unseeded
       `Math.random`** -- identical rows scored vito3corleone 57/58/59
       across runs, which matters right at the 50 cap.
+
+52. ✅ **Done 2026-09-24. Deterministic bootstrap CI** (follow-up found
+    in item 51). `eventClusteredRoiCI` drew with unseeded `Math.random`,
+    so identical trials gave different CIs -- and, through
+    `roiLowerBound`, different qualityScores (vito3corleone 57/58/59) --
+    enough to flip a wallet across the 50 cap between runs. Now: events
+    sorted by `eventKey` (trial arrival order can't change the draws), a
+    fixed-seed mulberry32 PRNG, and per-event stake/net sums precomputed
+    (also faster). New test: same trials, any order -> identical interval.
+    308/308 tests. Scores recorded before this commit carry run-to-run
+    noise of a point or two; re-confirm anything within ~2 of 50.
