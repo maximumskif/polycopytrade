@@ -16,6 +16,9 @@
 // still making progress). A daemon can be "active" but stuck, or not
 // running under systemd at all (started manually) but still writing fresh
 // data -- showing both avoids trusting either signal alone.
+//
+// Track L3 (2026-09-24) added two sections: a background-jobs rollup (from
+// Track L1's data/runs/, see src/cli/jobs.ts) and the quality-pool size.
 
 import "dotenv/config";
 import { execFile } from "node:child_process";
@@ -24,6 +27,9 @@ import { runMigrations } from "../storage/migrate";
 import { listWalletHealth, getDepthCollectorHealth } from "../storage/repository";
 import { main as paperReportMain } from "./paperReport";
 import { fmtAgo } from "../utils/format";
+import { TRACKED_WALLETS } from "../wallets";
+import { loadRunsWithState, RUNS_DIR } from "../jobs/systemd";
+import { formatRunRow, RUN_ROW_HEADER } from "./jobs";
 
 const execFileAsync = promisify(execFile);
 
@@ -43,6 +49,35 @@ async function systemdStatus(unit: string): Promise<string> {
     if (stdout) return stdout.trim();
     return "unknown (systemctl unavailable)";
   }
+}
+
+// Quality-pool membership is read from wallets.ts labels, not computed:
+// isQualityWallet() (src/scoring/walletScore.ts) needs a fresh score, i.e.
+// live, rate-limited /activity pulls -- the same reason wallet-score isn't
+// re-run here. The convention (2026-09-24) is that a wallet confirmed to
+// pass isQualityWallet gets "QUALITY WALLET" in its label. Track M2's
+// planned `wallet_scores` table (score + window + date) should replace this
+// label scan once it exists. Negated phrasings ("not a QUALITY WALLET") are
+// excluded so a label noting a failed bar isn't counted.
+export function isLabeledQualityWallet(label: string): boolean {
+  return /QUALITY WALLET/.test(label) && !/\bnot\s+(a\s+)?QUALITY WALLET/i.test(label);
+}
+
+// How many finished runs to show beneath any running ones.
+const RECENT_FINISHED_JOBS = 3;
+
+async function printJobs() {
+  const runs = await loadRunsWithState(RUNS_DIR);
+  const running = runs.filter((r) => r.state === "running");
+  const finished = runs.filter((r) => r.state !== "running").slice(0, RECENT_FINISHED_JOBS);
+  if (runs.length === 0) {
+    console.log("no job runs yet (`npm run job -- <name> -- <command...>`)");
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  console.log(`${running.length} running, ${runs.length} runs total in data/runs/ -- \`npm run jobs\` for more`);
+  console.log(RUN_ROW_HEADER);
+  for (const r of [...running, ...finished]) console.log(formatRunRow(r, now));
 }
 
 export async function main() {
@@ -75,6 +110,14 @@ export async function main() {
       console.log(`[${h.label}] last polled ${fmtAgo(h.lastPolledAt)} — ${h.consecutiveFailures} consecutive failures`);
     }
   }
+
+  console.log("\n=== background jobs ===");
+  await printJobs();
+
+  console.log("\n=== quality pool (from wallets.ts labels -- not re-scored here) ===");
+  const quality = TRACKED_WALLETS.filter((w) => isLabeledQualityWallet(w.label));
+  console.log(`${quality.length} of ${TRACKED_WALLETS.length} wallets in src/wallets.ts labeled QUALITY WALLET`);
+  for (const w of quality) console.log(`  ${w.label.split(" ")[0]} (${w.archetype})`);
 
   console.log("\n=== paper trading ===");
   await paperReportMain();

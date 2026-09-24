@@ -77,3 +77,62 @@ and repo location. If either moves (nvm upgrades Node, repo is relocated),
 edit both `.service` files' `ExecStart`/`WorkingDirectory`/`ExecStartPre`
 lines, re-symlink if the repo path changed, then `systemctl --user
 daemon-reload` and restart.
+
+## Background jobs (`npm run job`)
+
+Track L1 of `docs/IMPROVEMENT_PLAN.md`. Long research jobs (30 min - 3 h of
+rate-limited API pulls: `source-wallets`, `confirm-shallow`, sweeps) used to
+run as ad-hoc background shells logging to `/tmp` -- a WSL reboot wiped a
+3-hour sweep's log that way. Launch them through the job runner instead:
+
+```
+npm run job -- <name> -- <command...>
+npm run job -- sweep -- npm run source-wallets
+npm run job -- confirm -- npm run confirm-shallow -- <args...>
+npm run job -- adhoc -- bash -c 'cmd1 && cmd2 | tee x'   # for shell syntax
+```
+
+The first `--` is npm's; the second separates the job name from the
+command (everything after it, including further `--`s, is passed to the
+command untouched). The command runs as a transient systemd user unit
+(`systemd-run --user`, named `pct-job-<run dir>.service`) with the repo
+root as working directory and a PATH that starts with the Node that
+launched it -- so it survives the terminal / Claude session ending and
+doesn't depend on an interactive nvm shell.
+
+Each run gets `data/runs/<YYYY-MM-DDTHHMMSS>-<name>/` (local time,
+gitignored):
+
+- `output.log` -- stdout + stderr, plus `[run-job]` start/finish lines
+- `meta.json` -- name, argv, git commit + dirty flag (tracked files only),
+  start time, unit name
+- `exit.json` -- written on completion by `ops/jobs/run-job.sh` (the
+  wrapper the unit runs): exit code, signal if stopped, end time, duration
+
+```
+npm run jobs                              # recent runs (--limit N, --all)
+npm run jobs -- --tail <name|dir>         # last 40 lines (--lines N)
+tail -f data/runs/<dir>/output.log        # follow live
+npm run job:stop -- <name|dir>            # SIGTERM the running job
+npm run status                            # includes a jobs rollup
+```
+
+`<name|dir>` is a run directory name, a job name (its most recent run), or
+a directory-name prefix. States: `running`, `succeeded` (exit 0), `failed`
+(non-zero exit, or systemd-run couldn't launch it), `stopped` (via
+job:stop/`systemctl --user stop`), and `lost` -- no `exit.json` and the
+unit is no longer active, i.e. the process was SIGKILLed, OOM-killed, or
+WSL shut down mid-run. `jobs` checks `systemctl --user is-active` for any
+run without `exit.json`, so a dead job never shows as running forever.
+
+**Across WSL restarts**: the run directory (log, meta, whatever the job
+wrote to `data/`) survives, unlike `/tmp`. The job itself does **not** --
+transient units aren't restarted, so a job running during `wsl --shutdown`
+/ a Windows reboot shows as `lost` and has to be relaunched (check whether
+the command itself can resume). Linger (see above) keeps jobs running
+after the terminal closes, not across WSL shutdown.
+
+Units are launched with `--collect`, so finished/failed ones unload
+themselves; `systemctl --user list-units 'pct-job-*'` shows only live
+jobs. Recurring jobs (systemd timers, Track L2) are not set up -- they make
+unattended API calls and are gated on explicit approval.
