@@ -21,7 +21,9 @@ K1-K3 (persistent API cache, cross-process rate limit, scoring from the
 daemon DB), L1+L3 (`npm run job`/`jobs`, status rollup), M1+M2
 (`wallet_scores` + auto-confirmation), N1+N2 (`npm run prereg`,
 multiple-comparison reporting), O1+O2 (`scripts/agent-worktree.sh`,
-`docs/AGENTS.md`). In progress: M3 (watchlist triggers). Track E
+`docs/AGENTS.md`), M3 (`npm run watch:check`), L2 (timers: daily
+watch check, weekly pool re-score and rotating sourcing -- item 55).
+Track E
 sourcing continues through category-targeted holders passes (items 42,
 46 -- both clean negatives).
 
@@ -32,8 +34,6 @@ sourcing continues through category-targeted holders passes (items 42,
 - Track F (live execution code, item 17): explicitly gated on a separate,
   explicit go-ahead from the user — not started, not implied by anything
   else being done.
-- Track L2 (systemd timers for recurring rescoring/sourcing/watch checks):
-  makes unattended API calls -- needs the user's OK before enabling.
 
 **Revisit once the quality pool grows** (as of item 52: 3 confirmed quality
 wallets per `isQualityWallet` -- ndb1, HighTempTation, vito3corleone --
@@ -1291,3 +1291,15 @@ Track F stays gated on the user regardless.
     `npm run status` shows fired/errored entries plus a count. On-demand
     only -- a timer is L2 (needs the user's OK). When a watched script is
     re-run by hand, update that entry's baseline in `watchlist.ts`.
+
+55. ✅ **Done 2026-09-24. Track L2 enabled, with the user's explicit OK**
+    (commit `5f2282b`). Three systemd user timers, each a oneshot service
+    that launches its work through `npm run job`: daily 08:00
+    `watch:check -- --run`; Mon 03:00 `rescore-pool` (new: re-confirms
+    every confirmed quality wallet via confirm-shallow); Wed 03:00
+    `source-rotate` (new: one gamma tag per week from soccer, nfl, mlb,
+    tennis, nba, esports, politics, crypto -- all 8 verified live).
+    `Persistent=true` catches up after WSL downtime. Verified end to end
+    by starting `polycopytrade-watch.service` by hand: the job ran and
+    exited 0 in `npm run jobs`. Install/pause commands in
+    `docs/OPERATIONS.md`. All three ride the shared K2 rate limiter.
