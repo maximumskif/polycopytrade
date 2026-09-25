@@ -9,8 +9,8 @@
 //   G x gamma /markets (batched 50)  -> close time of those unredeemed ones
 //
 // Gamma is only asked about unredeemed positions near the window, and
-// those markets are settled, so the K1 cache keeps them for good. Screening only decides who gets the anchored
-// confirmation (walletConfirmation.ts), which is unchanged and still
+// those markets are settled, so the K1 cache keeps them for good.
+// Screening only decides who gets the anchored confirmation (walletConfirmation.ts), which is unchanged and still
 // authoritative.
 //
 // Mapping, checked on real data 2026-09-25 (see the K5 commit message):
@@ -50,13 +50,27 @@
 //   event); meetsMinimumSample (>= 20 trials), the per-trial Sharpe/Sortino
 //   and election share (a trial count) weight positions, not fills.
 // - A closed position's `timestamp` is its close time and an unredeemed
-//   one's is the market's scheduled endDate, so drawdown order and the
-//   weekly consistency windows use those instead of entry times.
+//   one's is its market's close time, so drawdown order and the weekly
+//   consistency windows use those instead of entry times.
 // - The window is "the newest N*50 closed positions" plus unredeemed
-//   positions whose market ended inside that window, not "the newest 2000
-//   activity rows". Both are non-reproducible newest-first screens.
+//   positions whose market closed inside that window, not "the newest 2000
+//   activity rows". Both are non-reproducible newest-first screens. A
+//   position's cost basis includes buys from before the window (a futures
+//   position held for months), which the activity screen never sees.
+// - High-frequency is judged on 500 newest activity rows, not 2000, so a
+//   bursty wallet's latest burst can trip it where 2000 rows would not.
+//
+// Validation (npm run validate-positions-screen, 30 wallets, 2026-09-25):
+// NOT good enough to replace the activity screen -- see screenMode.ts.
 
-import { getActivity, getClosedPositions, getRedeemablePositions, type Activity, type ClosedPosition, type OpenPosition } from "../api/client";
+import {
+  getActivity,
+  getClosedPositions,
+  getRedeemablePositions,
+  type Activity,
+  type ClosedPosition,
+  type OpenPosition,
+} from "../api/client";
 import { defaultBacktestConfig, resolveMarkets } from "../backtesting/engine";
 import { computeStrategyResult } from "../backtesting/statistics";
 import { categorize } from "../research/categorize";
@@ -75,7 +89,10 @@ const DAY_SECONDS = 86400;
 // within this slack of the window start.
 export const REDEEMABLE_ENDDATE_SLACK_SECONDS = 14 * DAY_SECONDS;
 
-type PositionFields = Pick<ClosedPosition, "conditionId" | "outcome" | "avgPrice" | "totalBought" | "curPrice" | "title" | "slug" | "eventSlug">;
+type PositionFields = Pick<
+  ClosedPosition,
+  "conditionId" | "outcome" | "avgPrice" | "totalBought" | "curPrice" | "title" | "slug" | "eventSlug"
+>;
 
 // 1 or 0 once the market has settled; null for a live price.
 export function settlementOf(curPrice: number): 0 | 1 | null {
@@ -117,7 +134,10 @@ export function endDateTs(endDate: string | null | undefined): number | null {
 // gamma's closedTime ("2026-09-25 04:43:35+00", not ISO) -> unix seconds.
 export function gammaTimeTs(value: string | null | undefined): number | null {
   if (!value) return null;
-  const iso = value.trim().replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00");
+  const iso = value
+    .trim()
+    .replace(" ", "T")
+    .replace(/([+-]\d\d)$/, "$1:00");
   const ms = Date.parse(iso);
   return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
 }
@@ -213,7 +233,10 @@ export interface PositionsScreenResult {
   redeemableCapped: boolean; // hit MAX_REDEEMABLE_PAGES while still inside the window
 }
 
-export async function scoreWalletPositions(wallet: TrackedWallet, closedPages = POSITIONS_SCREEN_CLOSED_PAGES): Promise<PositionsScreenResult> {
+export async function scoreWalletPositions(
+  wallet: TrackedWallet,
+  closedPages = POSITIONS_SCREEN_CLOSED_PAGES
+): Promise<PositionsScreenResult> {
   let requests = 0;
   const activity = await getActivity(wallet.address, { limit: ACTIVITY_PAGE_SIZE });
   requests++;

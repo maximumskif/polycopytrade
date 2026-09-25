@@ -21,7 +21,12 @@
 // entry is printed for each confirmed quality wallet. To actually track
 // one, paste it into wallets.ts and run `npm run wallets:add`.
 //
-// Usage: npm run source-wallets
+// Usage: npm run source-wallets [-- --screen=activity|positions]
+//
+// `--screen=positions` (K5, opt-in): after the dormancy pre-check, screen
+// with src/scoring/positionsScreen.ts instead of the full pull (+ shallow
+// fallback); every pass then goes to the anchored confirmation. See
+// src/research/screenMode.ts for why it isn't the default.
 
 import "dotenv/config";
 import { getActivity, getLeaderboard, type LeaderboardEntry } from "../api/client";
@@ -38,6 +43,7 @@ import {
   type PipelineOutcome,
   type ScoringAttempt,
 } from "./walletConfirmation";
+import { parseScreenMode, positionsScreenAttempt, POSITIONS_SOURCE_SUFFIX } from "./screenMode";
 
 const CATEGORIES = ["POLITICS", "SPORTS", "ESPORTS", "CRYPTO", "CULTURE", "WEATHER", "ECONOMICS", "TECH", "FINANCE"] as const;
 const WINDOWS = ["MONTH", "ALL"] as const;
@@ -120,6 +126,9 @@ function shortlist(deduped: Map<string, Candidate>): Candidate[] {
 
 async function main() {
   runMigrations();
+  const screenMode = parseScreenMode(process.argv.slice(2));
+  const source = screenMode === "positions" ? SOURCE + POSITIONS_SOURCE_SUFFIX : SOURCE;
+  console.log(`Screen: ${screenMode}.`);
   console.log(`Sweeping ${CATEGORIES.length} categories x ${WINDOWS.length} windows (PNL-ordered, top ${LIMIT_PER_SWEEP} each)...`);
   const swept = await sweep();
   console.log(`${swept.length} raw leaderboard entries pulled.`);
@@ -156,6 +165,17 @@ async function main() {
       if (isCertainlyDormant(latestTs)) {
         outcomes.push({ ...base, kind: "screened-out", reason: "dormant (pre-check: newest activity > 30 days old; full pull skipped)" });
         console.log(`[${i + 1}/${candidates.length}] ${wallet.label} -> VETOED(dormant) via pre-check, full pull skipped`);
+        continue;
+      }
+      if (screenMode === "positions") {
+        const screen = await positionsScreenAttempt(wallet);
+        console.log(
+          `[${i + 1}/${candidates.length}] ${wallet.label} -> positions screen qualityScore=${screen.score.qualityScore}` +
+            `${screen.score.flags.length ? ` VETOED(${screen.score.flags.join(",")})` : " clean"}`
+        );
+        const outcome = await screenAndConfirm(base, screen, { source });
+        outcomes.push(outcome);
+        if (outcome.kind !== "screened-out") console.log(`    -> ${outcome.kind}${outcome.reason ? `: ${outcome.reason}` : ""}`);
         continue;
       }
       const historyPages = wallet.historyPages ?? 10;

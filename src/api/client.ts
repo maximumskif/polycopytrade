@@ -581,7 +581,11 @@ export async function getClosedPositions(address: string, opts: { limit?: number
     sortBy: "TIMESTAMP",
     sortDirection: "DESC",
   });
-  return validate(ClosedPositionsResponseSchema, await requestJson(`${DATA_API}/closed-positions?${qs.toString()}`), "GET /closed-positions");
+  return validate(
+    ClosedPositionsResponseSchema,
+    await requestJson(`${DATA_API}/closed-positions?${qs.toString()}`),
+    "GET /closed-positions"
+  );
 }
 
 // K5: one page of a wallet's resolved-but-unredeemed positions, latest

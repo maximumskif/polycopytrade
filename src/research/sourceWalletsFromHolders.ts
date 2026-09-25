@@ -44,7 +44,11 @@
 // ready-to-paste wallets.ts entry per confirmed quality wallet. To actually
 // track one, paste it into wallets.ts and run `npm run wallets:add`.
 //
-// Usage: npm run source-wallets-holders [-- --tag=<gamma tag slug>]
+// Usage: npm run source-wallets-holders [-- --tag=<gamma tag slug>] [--screen=activity|positions]
+//
+// `--screen=positions` (K5, opt-in) screens with src/scoring/positionsScreen.ts
+// instead of scoreWalletShallow; see src/research/screenMode.ts for why it
+// isn't the default.
 //
 // `--tag` (e.g. `--tag=soccer`) restricts the scan to one category's
 // events. Added 2026-09-24 (item 42): the quality pool's first-ever market
@@ -59,6 +63,7 @@ import { runMigrations } from "../storage/migrate";
 import { recentlyConfirmedAddresses, RESCORE_AFTER_DAYS } from "./recentlyScored";
 import { TRACKED_WALLETS, type TrackedWallet } from "../wallets";
 import { printVerdicts, screenAndConfirm, type PipelineOutcome, type ScoringAttempt } from "./walletConfirmation";
+import { parseScreenMode, positionsScreenAttempt, POSITIONS_SOURCE_SUFFIX } from "./screenMode";
 
 const EVENTS_TO_SCAN = 15;
 const MARKETS_PER_EVENT = 3; // caps ladder-style events with dozens of sub-markets
@@ -186,6 +191,9 @@ async function main() {
     .slice(2)
     .find((a) => a.startsWith("--tag="))
     ?.slice("--tag=".length);
+  const screenMode = parseScreenMode(process.argv.slice(2));
+  const source = screenMode === "positions" ? SOURCE + POSITIONS_SOURCE_SUFFIX : SOURCE;
+  console.log(`Screen: ${screenMode}.`);
   const sightings = await collectSightings(tagSlug);
   console.log(`${sightings.length} raw (market, holder) sightings.`);
 
@@ -228,20 +236,27 @@ async function main() {
     const base = { address: wallet.address, label: wallet.label, provenance: wallet.source };
     console.log(`  scoring [${candidate.address}] ${candidate.name ?? "(no username)"}...`);
     try {
-      const { score, activity } = await scoreWalletShallow(wallet, SHALLOW_HISTORY_PAGES);
-      console.log(`    -> shallow qualityScore=${score.qualityScore}/100  flags=${score.flags.join(",") || "(none)"}`);
-      const screen: ScoringAttempt = {
-        method: "shallow",
-        historyStart: null,
-        historyPages: SHALLOW_HISTORY_PAGES,
-        truncated: false,
-        fills: activity.length,
-        score,
-      };
+      let screen: ScoringAttempt;
+      if (screenMode === "positions") {
+        screen = await positionsScreenAttempt(wallet);
+      } else {
+        const { score, activity } = await scoreWalletShallow(wallet, SHALLOW_HISTORY_PAGES);
+        screen = {
+          method: "shallow",
+          historyStart: null,
+          historyPages: SHALLOW_HISTORY_PAGES,
+          truncated: false,
+          fills: activity.length,
+          score,
+        };
+      }
+      console.log(
+        `    -> ${screenMode} screen qualityScore=${screen.score.qualityScore}/100  flags=${screen.score.flags.join(",") || "(none)"}`
+      );
       // Track M1 (2026-09-24): shallow passes (isQualityWallet, not the old
       // ">= 50") are auto-confirmed from a pinned anchor right here -- item
       // 42 did this by hand and 3 of 3 real-looking soccer passes failed.
-      const outcome = await screenAndConfirm(base, screen, { source: SOURCE, log: (line) => console.log(`  ${line}`) });
+      const outcome = await screenAndConfirm(base, screen, { source, log: (line) => console.log(`  ${line}`) });
       outcomes.push(outcome);
       if (outcome.kind !== "screened-out") console.log(`      -> ${outcome.kind}${outcome.reason ? `: ${outcome.reason}` : ""}`);
     } catch (err) {

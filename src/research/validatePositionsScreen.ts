@@ -54,7 +54,9 @@ function arg(name: string): string | undefined {
     ?.slice(name.length + 3);
 }
 
-async function measure<T>(fn: () => Promise<T>): Promise<{ value: T; requests: number; requestsByHost: Record<string, number>; cacheHits: number; ms: number }> {
+async function measure<T>(
+  fn: () => Promise<T>
+): Promise<{ value: T; requests: number; requestsByHost: Record<string, number>; cacheHits: number; ms: number }> {
   const before = new Map(requestCounts);
   const beforeTotal = totalRequests();
   const hitsBefore = getApiCacheStats().hits;
@@ -69,7 +71,10 @@ async function measure<T>(fn: () => Promise<T>): Promise<{ value: T; requests: n
   return { value, requests: totalRequests() - beforeTotal, requestsByHost, cacheHits: getApiCacheStats().hits - hitsBefore, ms };
 }
 
-function summarize(score: WalletScore, trials: number): Pick<ScreenRun, "pass" | "qualityScore" | "flags" | "distinctEvents" | "trials" | "roi"> {
+function summarize(
+  score: WalletScore,
+  trials: number
+): Pick<ScreenRun, "pass" | "qualityScore" | "flags" | "distinctEvents" | "trials" | "roi"> {
   return {
     pass: isQualityWallet(score),
     qualityScore: score.qualityScore,
@@ -112,7 +117,13 @@ async function main() {
     // The anchored verdict is the LAST attempt's (classifyConfirmation): a
     // truncated last attempt is unconfirmed, never a pass or a fail.
     const lastAnchored = w.anchored[w.anchored.length - 1];
-    const anchored: Verdict | null = lastAnchored ? (lastAnchored.truncated ? "unconfirmed" : lastAnchored.is_quality ? "pass" : "fail") : null;
+    const anchored: Verdict | null = lastAnchored
+      ? lastAnchored.truncated
+        ? "unconfirmed"
+        : lastAnchored.is_quality
+          ? "pass"
+          : "fail"
+      : null;
     const wallet = { address, label: address, archetype: "unclassified" as const, source: "validate-positions-screen" };
 
     let positions: ScreenRun | null = null;
@@ -177,7 +188,11 @@ async function main() {
   console.log("\n=== agreement ===");
   table("recorded shallow vs positions", (r) => r.recordedShallow as Verdict | null, "positions");
   table("recorded shallow vs activity-now", (r) => r.recordedShallow as Verdict | null, "activity");
-  table("activity-now vs positions", (r) => ((r.activity as ScreenRun | null) ? ((r.activity as ScreenRun).pass ? "pass" : "fail") : null), "positions");
+  table(
+    "activity-now vs positions",
+    (r) => ((r.activity as ScreenRun | null) ? ((r.activity as ScreenRun).pass ? "pass" : "fail") : null),
+    "positions"
+  );
   table("anchored vs positions", (r) => r.anchored as Verdict | null, "positions");
   table("anchored vs activity-now", (r) => r.anchored as Verdict | null, "activity");
 
