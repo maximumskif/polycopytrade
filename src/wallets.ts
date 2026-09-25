@@ -984,4 +984,25 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     historyPages: 40,
     historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
   },
+  // Added 2026-09-25 (item 63): early-movers channel, wider run (1500
+  // markets / 120 days). MEPP also "confirmed" but at ROI 0.0% ($148 net)
+  // -- breakeven, not tracked.
+  {
+    address: "0xbd0477e08d82d35a855ff19644a88a9213d8fbb0",
+    label:
+      "yuhyuhyuhy352352 (early-mover sourced: early winning buys in 8 events, $32272; e.g. US x Iran permanent peace deal by May 31, 2026? @0.34; Israel announces Lebanon ceasefire extension by June 7? @0.23; US announces new Iran agreement/ceasefire extension by June 7? @0.33) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 54/100 clean, 48.5% win, ROI 10.2%, 54 events, netPnl=$91.6K, medianGapSeconds=55 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
+  {
+    address: "0xdf17f4a8dd01a4cfa6fc3da323a2baee5f8697d1",
+    label:
+      "gkeqd (early-mover sourced: early winning buys in 7 events, $7331; e.g. Russia x Ukraine ceasefire by May 31, 2026? @0.23; Russia x Ukraine ceasefire by June 30, 2026? @0.29; Israel announces Lebanon ceasefire extension by June 7? @0.18) — CONFIRMED 2026-09-25 on anchored from 2026-08-16, 120 pages (reached present): 63/100 clean, 71.8% win, ROI 7.9%, 65 events, netPnl=$123.4K, medianGapSeconds=51 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 120,
+    historyStart: 1786838400, // 2026-08-16 -- auto-confirm anchor
+  },
 ];
