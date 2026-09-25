@@ -35,15 +35,12 @@ sourcing continues through category-targeted holders passes (items 42,
   explicit go-ahead from the user — not started, not implied by anything
   else being done.
 
-**Revisit once the quality pool grows** (as of item 52: 3 confirmed quality
-wallets per `isQualityWallet` -- ndb1, HighTempTation, vito3corleone --
-but 0 actionable for copy trading: HighTempTation's edge dies to copy
-delay (item 44), ndb1's is World-Cup-driven with a CI straddling zero
-(item 45), vito3corleone has 13 events. Only same-category overlap is 4
-soccer markets, need >= 20):
-- G.19 item 1 — consensus signal restricted to quality wallets.
-- G.19 item 2 follow-up — smart-money divergence, starved twice already
-  (2026-09-10, 2026-09-13), same root cause both times.
+**Open, awaiting data** (as of item 65):
+- `lamyk` forward paper test (item 64) -- pre-registered; evaluate at 20
+  resolved events (`watch:check` entry `lamyk-forward-test`).
+- Quality pool: 13 by `isQualityWallet` (early-movers channel, items
+  62-64, supplied 9); CIs clear zero only for lamyk. Weekly
+  `rescore-pool` keeps them current.
 
 **Closed, don't revisit without a specific reason**:
 - Track G.20 (funding-source clustering, items 36-38) — 41/95 resolved,
@@ -52,6 +49,11 @@ soccer markets, need >= 20):
 - Volatility-breakout strategy (item 43) — no edge on a proper sample.
 - Weather favorite-longshot (item 44) — pre-registered out-of-sample test
   failed.
+- G.19 items 1-2 (consensus / smart-money divergence among quality
+  wallets, item 65) — testable at last (80 events), no edge, CIs straddle
+  zero even in-sample.
+- Holders-based sourcing as a primary channel (items 42, 46, 60) — zero
+  durable wallets in five categories; still runs weekly (cheap).
 
 ## Track A — Safety net (do first, low risk)
 
@@ -1481,3 +1483,23 @@ Track F stays gated on the user regardless.
       > 0 AND the event-clustered 95% CI lower bound > -10%. Anything else
       = FAIL: stop paper-trading it.** No parameter changes (stake, delay,
       filters) before evaluation. 345/345 tests.
+
+65. ✅ **Done 2026-09-25. G.19 items 1-2 finally testable -- clean
+    negative.** The M3 `quality-overlap` watch fired (quality wallets now
+    share 71 markets in "other"/geopolitics, need 20 -- largely from the
+    early-movers wallets) and launched `smart-money-divergence` itself via
+    `watch:check --run` (14 min; pool of 12 by `isQualityWallet`, 30,343
+    resolved BUY trials, 114 markets where >= 2 quality wallets bought the
+    same outcome within 72h):
+    | signal | events | win | ROI | 95% CI |
+    |---|---|---|---|---|
+    | any >= 2-wallet accumulation (= G.19 item 1, consensus) | 80 | 59.6% | +5.5% | [-14.5%, 25.7%] |
+    | divergent (price flat; G.19 item 2's hypothesis) | 50 | 46.0% | +5.6% | [-24.3%, 35.6%] |
+    | trend-following (control) | 43 | 76.5% | +5.3% | [-12.1%, 22.9%] |
+    | divergent, >= 3 wallets agreeing | 8 | 55.6% | +52.9% | n/a (< 20 events) |
+    Every CI straddles zero and divergent ~= the trend-following control,
+    **even though this is in-sample-biased upward** (most pool wallets
+    were nominated for early buys in these same markets). The >= 3-wallet
+    row is 8 events and one of 5 variants -- noise until seen out of
+    sample. G.19 closed unless a forward (post-2026-09-25) dataset shows
+    otherwise.
