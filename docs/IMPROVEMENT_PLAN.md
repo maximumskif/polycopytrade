@@ -1369,3 +1369,25 @@ Track F stays gated on the user regardless.
     - Follow-up noticed: `tsconfig.json` includes only `src`, so `tsc`
       never typechecks `tests/` (a test passing objects missing `roi`
       compiled fine).
+
+60. ✅ **Done 2026-09-25. MLB + tennis holders passes: zero quality
+    wallets.** MLB (`holders-mlb-tennis`, pre-K4/pre-item-57 code, 8h+):
+    883 sightings -> 458 new -> 15 active -> 0 confirmed / 1 failed
+    (TimeTraveler: truncated at 2026-06-24, retry from 2026-08-16 reached
+    present at 50/cap, ROI -12.8%) / 14 screened out. Tennis (relaunched on
+    K4 code, **19 min**): 474 sightings -> 275 new -> 15 active -> 1
+    "confirmed" (`0x796f...`, 66/100 but ROI -0.8% on 1419 events --
+    re-scored after item 59 and now fails "lost money") / 4 unconfirmed
+    (truncated) / 10 screened out. The 4 truncated re-confirmed with the
+    120-page retry (item 61, 7 min): `0xeea3...` reached the present and
+    fails (ROI -0.6%, 1519 events); the other 3 are still truncated
+    (>60K fills in <40 days -- market-maker volume) with partial-window
+    ROIs of +2.2%, -0.2%, +1.7% (one bot-speed) -- breakeven, not
+    candidates. Across items 42/46/60 the holders channel has now
+    produced zero durable quality wallets in five categories.
+
+61. ✅ **Done 2026-09-25. Confirmation retry gets 120 pages; `tests/` is
+    typechecked** (commit `a15563f`). `CONFIRM_RETRY_HISTORY_PAGES=120`
+    for the later-anchor retry only. `npm run typecheck` (and CI) also run
+    `tsconfig.test.json` over `tests/`, which `tsc` never saw; fixed the 2
+    real errors it found. 338/338 tests.
