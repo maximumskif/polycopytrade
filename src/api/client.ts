@@ -421,6 +421,69 @@ export async function getMarketByConditionId(conditionId: string, closed: boolea
   return res[0] ?? null;
 }
 
+// K4 (2026-09-25): batch form of getMarketByConditionId. gamma's /markets
+// accepts repeated `condition_ids=` params (a comma list silently returns
+// nothing) but caps the response at 20 unless `limit` is passed -- both
+// confirmed live. Checked for equivalence the same day: of 100 real
+// conditionIds, the batch returned 97; the other 3 were also absent from
+// single closed=true AND closed=false lookups. So resolving N markets
+// costs ~2*ceil(N/50) requests instead of up to 2N (a candidate wallet
+// with 400 markets: ~16 requests instead of ~400-800, at ~1.1s each).
+// Cache semantics are unchanged: each finalized market is stored under
+// the SAME key a single closed=true lookup would use (and read back from
+// it), so the single and batch paths share one cache.
+const MARKET_BATCH_SIZE = 50; // ~4KB of query string per request
+
+function singleMarketLookupUrl(conditionId: string, closed: boolean): string {
+  return `${GAMMA_API}/markets?${new URLSearchParams({ condition_ids: conditionId, closed: String(closed) }).toString()}`;
+}
+
+export async function getMarketsByConditionIds(conditionIds: string[]): Promise<Map<string, GammaMarket>> {
+  const out = new Map<string, GammaMarket>();
+  const cache = apiCache();
+  let pending: string[] = [];
+  for (const id of new Set(conditionIds)) {
+    if (cache) {
+      const hit = cache.get(singleMarketLookupUrl(id, true));
+      const parsed = hit ? MarketsLookupResponseSchema.safeParse(hit.body) : null;
+      if (parsed?.success && parsed.data[0]) {
+        cacheStats.hits++;
+        out.set(id, parsed.data[0]);
+        continue;
+      }
+      cacheStats.misses++;
+    }
+    pending.push(id);
+  }
+  for (const closed of [true, false]) {
+    const notFound: string[] = [];
+    for (let i = 0; i < pending.length; i += MARKET_BATCH_SIZE) {
+      const chunk = pending.slice(i, i + MARKET_BATCH_SIZE);
+      const qs = new URLSearchParams({ closed: String(closed), limit: String(MARKET_BATCH_SIZE * 2) });
+      for (const id of chunk) qs.append("condition_ids", id);
+      const raw = await requestJson(`${GAMMA_API}/markets?${qs.toString()}`);
+      const parsed = validate(MarketsLookupResponseSchema, raw, "GET /markets (batch)");
+      const rawList = raw as unknown[];
+      const byId = new Map<string, { market: GammaMarket; raw: unknown }>();
+      parsed.forEach((m, j) => byId.set(m.conditionId.toLowerCase(), { market: m, raw: rawList[j] }));
+      for (const id of chunk) {
+        const found = byId.get(id.toLowerCase());
+        if (!found) {
+          notFound.push(id);
+          continue;
+        }
+        out.set(id, found.market);
+        if (closed && cache && isCacheableMarketLookup(id, true, [found.market])) {
+          cache.set(singleMarketLookupUrl(id, true), [found.raw]);
+          cacheStats.stored++;
+        }
+      }
+    }
+    pending = notFound;
+  }
+  return out;
+}
+
 // Resolves a username or profile-slug fragment to the proxyWallet address
 // that actually holds funds/positions (NOT the same as what shows in a
 // polymarket.com/@... profile URL — see wallets.ts for why that matters).

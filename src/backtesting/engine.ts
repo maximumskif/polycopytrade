@@ -15,7 +15,7 @@
 //   just never got around to selling); a cycle still open on a still-active
 //   market is excluded — there's no resolved P&L to report yet.
 
-import { getMarketByConditionId, type Activity, type GammaMarket } from "../api/client";
+import { getMarketByConditionId, getMarketsByConditionIds, type Activity, type GammaMarket } from "../api/client";
 import { categorize } from "../research/categorize";
 import { reconstructPositions } from "./positionReconstruction";
 import type { BacktestConfig, BacktestTrial } from "../domain/types";
@@ -67,6 +67,29 @@ export async function resolveMarket(conditionId: string): Promise<GammaMarket | 
 }
 
 // Exported for the same reason as resolveMarket above.
+// Batch form of resolveMarket (K4, 2026-09-25): same in-memory cache and
+// same result per id (null when gamma has no such market), but everything
+// not already cached goes out as a few batched /markets requests instead of
+// up to two requests per market. See getMarketsByConditionIds.
+export async function resolveMarkets(conditionIds: string[]): Promise<Map<string, GammaMarket | null>> {
+  const result = new Map<string, GammaMarket | null>();
+  const need: string[] = [];
+  for (const id of new Set(conditionIds)) {
+    const cached = marketCache.get(id);
+    if (cached) result.set(id, cached);
+    else need.push(id);
+  }
+  if (need.length) {
+    const fetched = await getMarketsByConditionIds(need);
+    for (const id of need) {
+      const market = fetched.get(id) ?? null;
+      result.set(id, market);
+      if (market?.closed) marketCache.set(id, market);
+    }
+  }
+  return result;
+}
+
 export function outcomeWon(market: GammaMarket, outcome: string): boolean | null {
   const outcomes: string[] = JSON.parse(market.outcomes ?? "[]");
   const finalPrices: number[] = JSON.parse(market.outcomePrices ?? "[]").map(Number);
@@ -79,9 +102,10 @@ async function buildHoldToResolutionTrials(walletAddress: string, activity: Acti
   const buys = activity.filter((a) => a.type === "TRADE" && a.side === "BUY" && a.timestamp <= config.datasetCutoff);
   const trials: BacktestTrial[] = [];
   const uniqueConditionIds = [...new Set(buys.map((b) => b.conditionId))];
+  const markets = await resolveMarkets(uniqueConditionIds);
 
   for (const conditionId of uniqueConditionIds) {
-    const market = await resolveMarket(conditionId);
+    const market = markets.get(conditionId) ?? null;
     if (!market || !market.closed) continue;
 
     for (const b of buys.filter((x) => x.conditionId === conditionId)) {
@@ -123,6 +147,7 @@ async function buildMirrorExitTrials(walletAddress: string, activity: Activity[]
   }
 
   const trials: BacktestTrial[] = [];
+  const openMarkets = await resolveMarkets(positions.filter((p) => p.closedAt === null).map((p) => p.conditionId));
   for (const pos of positions) {
     const meta = metaByMarket.get(`${pos.conditionId} ${pos.outcome}`);
     if (!meta) continue; // shouldn't happen — every position came from this same activity set
@@ -133,7 +158,7 @@ async function buildMirrorExitTrials(walletAddress: string, activity: Activity[]
     if (!resolved) {
       // Still open per the fills alone — check whether the underlying
       // market has already settled anyway (the wallet just never sold).
-      const market = await resolveMarket(pos.conditionId);
+      const market = openMarkets.get(pos.conditionId) ?? null;
       if (market?.closed) {
         const won = outcomeWon(market, pos.outcome);
         if (won !== null) {

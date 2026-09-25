@@ -18,6 +18,7 @@ import {
 import { ApiResponseCache, normalizeCacheKey } from "../src/api/responseCache";
 import {
   getMarketByConditionId,
+  getMarketsByConditionIds,
   getPricesHistory,
   getApiCacheStats,
   __setFetchImplForTests,
@@ -248,4 +249,67 @@ test("POLYCOPY_API_CACHE=0 disables reads and writes; otherwise the cache persis
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --- K4 batch market lookup ----------------------------------------------
+
+// A fake gamma /markets honoring repeated condition_ids, `closed`, and a
+// default cap of 20 without `limit` (the live behavior checked 2026-09-25).
+function fakeGamma(markets: Record<string, { closed: boolean; outcomePrices: string }>) {
+  const urls: string[] = [];
+  const impl = async (url: string | URL | Request) => {
+    const u = new URL(String(url));
+    urls.push(u.toString());
+    const ids = u.searchParams.getAll("condition_ids");
+    const closed = u.searchParams.get("closed") === "true";
+    const limit = Number(u.searchParams.get("limit") ?? 20);
+    const found = ids
+      .filter((id) => markets[id] && markets[id].closed === closed)
+      .map((id) => ({ ...settled, conditionId: id, ...markets[id] }))
+      .slice(0, limit);
+    return jsonResponse(found);
+  };
+  return { urls, impl };
+}
+
+test("getMarketsByConditionIds: batches of 50, closed then open, missing ids absent -- same answers as single lookups", async () => {
+  __setApiCacheForTests(undefined);
+  __setSlotReserverForTests(countingReserver());
+  const markets: Record<string, { closed: boolean; outcomePrices: string }> = {};
+  const ids: string[] = [];
+  for (let i = 0; i < 120; i++) {
+    const id = `0x${i.toString(16).padStart(4, "0")}`;
+    ids.push(id);
+    if (i % 10 === 9) continue; // gamma doesn't know this one
+    markets[id] = i % 3 === 0 ? { closed: false, outcomePrices: '["0.4","0.6"]' } : { closed: true, outcomePrices: '["1","0"]' };
+  }
+  const gamma = fakeGamma(markets);
+  __setFetchImplForTests(gamma.impl);
+
+  const batch = await getMarketsByConditionIds(ids);
+  assert.equal(gamma.urls.length, 3 + 1, "3 closed=true chunks of <=50, then 1 closed=false chunk for the leftovers");
+  for (const id of ids) {
+    const single = (await getMarketByConditionId(id, true)) ?? (await getMarketByConditionId(id, false));
+    assert.deepEqual(batch.get(id) ?? null, single, id);
+  }
+});
+
+test("getMarketsByConditionIds: finalized markets go into the single-lookup cache key, and are read back from it", async () => {
+  const cache = new ApiResponseCache(":memory:");
+  __setApiCacheForTests(cache);
+  __setSlotReserverForTests(countingReserver());
+  const gamma = fakeGamma({
+    "0xAA": { closed: true, outcomePrices: '["1","0"]' },
+    "0xBB": { closed: false, outcomePrices: '["0.5","0.5"]' },
+  });
+  __setFetchImplForTests(gamma.impl);
+
+  await getMarketsByConditionIds(["0xAA", "0xBB"]);
+  assert.equal(getApiCacheStats().stored, 1, "only the finalized market is stored");
+  const before = gamma.urls.length;
+  assert.equal((await getMarketByConditionId("0xAA", true))?.conditionId, "0xAA");
+  assert.equal(gamma.urls.length, before, "single lookup served from the batch-written cache entry");
+  const again = await getMarketsByConditionIds(["0xAA"]);
+  assert.equal(again.get("0xAA")?.closed, true);
+  assert.equal(gamma.urls.length, before, "batch lookup also served from cache");
 });
