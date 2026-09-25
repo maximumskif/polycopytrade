@@ -1428,3 +1428,23 @@ Track F stays gated on the user regardless.
       revisit when the CI clears zero.
     - `source-rotate` (Wednesday timer) now runs early movers before the
       weekly holders tag (commit `2a28479`).
+
+63. ✅ **Done 2026-09-25. Early movers, wider run: 2 more tracked quality
+    wallets.** `source-early-movers -- --days=120 --markets=1500` (33 min):
+    107 markets with a qualifying move, 6041 early winning buys by 2529
+    wallets, **125 nominees** (>= 3 events), top 15 scored -> 3
+    confirmed / 2 failed / 10 screened out.
+    - **`gkeqd` (`0xdf17f4a8...`): 63/100, 65 events, 71.8% win, ROI
+      +7.9%, $123K net, median gap 51s, max drawdown 1.2%; ROI CI
+      [-0.9%, +20.9%]** -- just short of clearing zero. Retry-anchored
+      from 2026-08-16 at 120 pages (very active). Early buys: Russia x
+      Ukraine ceasefire, Israel.
+    - **`yuhyuhyuhy352352` (`0xbd0477e0...`): 54/100, 54 events, 48.5%
+      win, ROI +10.2%, $91.6K net, gap 55s; CI [-19.2%, +63.1%].**
+    - `MEPP` "confirmed" at ROI 0.0% ($148 net) -- clears `roi > 0` by
+      rounding; breakeven, not tracked.
+    - gkeqd and yuhyuhyuhy352352 added to `wallets.ts`; neither CI clears
+      zero, so both are watched (weekly `rescore-pool`), not paper-traded.
+    - 110 of 125 nominees went unscored at the default cap of 15;
+      `--candidates=N` added and an 80-candidate re-run launched (result
+      appended below).
