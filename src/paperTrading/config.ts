@@ -91,4 +91,24 @@ export const PAPER_TRADE_TARGETS: PaperTradeTarget[] = [
     delaySeconds: 30,
     activeFrom: 1790325448,
   },
+  {
+    // gkeqd -- early movers (item 63). 65 events, ROI +7.9%, CI [-0.9%,
+    // 20.9%], max drawdown 1.2%, median gap 51s. Forward test under item
+    // 64's rule, registered in item 66.
+    address: "0xdf17f4a8dd01a4cfa6fc3da323a2baee5f8697d1",
+    label: "gkeqd (early-mover, forward test)",
+    stakeUsdc: 100,
+    delaySeconds: 30,
+    activeFrom: 1790326510,
+  },
+  {
+    // BiDiFakePolls -- early movers (item 64). 115 events, ROI +12.3%, CI
+    // [-1.5%, 23.5%], max drawdown 2.9%, median gap 132s. Forward test
+    // under item 64's rule, registered in item 66.
+    address: "0xd24b95551eb288ff82bb625dcd7f32f62abdef76",
+    label: "BiDiFakePolls (early-mover, forward test)",
+    stakeUsdc: 100,
+    delaySeconds: 30,
+    activeFrom: 1790326510,
+  },
 ];

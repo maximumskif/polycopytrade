@@ -1503,3 +1503,19 @@ Track F stays gated on the user regardless.
     row is 8 events and one of 5 variants -- noise until seen out of
     sample. G.19 closed unless a forward (post-2026-09-25) dataset shows
     otherwise.
+
+66. ✅ **Done 2026-09-25. Two more pre-registered forward paper tests:
+    `gkeqd` and `BiDiFakePolls`** -- the two wallets whose in-sample ROI
+    CIs came closest to clearing zero ([-0.9%, 20.9%] and [-1.5%, 23.5%]).
+    Paper trading costs nothing and a forward test is out-of-sample however
+    a wallet was picked. **Registration (before any paper result):** same
+    target settings and rule as item 64 -- $100/fill, 30s delay, no
+    filters, `activeFrom` = this commit's time; evaluate each at >= 20
+    resolved events; PASS = paper net ROI > 0 AND event-clustered 95% CI
+    lower bound > -10%; FAIL = stop paper-trading that wallet; no
+    parameter changes before evaluation. **Family note, fixed now:** with 3
+    parallel forward tests (lamyk, gkeqd, BiDiFakePolls), a single PASS is
+    weaker evidence than a lone test's -- before any live-execution
+    discussion (Track F), a passing wallet also needs its CI lower bound >
+    0 at the Bonferroni level (98.3%, 1-0.05/3), or a second forward window.
+    `watch:check` entries `gkeqd-forward-test`, `bidifakepolls-forward-test`.

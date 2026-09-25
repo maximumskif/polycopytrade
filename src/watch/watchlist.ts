@@ -126,4 +126,20 @@ export const WATCHLIST: WatchEntry[] = [
     action: ["npm", "run", "paper:report"],
     note: "Evaluate against item 64's rule exactly: PASS = paper net ROI > 0 AND event-clustered 95% CI lower bound > -10%; else stop paper-trading lamyk.",
   },
+  {
+    id: "gkeqd-forward-test",
+    description: "gkeqd's pre-registered forward paper test reaches its evaluation point (>= 20 resolved events)",
+    planRef: "item 66",
+    condition: { kind: "paperResolvedEvents", threshold: 20, walletAddress: "0xdf17f4a8dd01a4cfa6fc3da323a2baee5f8697d1" },
+    action: ["npm", "run", "paper:report"],
+    note: "Same rule as item 64 (ROI > 0 AND CI lower > -10%); one of 3 parallel forward tests -- see item 66 on reading a single pass.",
+  },
+  {
+    id: "bidifakepolls-forward-test",
+    description: "BiDiFakePolls's pre-registered forward paper test reaches its evaluation point (>= 20 resolved events)",
+    planRef: "item 66",
+    condition: { kind: "paperResolvedEvents", threshold: 20, walletAddress: "0xd24b95551eb288ff82bb625dcd7f32f62abdef76" },
+    action: ["npm", "run", "paper:report"],
+    note: "Same rule as item 64 (ROI > 0 AND CI lower > -10%); one of 3 parallel forward tests -- see item 66 on reading a single pass.",
+  },
 ];
