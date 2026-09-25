@@ -102,6 +102,20 @@ export function earlyWinningBuys(trades: MarketTrade[], winner: number, crossTs:
   );
 }
 
+// Control group for item 67: the same cheap early BUYs, but of an outcome
+// that LOST -- early longshot buyers the market proved wrong.
+export function earlyLosingBuys(trades: MarketTrade[], winner: number, crossTs: number): MarketTrade[] {
+  return trades.filter(
+    (t) =>
+      t.side === "BUY" &&
+      t.outcomeIndex !== undefined &&
+      t.outcomeIndex !== winner &&
+      t.timestamp < crossTs &&
+      t.price <= EARLY_MAX_PRICE &&
+      t.size * t.price >= MIN_EARLY_USDC
+  );
+}
+
 export interface Nominee {
   address: string;
   name: string | null;
@@ -158,31 +172,41 @@ async function earlyTrades(conditionId: string, startTs: number, crossTs: number
   return out;
 }
 
-async function main() {
-  runMigrations();
-  const days = flag("days", 45);
-  const marketCount = flag("markets", 150);
-  const maxCandidates = flag("candidates", DEFAULT_MAX_CANDIDATES);
-  const endDateMin = new Date(Date.now() - days * 86400 * 1000).toISOString().slice(0, 10);
-  const nowSec = Math.floor(Date.now() / 1000);
-
+// Steps 1-3 of the header, reusable with a closed-before cutoff so a
+// nomination can be restricted to an earlier window (item 67's
+// out-of-sample test of this channel). Only markets that actually closed
+// (closedTime, else endDate) before `closedBeforeTs` are used.
+export async function scanEarlyBuys(opts: {
+  endDateMin: string;
+  endDateMax?: string;
+  marketCount: number;
+  closedBeforeTs: number;
+}): Promise<{
+  marketsScanned: number;
+  withMove: number;
+  buys: { trade: MarketTrade; eventKey: string; question: string }[];
+  losingBuys: { trade: MarketTrade; eventKey: string; question: string }[];
+}> {
+  const { endDateMin, endDateMax, marketCount, closedBeforeTs } = opts;
   const markets: GammaMarket[] = [];
   for (let offset = 0; markets.length < marketCount; offset += 100) {
-    const page = await getClosedMarketsByVolume({ endDateMin, limit: 100, offset });
+    const page = await getClosedMarketsByVolume({ endDateMin, endDateMax, limit: 100, offset });
     markets.push(...page);
     if (page.length < 100) break;
   }
+  const marketsScanned = Math.min(markets.length, marketCount);
   console.log(
-    `${markets.length} settled markets (end date >= ${endDateMin}), biggest first; scanning ${Math.min(markets.length, marketCount)}.`
+    `${markets.length} settled markets (end date ${endDateMin}..${endDateMax ?? "now"}), biggest first; scanning ${marketsScanned}.`
   );
 
   const buys: { trade: MarketTrade; eventKey: string; question: string }[] = [];
+  const losingBuys: { trade: MarketTrade; eventKey: string; question: string }[] = [];
   let withMove = 0;
   for (const market of markets.slice(0, marketCount)) {
     const winner = winnerIndex(market);
     const closeTs = parseGammaTime(market.closedTime) ?? parseGammaTime(market.endDate);
     const tokenId = (JSON.parse(market.clobTokenIds ?? "[]") as string[])[winner ?? -1];
-    if (winner === null || closeTs === null || closeTs > nowSec || !tokenId) continue;
+    if (winner === null || closeTs === null || closeTs > closedBeforeTs || !tokenId) continue;
     try {
       const move = findMove(await winnerSeries(market, tokenId, closeTs), closeTs);
       if (!move) continue;
@@ -190,6 +214,9 @@ async function main() {
       const trades = await earlyTrades(market.conditionId, closeTs - HISTORY_DAYS * 86400, move.crossTs);
       const early = earlyWinningBuys(trades, winner, move.crossTs);
       for (const trade of early) buys.push({ trade, eventKey: trade.eventSlug || trade.slug || market.slug, question: market.question });
+      for (const trade of earlyLosingBuys(trades, winner, move.crossTs)) {
+        losingBuys.push({ trade, eventKey: trade.eventSlug || trade.slug || market.slug, question: market.question });
+      }
       console.log(
         `  [move] ${market.question.slice(0, 70)} -- crossed ${MOVE_CROSS_PRICE} ${((closeTs - move.crossTs) / 3600).toFixed(0)}h before close; ` +
           `${early.length} early winning buys (${trades.length} fills scanned)`
@@ -198,6 +225,18 @@ async function main() {
       console.log(`  [skip] ${market.question.slice(0, 70)}: ${(err as Error).message}`);
     }
   }
+  return { marketsScanned, withMove, buys, losingBuys };
+}
+
+async function main() {
+  runMigrations();
+  const days = flag("days", 45);
+  const marketCount = flag("markets", 150);
+  const maxCandidates = flag("candidates", DEFAULT_MAX_CANDIDATES);
+  const endDateMin = new Date(Date.now() - days * 86400 * 1000).toISOString().slice(0, 10);
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  const { marketsScanned, withMove, buys } = await scanEarlyBuys({ endDateMin, marketCount, closedBeforeTs: nowSec });
 
   const tracked = new Set(TRACKED_WALLETS.map((w) => w.address.toLowerCase()));
   const skip = recentlyConfirmedAddresses();
@@ -247,7 +286,7 @@ async function main() {
   printVerdicts(outcomes);
   const count = (kind: PipelineOutcome["kind"]) => outcomes.filter((o) => o.kind === kind).length;
   console.log(
-    `\nSummary: ${Math.min(markets.length, marketCount)} settled markets -> ${withMove} with a move -> ${ranked.length} nominees -> ` +
+    `\nSummary: ${marketsScanned} settled markets -> ${withMove} with a move -> ${ranked.length} nominees -> ` +
       `${Math.min(ranked.length, maxCandidates)} scored (${dormant} dormant) -> ${count("confirmed-quality")} confirmed quality / ` +
       `${count("failed-confirmation")} failed confirmation / ${count("unconfirmed-truncated")} unconfirmed (truncated) / ` +
       `${count("screened-out")} screened out${count("error") ? ` / ${count("error")} errors` : ""}.`

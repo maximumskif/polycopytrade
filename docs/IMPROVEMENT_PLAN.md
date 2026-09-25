@@ -1519,3 +1519,30 @@ Track F stays gated on the user regardless.
     discussion (Track F), a passing wallet also needs its CI lower bound >
     0 at the Bonferroni level (98.3%, 1-0.05/3), or a second forward window.
     `watch:check` entries `gkeqd-forward-test`, `bidifakepolls-forward-test`.
+
+67. **Pre-registered 2026-09-25 (this entry's commit = registration
+    time); result appended below when the run finishes. Out-of-sample test
+    of the early-movers channel itself.** Items 62-64 confirmed nominees on
+    windows overlapping their nomination (in-sample). `npm run
+    early-movers-oos` splits time instead: **window A** = markets that
+    closed 2026-01-28..2026-05-28 (`--split=2026-05-28 --lookbackDays=120
+    --markets=1500`), nominating with the unchanged item-62 rules (winner
+    <= 0.35 then first cross of 0.60 >= 6h before close; taker BUYs of the
+    winner <= 0.35, >= $50, before the cross; >= 3 distinct events); top 60
+    by events then $ (`--perGroup=60`). **Control** = top 60 wallets with
+    the same cheap early BUYs but on outcomes that LOST (>= 3 events,
+    excluding nominees). **Window B** = each wallet's trades from
+    2026-05-28 on, 40-page anchored pull; wallets whose pull is truncated,
+    or with no resolved window-B trials, are excluded and counted.
+    - **Primary metric: nominees' equal-weight pooled window-B ROI**
+      (each wallet's trials scaled to total stake 1), event-clustered
+      bootstrap 95% CI (deterministic since item 52).
+    - **PASS = that CI's lower bound > 0.** Anything else = FAIL: the
+      channel's in-sample confirmations (items 62-64) are then treated as
+      unproven selection artifacts until the forward paper tests (items
+      64/66) say otherwise.
+    - Secondary, reported but not part of the pass rule: the control's
+      ROI/CI, nominee-minus-control difference, and fraction of wallets
+      with ROI > 0 in each group.
+    - One run, no parameter changes after seeing results; any variant
+      would be a new registration.

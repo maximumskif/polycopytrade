@@ -50,7 +50,8 @@
     "rescore-pool": "tsx src/cli/rescorePool.ts",
     "source-rotate": "tsx src/cli/sourceRotate.ts",
     "validate-positions-screen": "tsx src/research/validatePositionsScreen.ts",
-    "source-early-movers": "tsx src/research/sourceEarlyMovers.ts"
+    "source-early-movers": "tsx src/research/sourceEarlyMovers.ts",
+    "early-movers-oos": "tsx src/research/earlyMoversOOS.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
