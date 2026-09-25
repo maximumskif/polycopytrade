@@ -1391,3 +1391,29 @@ Track F stays gated on the user regardless.
     for the later-anchor retry only. `npm run typecheck` (and CI) also run
     `tsconfig.test.json` over `tests/`, which `tsc` never saw; fixed the 2
     real errors it found. 338/338 tests.
+
+62. ✅ **Done 2026-09-25. New sourcing channel: early movers -- first
+    durable quality wallet since item 41.** Chosen by the user (option 2)
+    after items 42/46/60 found the holders channel dry. `npm run
+    source-early-movers` (commit `1135439`): settled markets by volume ->
+    keep those whose winner traded <= 0.35 and first crossed 0.60 >= 6h
+    before close (CLOB history, K1-cached) -> taker BUYs of the winner at
+    <= 0.35 before the cross (data-api `/trades` with start/end; checked
+    live: newest first, offset paging past 10K, taker-only by default) ->
+    wallets with early winning buys in >= 3 distinct events -> dormancy
+    pre-check -> the standard screen + anchored confirmation (scores ALL
+    trades, losers included -- nomination alone is survivorship-biased).
+    - **Run (600 largest markets closing since 2026-08-11, 15 min):** 45
+      with a qualifying move, 2151 early winning buys by 1092 wallets, 15
+      nominees -> **1 confirmed quality** / 3 failed (two at the 50 cap
+      despite +15% ROI screens, one ROI -1.5%) / 11 screened out (mostly
+      net-losing -- the longshot-buyer survivorship the design expected).
+    - **`Toncar16` (`0x41583f2e...`): 58/100 clean, 87 events, 37.4% win,
+      ROI +14.0%, $9.1K net, median gap 192s (human speed), active.**
+      Early buys were geopolitical (Iran strike / Hormuz / US halt) at
+      0.17-0.28. Added to `wallets.ts` (tracked by the daemon from now).
+      Sample is modest (87 events, $9K) -- watch, not yet paper-traded.
+    - Also found running it: `npm run job` didn't forward `DB_PATH`/
+      `POLYCOPY_*` into the systemd unit (systemd-run starts clean), so a
+      job launched from a worktree used the worktree's DB and limiter --
+      fixed (`forwardedEnv`, commit in the same merge). 344/344 tests.
