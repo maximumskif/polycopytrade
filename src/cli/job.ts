@@ -29,6 +29,17 @@ function git(args: string[]): string | null {
 // of the Node running this launcher first -- it's by definition a working
 // Node -- then the caller's PATH, so the job sees what an interactive run
 // from this shell would.
+// systemd-run starts from a clean environment, so the project's own
+// settings must be forwarded explicitly (2026-09-25: a job launched from a
+// worktree with DB_PATH/POLYCOPY_*_PATH pointing at the main checkout ran
+// against the worktree's own DB and rate limiter instead). Forwards
+// DB_PATH and every POLYCOPY_* variable set in the launching shell.
+export function forwardedEnv(env: NodeJS.ProcessEnv = process.env): [string, string][] {
+  return Object.entries(env)
+    .filter((e): e is [string, string] => e[1] !== undefined && (e[0] === "DB_PATH" || e[0].startsWith("POLYCOPY_")))
+    .sort(([a], [b]) => a.localeCompare(b));
+}
+
 function jobPath(): string {
   const nodeBin = path.dirname(process.execPath);
   const rest = (process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin").split(":").filter((p) => p && p !== nodeBin);
@@ -102,6 +113,7 @@ export function main(args = process.argv.slice(2)) {
       `--description=polycopytrade job ${name} (${dirName})`,
       `--working-directory=${REPO_ROOT}`,
       `--setenv=PATH=${jobPath()}`,
+      ...forwardedEnv().map(([k, v]) => `--setenv=${k}=${v}`),
       `--property=StandardOutput=append:${logFile}`,
       `--property=StandardError=append:${logFile}`,
       "/bin/bash",

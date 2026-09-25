@@ -178,3 +178,12 @@ test("lastLogLine prefers a Summary: line and skips warnings/api chatter", () =>
   assert.equal(lastLogLine(log), "Summary: 883 raw sightings -> 0 confirmed quality");
   assert.equal(lastLogLine("working\n[api] data-api 429 (attempt 1)\n"), "working");
 });
+
+test("forwardedEnv passes DB_PATH and POLYCOPY_* only, sorted", async () => {
+  const { forwardedEnv } = await import("../src/cli/job");
+  assert.deepEqual(forwardedEnv({ HOME: "/h", POLYCOPY_B: "2", DB_PATH: "/d.db", POLYCOPY_A: "1", PATH: "/bin" }), [
+    ["DB_PATH", "/d.db"],
+    ["POLYCOPY_A", "1"],
+    ["POLYCOPY_B", "2"],
+  ]);
+});
