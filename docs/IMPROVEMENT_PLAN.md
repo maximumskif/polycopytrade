@@ -1326,3 +1326,17 @@ Track F stays gated on the user regardless.
     cache off: vito3corleone `wallet-score` **36s -> 5s, output
     identical**. 2 new tests (batch == single over 120 mixed ids; shared
     cache key). 325/325 tests.
+
+57. ✅ **Done 2026-09-25. Rate-limit gap 1100ms -> 100ms per Polymarket
+    host** (after the user flagged jobs as too slow). Polymarket's
+    documented per-IP limits (docs.polymarket.com rate-limits page, read
+    2026-09-25): data-api 1000/10s general (`/positions` 150/10s), gamma
+    4000/10s general (`/markets` 300/10s), CLOB `/prices-history`
+    1000/10s -- enforced by Cloudflare throttling. The old flat 1.1s gap
+    was 20-100x under all of them. `HOST_MIN_GAP_MS` in `client.ts`: 100ms
+    for data-api/gamma/clob (10 req/s, under the tightest limit), still
+    coordinated across processes by K2; `POLYCOPY_MIN_GAP_MS` overrides.
+    Live (cache + DB off): ndb1 `wallet-score` **153s -> 34s**, identical
+    output, zero 429s. Combined with K4 (item 56), a candidate that took
+    ~20 min now takes well under a minute; the remaining cost is request
+    latency (~250ms, sequential), not pacing.
