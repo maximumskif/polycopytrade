@@ -29,6 +29,10 @@ import {
   OrderBookSchema,
   LeaderboardResponseSchema,
   HoldersResponseSchema,
+  ClosedPositionsResponseSchema,
+  OpenPositionsResponseSchema,
+  type ClosedPosition,
+  type OpenPosition,
   type Activity,
   type GammaMarket,
   type GammaEvent,
@@ -37,7 +41,7 @@ import {
   type HoldersGroup,
 } from "./schemas";
 
-export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry, HoldersGroup };
+export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry, HoldersGroup, ClosedPosition, OpenPosition };
 
 const DATA_API = "https://data-api.polymarket.com";
 const GAMMA_API = "https://gamma-api.polymarket.com";
@@ -564,4 +568,32 @@ export async function getActiveEventsByVolume(limit = 20, tagSlug?: string): Pro
   const qs = new URLSearchParams({ closed: "false", order: "volume24hr", ascending: "false", limit: String(limit) });
   if (tagSlug) qs.set("tag_slug", tagSlug);
   return validate(GammaEventsResponseSchema, await requestJson(`${GAMMA_API}/events?${qs.toString()}`), "GET /events (by volume24hr)");
+}
+
+// K5 (2026-09-25): one page of a wallet's closed positions, newest first
+// (API max 50 per page). Never cached: a wallet's closed set grows, and a
+// merged position's curPrice keeps moving until its market settles.
+export async function getClosedPositions(address: string, opts: { limit?: number; offset?: number } = {}): Promise<ClosedPosition[]> {
+  const qs = new URLSearchParams({
+    user: address,
+    limit: String(opts.limit ?? 50),
+    offset: String(opts.offset ?? 0),
+    sortBy: "TIMESTAMP",
+    sortDirection: "DESC",
+  });
+  return validate(ClosedPositionsResponseSchema, await requestJson(`${DATA_API}/closed-positions?${qs.toString()}`), "GET /closed-positions");
+}
+
+// K5: one page of a wallet's resolved-but-unredeemed positions, latest
+// market endDate first (sortBy=RESOLVING). Not cached, for the same reason.
+export async function getRedeemablePositions(address: string, opts: { limit?: number; offset?: number } = {}): Promise<OpenPosition[]> {
+  const qs = new URLSearchParams({
+    user: address,
+    redeemable: "true",
+    limit: String(opts.limit ?? 500),
+    offset: String(opts.offset ?? 0),
+    sortBy: "RESOLVING",
+    sortDirection: "DESC",
+  });
+  return validate(OpenPositionsResponseSchema, await requestJson(`${DATA_API}/positions?${qs.toString()}`), "GET /positions (redeemable)");
 }

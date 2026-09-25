@@ -48,7 +48,8 @@
     "prereg": "tsx src/cli/prereg.ts",
     "watch:check": "tsx src/cli/watchCheck.ts",
     "rescore-pool": "tsx src/cli/rescorePool.ts",
-    "source-rotate": "tsx src/cli/sourceRotate.ts"
+    "source-rotate": "tsx src/cli/sourceRotate.ts",
+    "validate-positions-screen": "tsx src/research/validatePositionsScreen.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

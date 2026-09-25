@@ -160,3 +160,56 @@ export const HoldersResponseSchema = z
   .array(HoldersGroupSchema)
   .nullable()
   .transform((v) => v ?? []);
+
+// data-api's /closed-positions (K5, 2026-09-25; checked live that day):
+// max 50 rows per page, offset paging, sortBy=TIMESTAMP newest first.
+// `totalBought` is SHARES bought (not USD) and `avgPrice` the buy-weighted
+// average price -- both matched a wallet's own BUY fills exactly -- so the
+// cost basis is totalBought*avgPrice. `curPrice` is the market's current
+// price: 1/0 once settled, a live price for a position closed by
+// selling/merging on a still-open market. `timestamp` is when the position
+// closed (after its last fill), not when it opened. Only fields the
+// positions screen reads are required.
+export const ClosedPositionSchema = z.object({
+  conditionId: z.string(),
+  asset: z.string().optional(),
+  avgPrice: z.number(),
+  totalBought: z.number(),
+  realizedPnl: z.number(),
+  curPrice: z.number(),
+  timestamp: z.number(),
+  title: z.string(),
+  slug: z.string(),
+  eventSlug: z.string().nullable().optional(),
+  outcome: z.string(),
+  outcomeIndex: z.number().optional(),
+  endDate: z.string().nullable().optional(),
+});
+export type ClosedPosition = z.infer<typeof ClosedPositionSchema>;
+export const ClosedPositionsResponseSchema = z.array(ClosedPositionSchema);
+
+// data-api's /positions (K5): the wallet's CURRENT holdings. The positions
+// screen needs it because /closed-positions is survivorship-biased (found
+// live 2026-09-25): a resolved position the wallet never redeemed stays
+// here (redeemable=true), and losers are rarely redeemed -- one wallet had
+// 0 "lone" losers among 200 closed positions but 1000+ unredeemed curPrice=0
+// positions here. No timestamp field; `endDate` is the market's scheduled
+// end, and sortBy=RESOLVING orders by it.
+export const OpenPositionSchema = z.object({
+  conditionId: z.string(),
+  asset: z.string().optional(),
+  avgPrice: z.number(),
+  totalBought: z.number(),
+  size: z.number(),
+  realizedPnl: z.number().optional(),
+  curPrice: z.number(),
+  redeemable: z.boolean().optional(),
+  title: z.string(),
+  slug: z.string(),
+  eventSlug: z.string().nullable().optional(),
+  outcome: z.string(),
+  outcomeIndex: z.number().optional(),
+  endDate: z.string().nullable().optional(),
+});
+export type OpenPosition = z.infer<typeof OpenPositionSchema>;
+export const OpenPositionsResponseSchema = z.array(OpenPositionSchema);
