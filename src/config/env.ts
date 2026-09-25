@@ -31,6 +31,11 @@ export const config = {
   pollIntervalMs: intFromEnv("POLL_INTERVAL_MS", 60_000),
   // SQLite database file. Relative paths resolve against the repo root.
   dbPath: process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : path.join(DATA_DIR, "polycopytrade.db"),
+  // The depth collector's own DB (2026-09-25): ~86K order-book snapshots
+  // (~200MB) a day would swamp the main DB the daemon and every job share.
+  // polycopytrade-depth.service runs the collector with DB_PATH set to this;
+  // `npm run status` reads collector health from it.
+  depthDbPath: process.env.DEPTH_DB_PATH ? path.resolve(process.env.DEPTH_DB_PATH) : path.join(DATA_DIR, "depth.db"),
   // Per-request timeout for outbound API calls, in ms.
   apiTimeoutMs: intFromEnv("API_TIMEOUT_MS", 15_000),
   // Bounded retry budget for a single API call (429s and transient network

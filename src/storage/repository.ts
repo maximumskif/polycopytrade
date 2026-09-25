@@ -3,7 +3,11 @@
 // the boundary the target architecture (docs/AUDIT.md §11) calls for
 // between storage and everything else (tracking daemon, research scripts).
 
+import fs from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { getDb } from "./db";
+import { config } from "../config/env";
 import type { Activity } from "../api/schemas";
 import type {
   ApiErrorRecord,
@@ -377,13 +381,19 @@ export function insertOrderbookSnapshot(snapshot: NewOrderbookSnapshot): void {
 // Track D (docs/IMPROVEMENT_PLAN.md): status-view support -- depth:collector
 // has no per-wallet health row like wallet_polls, so its liveness is read
 // straight off its own output table instead.
+// Reads the collector's own DB (config.depthDbPath) when it exists, else the
+// main DB (where snapshots lived before 2026-09-25).
 export function getDepthCollectorHealth(): { lastCapturedAt: number | null; totalSnapshots: number } {
-  const db = getDb();
-  const row = db.prepare(`SELECT MAX(captured_at) as lastCapturedAt, COUNT(*) as totalSnapshots FROM orderbook_snapshots`).get() as {
-    lastCapturedAt: number | null;
-    totalSnapshots: number;
-  };
-  return row;
+  const own = fs.existsSync(config.depthDbPath) && path.resolve(config.depthDbPath) !== path.resolve(config.dbPath);
+  const db = own ? new DatabaseSync(config.depthDbPath, { readOnly: true }) : getDb();
+  try {
+    return db.prepare(`SELECT MAX(captured_at) as lastCapturedAt, COUNT(*) as totalSnapshots FROM orderbook_snapshots`).get() as {
+      lastCapturedAt: number | null;
+      totalSnapshots: number;
+    };
+  } finally {
+    if (own) db.close();
+  }
 }
 
 // ---------------------------------------------------------------------

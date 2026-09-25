@@ -32,6 +32,7 @@
 
 import { fetchRaw } from "../api/client";
 import { insertOrderbookSnapshot } from "../storage/repository";
+import { runMigrations } from "../storage/migrate";
 import { sleep, backoffDelayMs } from "../utils/retry";
 import { parseMarketMessages, createBookState, applyPriceChangeEntry, toBookLevels, type BookState } from "./clobWebSocket";
 import type { GammaMarket } from "../api/schemas";
@@ -181,6 +182,9 @@ function runConnection(ws: WebSocket, tracking: Map<Asset, AssetTracking>, onOpe
 }
 
 export async function runCollectorLoop(): Promise<never> {
+  // Found 2026-09-25: the collector never ran migrations, so against a
+  // fresh DB it crashed on its first snapshot write ("no such table").
+  runMigrations();
   console.log(`[depth-collector] starting -- WebSocket mode, snapshot interval ${SNAPSHOT_INTERVAL_MS}ms, assets: ${ASSETS.join(", ")}`);
 
   const tracking = new Map<Asset, AssetTracking>();

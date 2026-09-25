@@ -35,7 +35,9 @@ sourcing continues through category-targeted holders passes (items 42,
   explicit go-ahead from the user — not started, not implied by anything
   else being done.
 
-**Open, awaiting data** (as of item 65):
+**Open, awaiting data** (as of item 69):
+- Depth-shift dataset (item 69): collector running since 2026-09-25 into
+  `data/depth.db`; research step once ~2 weeks of snapshots exist.
 - `lamyk` forward paper test (item 64) -- pre-registered; evaluate at 20
   resolved events (`watch:check` entry `lamyk-forward-test`).
 - Quality pool: 13 by `isQualityWallet` (early-movers channel, items
@@ -1609,3 +1611,23 @@ Track F stays gated on the user regardless.
       what's left is roughly breakeven, not profitable. The 120-page
       pulls cut truncation (16 -> 14 of 60) only slightly.
       Result JSON: `data/research-results/early-movers-oos-2026-01-28.json`.
+
+69. ✅ **Done 2026-09-25. Depth-shift data collection started** -- the one
+    non-copy-trading strategy in the plan (Track J / E.15,
+    `docs/DEPTH_SHIFT_STRATEGY_SCOPE.md`) was blocked on "a real snapshot
+    dataset", and the WebSocket collector (item 39) had never been left
+    running (0 snapshots ever). Two fixes before starting it:
+    - **Bug:** `snapshotCollector.ts` never ran migrations, so on a fresh
+      DB it crashed on its first write ("no such table:
+      orderbook_snapshots"). Now calls `runMigrations()` at startup.
+    - **Own DB file:** measured 90s live -- ~1 snapshot/s (BTC + ETH
+      15-minute "Up" books every 2s), ~1.9KB of ladder JSON each, i.e.
+      ~86K rows / ~200MB a day (~6GB/month). That would swamp the main DB
+      the daemon and every job share, so `polycopytrade-depth.service`
+      now sets `DB_PATH=data/depth.db`, and `config.depthDbPath` lets
+      `npm run status` read collector health from it.
+    - Enabled + started (`systemctl --user enable --now
+      polycopytrade-depth.service`); status shows it active, snapshots
+      2s fresh. **Next step for this track: once ~2 weeks of snapshots
+      exist, do the scope doc's research step (define a depth-shift
+      signal, pre-register it, backtest on the collected books).**
