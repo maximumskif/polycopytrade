@@ -20,6 +20,7 @@
 //
 // Usage: npm run early-movers-oos [-- --split=2026-05-28] [-- --lookbackDays=120]
 //   [-- --markets=1500] [-- --perGroup=60] [-- --json=<path>]
+//   [-- --controlMinEvents=3] [-- --pages=40]   (v2 knobs, item 68)
 
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -32,7 +33,7 @@ import { runMigrations } from "../storage/migrate";
 import { scoreWalletWithActivity } from "../scoring/walletScore";
 import { aggregate, rankNominees, scanEarlyBuys, type Nominee } from "./sourceEarlyMovers";
 
-const HISTORY_PAGES = 40;
+const DEFAULT_HISTORY_PAGES = 40;
 
 // Scale one wallet's resolved trials to total stake 1, so pooling across
 // wallets weights each wallet equally.
@@ -62,7 +63,7 @@ interface WalletResult {
   trials: BacktestTrial[];
 }
 
-async function scoreWindowB(n: Nominee, splitTs: number): Promise<WalletResult> {
+async function scoreWindowB(n: Nominee, splitTs: number, historyPages: number): Promise<WalletResult> {
   const base = { address: n.address, name: n.name, eventsA: n.events.size, trials: [] as BacktestTrial[] };
   try {
     const latest = await getActivity(n.address, { limit: 1 });
@@ -72,7 +73,7 @@ async function scoreWindowB(n: Nominee, splitTs: number): Promise<WalletResult> 
       label: n.name ?? n.address,
       archetype: "unclassified",
       source: "early-movers-oos",
-      historyPages: HISTORY_PAGES,
+      historyPages,
       historyStart: splitTs,
     });
     const newest = activity.length ? Math.max(...activity.map((a) => a.timestamp)) : null;
@@ -131,6 +132,9 @@ async function main() {
   const lookbackDays = num("lookbackDays", 120);
   const marketCount = num("markets", 1500);
   const perGroup = num("perGroup", 60);
+  // v2 knobs (item 68); defaults reproduce item 67 exactly.
+  const controlMinEvents = num("controlMinEvents", 3);
+  const historyPages = num("pages", DEFAULT_HISTORY_PAGES);
   const endDateMin = new Date((splitTs - lookbackDays * 86400) * 1000).toISOString().slice(0, 10);
   console.log(`early-movers OOS: window A ${endDateMin}..${split} (nominate), window B ${split}..now (score)`);
 
@@ -142,16 +146,16 @@ async function main() {
   });
   const nominees = rankNominees(aggregate(buys), new Set()).slice(0, perGroup);
   const nomineeSet = new Set(nominees.map((n) => n.address.toLowerCase()));
-  const controls = rankNominees(aggregate(losingBuys), nomineeSet).slice(0, perGroup);
+  const controls = rankNominees(aggregate(losingBuys), nomineeSet, controlMinEvents).slice(0, perGroup);
   console.log(
     `\n${marketsScanned} markets scanned, ${withMove} with a move; ${nominees.length} nominees, ${controls.length} controls ` +
-      `(>= 3 events each; controls exclude nominees)`
+      `(nominees >= 3 events, controls >= ${controlMinEvents}; controls exclude nominees; ${historyPages}-page pulls)`
   );
 
   const score = async (group: Nominee[], label: string) => {
     const out: WalletResult[] = [];
     for (const [i, n] of group.entries()) {
-      const r = await scoreWindowB(n, splitTs);
+      const r = await scoreWindowB(n, splitTs, historyPages);
       console.log(
         `  [${label} ${i + 1}/${group.length}] ${n.name ?? n.address}: ${r.status}` +
           (r.status === "scored" ? ` roi=${((r.roi ?? 0) * 100).toFixed(1)}% events=${r.resolvedEvents}` : "")

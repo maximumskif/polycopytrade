@@ -1573,3 +1573,22 @@ Track F stays gated on the user regardless.
       The registered evaluation counts distinct events and clusters its
       CI by event, so this counts as one event, but it will dominate
       gkeqd's dollar P&L -- read paper:report's $ figures with that in mind.
+
+68. **Pre-registered 2026-09-25 (this entry's commit = registration
+    time); result appended below. Replication of item 67 on an independent
+    nomination window, with v1's two power problems fixed.** Same script,
+    same nomination rules and same PRIMARY rule as item 67 (nominees'
+    equal-weight pooled window-B ROI, event-clustered 95% CI; **PASS = CI
+    lower bound > 0**). Changes, all decided from item 67's *diagnostics*
+    (control size, truncation count), not from nominee outcomes:
+    `--split=2026-01-28 --lookbackDays=120` (window A = markets closing
+    2025-09-30..2026-01-28, disjoint from v1's window A; window B = trades
+    from 2026-01-28 on), `--controlMinEvents=2` (v1 got only 7 controls),
+    `--pages=120` (v1 dropped 16 of 60 nominees as truncated), `--markets=
+    1500 --perGroup=60`.
+    - **How the result will be read, fixed now:** v1 FAILED. If v2 PASSES,
+      the combined evidence is *mixed* (1 of 2 pre-registered windows), not
+      a pass -- the channel stays unproven and the forward paper tests
+      still decide. If v2 FAILS, the early-movers channel is recorded as
+      showing no out-of-sample edge in two independent windows, and stays
+      in weekly sourcing only as a candidate generator for forward tests.

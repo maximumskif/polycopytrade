@@ -140,9 +140,9 @@ export function aggregate(buys: { trade: MarketTrade; eventKey: string; question
   return byWallet;
 }
 
-export function rankNominees(all: Map<string, Nominee>, skip: Set<string>): Nominee[] {
+export function rankNominees(all: Map<string, Nominee>, skip: Set<string>, minEvents = MIN_EVENTS): Nominee[] {
   return [...all.values()]
-    .filter((n) => n.events.size >= MIN_EVENTS && !skip.has(n.address.toLowerCase()))
+    .filter((n) => n.events.size >= minEvents && !skip.has(n.address.toLowerCase()))
     .sort((a, b) => b.events.size - a.events.size || b.usdc - a.usdc);
 }
 
