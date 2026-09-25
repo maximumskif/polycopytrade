@@ -34,6 +34,11 @@ import type { TrackedWallet } from "../wallets";
 // reproducible; recorded as `historyStart` in wallets.ts and wallet_scores.
 export const CONFIRM_HISTORY_START = 1782259200;
 export const CONFIRM_HISTORY_PAGES = 40;
+// The later-anchor retry only runs for wallets too active for 40 pages to
+// span the default window; item 55's tennis pass left 4 of 15 unconfirmed
+// even after the retry. Since item 57 (100ms pacing) 120 pages (~60K
+// fills) costs well under a minute, so the retry gets 3x the budget.
+export const CONFIRM_RETRY_HISTORY_PAGES = 120;
 
 // Retry anchor rule (2026-09-24). Item 42 retried truncated soccer wallets
 // by hand with `--from` ~30 days back (Zzzz87 from 2026-08-25). Automated,
@@ -181,18 +186,19 @@ export async function confirmWallet(
   const attempts: ScoringAttempt[] = [];
   let anchor: number | null = opts.historyStart ?? CONFIRM_HISTORY_START;
   while (anchor !== null && attempts.length < 2) {
+    const pages = attempts.length === 0 ? historyPages : Math.max(historyPages, CONFIRM_RETRY_HISTORY_PAGES);
     const { score, activity } = await deps.scoreAnchored({
       address: wallet.address,
       label: wallet.label,
       archetype: "unclassified",
       source: "walletConfirmation",
-      historyPages,
+      historyPages: pages,
       historyStart: anchor,
     });
     const attempt: ScoringAttempt = {
       method: "anchored",
       historyStart: anchor,
-      historyPages,
+      historyPages: pages,
       truncated: isTruncated(latestActivityTs, newestTimestamp(activity)),
       fills: activity.length,
       score,

@@ -49,7 +49,7 @@ Worktree ready: $WT (branch $name from $BASE @ $(git -C "$WT" rev-parse --short 
 Share the main checkout's rate limiter (and API cache) when calling the API from here:
   export POLYCOPY_SHARED_RATELIMIT_PATH=$MAIN/data/api-ratelimit.db
   export POLYCOPY_API_CACHE_PATH=$MAIN/data/api-cache.db
-Verify: npm test && npx tsc --noEmit -p . && npx eslint <changed files>
+Verify: npm test && npm run typecheck && npx eslint <changed files>
 Merge (from the coordinating session): scripts/agent-worktree.sh merge $name
 MSG
     ;;
@@ -77,7 +77,7 @@ MSG
       die "tests FAIL on $BASE after the merge (full log: $log) -- fix forward on $BASE or revert the picked commits"
     fi
     grep -E '^# (tests|pass|fail)' "$log" | sed 's/^/  /'; rm -f "$log"
-    (cd "$MAIN" && npx tsc --noEmit -p .) || die "typecheck failed on $BASE after the merge"
+    (cd "$MAIN" && npm run -s typecheck) || die "typecheck failed on $BASE after the merge"
     echo "Merged. Restart long-running services only if the change needs it (docs/OPERATIONS.md)."
     ;;
 

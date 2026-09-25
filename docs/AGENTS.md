@@ -115,7 +115,7 @@ Run these in the worktree:
 
 ```
 npm test                          # full suite; report the count (e.g. 293/293)
-npx tsc --noEmit -p .
+npm run typecheck
 npx eslint <changed files>        # pre-existing any-warnings in src/storage are known; do not "fix" files you do not own
 npx prettier --check <changed files>
 bash -n <changed shell scripts>

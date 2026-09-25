@@ -22,9 +22,11 @@ const notSafeFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures
 test("TokenTxResponseSchema accepts a real pUSD tokentx response", () => {
   const parsed = TokenTxResponseSchema.parse(tokentxFixture);
   assert.equal(parsed.status, "1");
-  assert.equal(parsed.result[0].tokenSymbol, "pUSD");
+  const rows = parsed.result;
+  assert.ok(Array.isArray(rows), "result is the transfer list, not an error string");
+  assert.equal(rows[0].tokenSymbol, "pUSD");
   // The real first entry is a mint: from the zero address, not a real depositor.
-  assert.equal(parsed.result[0].from, "0x0000000000000000000000000000000000000000");
+  assert.equal(rows[0].from, "0x0000000000000000000000000000000000000000");
 });
 
 test("TransactionReceiptEnvelopeSchema accepts a real eth_getTransactionReceipt response", () => {

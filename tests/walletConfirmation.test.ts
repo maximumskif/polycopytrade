@@ -21,6 +21,7 @@ import {
   nextRetryAnchor,
   qualityFailureReason,
   retryAnchorFor,
+  CONFIRM_RETRY_HISTORY_PAGES,
   screenAndConfirm,
   toWalletScoreRecord,
   type ConfirmDeps,
@@ -208,6 +209,11 @@ test("confirmWallet: truncated -> exactly one retry from the pinned rule's ancho
   assert.deepEqual(
     seen.map((a) => a.truncated),
     [true, false]
+  );
+  assert.deepEqual(
+    calls.map((c) => c.historyPages),
+    [CONFIRM_HISTORY_PAGES, CONFIRM_RETRY_HISTORY_PAGES],
+    "the retry gets the larger page budget"
   );
   assert.equal(verdict.kind, "failed-confirmation"); // retry reached present, but 50 is the cap
 });
