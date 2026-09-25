@@ -224,9 +224,9 @@ function evalPaperResolvedEvents(c: Extract<WatchCondition, { kind: "paperResolv
     .prepare(
       `SELECT COUNT(*) AS orders, COUNT(DISTINCT p.condition_id) AS markets, COUNT(DISTINCT ${EVENT_KEY_SQL}) AS events
        FROM paper_orders p JOIN wallet_activity a ON a.id = p.source_activity_id
-       WHERE p.status IN ('won', 'lost')`
+       WHERE p.status IN ('won', 'lost')${c.walletAddress ? " AND lower(p.wallet_address) = lower(?)" : ""}`
     )
-    .get() as { orders: number; markets: number; events: number };
+    .get(...(c.walletAddress ? [c.walletAddress] : [])) as { orders: number; markets: number; events: number };
   return {
     met: row.events >= c.threshold,
     value: `${row.events} events`,

@@ -47,7 +47,7 @@ export type WatchCondition =
   | { kind: "qualityPoolChanged"; baseline: string[] }
   // Distinct events behind resolved (won/lost) paper_orders, via each
   // order's source fill in wallet_activity.
-  | { kind: "paperResolvedEvents"; threshold: number };
+  | { kind: "paperResolvedEvents"; threshold: number; walletAddress?: string };
 
 export interface WatchEntry {
   id: string; // becomes part of a job name (`watch-<id>`): [a-z0-9-]
@@ -117,5 +117,13 @@ export const WATCHLIST: WatchEntry[] = [
     condition: { kind: "paperResolvedEvents", threshold: 20 },
     action: ["npm", "run", "paper:report"],
     note: "paper:report counts distinct markets; this counts distinct events, the stricter unit.",
+  },
+  {
+    id: "lamyk-forward-test",
+    description: "lamyk's pre-registered forward paper test reaches its evaluation point (>= 20 resolved events)",
+    planRef: "item 64",
+    condition: { kind: "paperResolvedEvents", threshold: 20, walletAddress: "0xc004b035b67be284e0d1db56c39e865df6cac095" },
+    action: ["npm", "run", "paper:report"],
+    note: "Evaluate against item 64's rule exactly: PASS = paper net ROI > 0 AND event-clustered 95% CI lower bound > -10%; else stop paper-trading lamyk.",
   },
 ];
