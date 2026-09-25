@@ -1566,3 +1566,10 @@ Track F stays gated on the user regardless.
       weekly sourcing run (cheap, and it's the only one producing
       candidates), but its output is no longer described as an edge.
       Result JSON: `data/research-results/early-movers-oos-2026-05-28.json`.
+    - Observation 2026-09-25 (not a parameter change): gkeqd's first ~2.5h
+      produced 70 copied fills, **68 in one market** ("Trump renames AI by
+      September 30?", 52 filled / 16 unresolvable -- CLOB history gaps
+      between its rapid small buys, same market so not a biased subset).
+      The registered evaluation counts distinct events and clusters its
+      CI by event, so this counts as one event, but it will dominate
+      gkeqd's dollar P&L -- read paper:report's $ figures with that in mind.
