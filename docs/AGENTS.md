@@ -118,6 +118,7 @@ npm test                          # full suite; report the count (e.g. 293/293)
 npm run typecheck
 npx eslint <changed files>        # pre-existing any-warnings in src/storage are known; do not "fix" files you do not own
 npx prettier --check <changed files>
+npm run format:check              # whole repo, exactly as CI runs it (CI was red 2026-09-09..25 on this alone)
 bash -n <changed shell scripts>
 ```
 

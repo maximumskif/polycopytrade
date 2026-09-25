@@ -49,7 +49,7 @@ Worktree ready: $WT (branch $name from $BASE @ $(git -C "$WT" rev-parse --short 
 Share the main checkout's rate limiter (and API cache) when calling the API from here:
   export POLYCOPY_SHARED_RATELIMIT_PATH=$MAIN/data/api-ratelimit.db
   export POLYCOPY_API_CACHE_PATH=$MAIN/data/api-cache.db
-Verify: npm test && npm run typecheck && npx eslint <changed files>
+Verify: npm test && npm run typecheck && npm run lint && npm run format:check
 Merge (from the coordinating session): scripts/agent-worktree.sh merge $name
 MSG
     ;;
@@ -78,6 +78,10 @@ MSG
     fi
     grep -E '^# (tests|pass|fail)' "$log" | sed 's/^/  /'; rm -f "$log"
     (cd "$MAIN" && npm run -s typecheck) || die "typecheck failed on $BASE after the merge"
+    # CI's other gates (.github/workflows/ci.yml) -- format:check went
+    # unrun here and CI sat red 2026-09-09..25 unnoticed.
+    (cd "$MAIN" && npm run -s lint >/dev/null) || die "lint failed on $BASE after the merge"
+    (cd "$MAIN" && npm run -s format:check >/dev/null) || die "format:check failed on $BASE after the merge (npx prettier --write <files>)"
     echo "Merged. Restart long-running services only if the change needs it (docs/OPERATIONS.md)."
     ;;
 
