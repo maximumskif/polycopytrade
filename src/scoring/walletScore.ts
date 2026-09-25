@@ -147,15 +147,19 @@ export function computeQualityScore(
   return { score: Math.round(score01 * 100), components };
 }
 
-// The project's single definition of a "quality" wallet: zero veto flags
-// and a qualityScore strictly ABOVE the profitability-floor cap. The old
-// `>= 50` bar (duplicated in smartMoneyDivergence.ts/archetypeCohorts.ts)
-// admitted wallets sitting exactly AT the cap -- i.e. both profitability
-// terms below neutral -- which is the "clearly not profitable" case the cap
-// exists to exclude (SDTrading, net -1.7% ROI, passed that way; item 42's
-// soccer pass had 6 of 12 "clean" wallets pinned at exactly 50).
-export function isQualityWallet(score: Pick<WalletScore, "flags" | "qualityScore">): boolean {
-  return score.flags.length === 0 && score.qualityScore > PROFITABILITY_FLOOR_CAP * 100;
+// The project's single definition of a "quality" wallet: zero veto flags,
+// a qualityScore strictly ABOVE the profitability-floor cap, and positive
+// net ROI on the scored window. The old `>= 50` bar (duplicated in
+// smartMoneyDivergence.ts/archetypeCohorts.ts) admitted wallets sitting
+// exactly AT the cap (SDTrading, net -1.7% ROI; item 42's soccer pass had
+// 6 of 12 "clean" wallets pinned at 50). The ROI clause (item 59,
+// 2026-09-25): the cap only applies when BOTH profitability terms are
+// weak, so a money-losing wallet with one middling profitability term and
+// strong hygiene terms could still score above 50 -- 0x3804fb confirmed at
+// 61/100 on ROI -2.3% over 708 events, and a -16.9% ROI wallet screened
+// at 52. A wallet that lost money over the window isn't worth copying.
+export function isQualityWallet(score: Pick<WalletScore, "flags" | "qualityScore" | "roi">): boolean {
+  return score.flags.length === 0 && score.qualityScore > PROFITABILITY_FLOOR_CAP * 100 && score.roi > 0;
 }
 
 // True when a wallet's single most recent activity (any type) is already

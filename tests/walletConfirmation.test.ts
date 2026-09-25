@@ -126,11 +126,15 @@ test("isTruncated: pull ended before the wallet's newest activity", () => {
 
 // --- verdict classification ---
 
-test("qualityFailureReason: == cap is called out as the cap, > cap passes", () => {
-  assert.equal(qualityFailureReason({ flags: [], qualityScore: 51 }), null);
-  assert.match(qualityFailureReason({ flags: [], qualityScore: 50 })!, /profitability-floor cap/);
-  assert.match(qualityFailureReason({ flags: [], qualityScore: 42 })!, /qualityScore=42 <= 50/);
-  assert.match(qualityFailureReason({ flags: ["uncopyable-high-frequency"], qualityScore: 80 })!, /vetoed: uncopyable-high-frequency/);
+test("qualityFailureReason: == cap is called out as the cap, > cap passes, losing money is called out", () => {
+  assert.equal(qualityFailureReason({ flags: [], qualityScore: 51, roi: 0.05 }), null);
+  assert.match(qualityFailureReason({ flags: [], qualityScore: 50, roi: 0.05 })!, /profitability-floor cap/);
+  assert.match(qualityFailureReason({ flags: [], qualityScore: 42, roi: 0.05 })!, /qualityScore=42 <= 50/);
+  assert.match(
+    qualityFailureReason({ flags: ["uncopyable-high-frequency"], qualityScore: 80, roi: 0.05 })!,
+    /vetoed: uncopyable-high-frequency/
+  );
+  assert.match(qualityFailureReason({ flags: [], qualityScore: 61, roi: -0.023 })!, /net ROI -2\.3% -- lost money/);
 });
 
 test("classifyConfirmation: untruncated pass is confirmed; ==50 fails confirmation", () => {

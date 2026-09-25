@@ -385,11 +385,17 @@ test("isCertainlyDormant: no activity at all is certainly dormant", () => {
 });
 
 test("isQualityWallet rejects a score pinned at the profitability cap, accepts one above it", () => {
-  assert.equal(isQualityWallet({ flags: [], qualityScore: 50 }), false);
-  assert.equal(isQualityWallet({ flags: [], qualityScore: 51 }), true);
-  assert.equal(isQualityWallet({ flags: [], qualityScore: 49 }), false);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 50, roi: 0.1 }), false);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 51, roi: 0.1 }), true);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 49, roi: 0.1 }), false);
 });
 
 test("isQualityWallet rejects any veto flag regardless of score", () => {
-  assert.equal(isQualityWallet({ flags: ["dormant"], qualityScore: 90 }), false);
+  assert.equal(isQualityWallet({ flags: ["dormant"], qualityScore: 90, roi: 0.1 }), false);
+});
+
+test("isQualityWallet rejects a money-losing wallet even above the cap (0x3804fb: 61/100 at ROI -2.3%)", () => {
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 61, roi: -0.023 }), false);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 61, roi: 0 }), false);
+  assert.equal(isQualityWallet({ flags: [], qualityScore: 61, roi: 0.001 }), true);
 });

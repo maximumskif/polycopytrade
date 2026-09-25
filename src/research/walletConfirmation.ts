@@ -89,9 +89,10 @@ function pct(x: number): string {
 // Why a score does NOT pass isQualityWallet(), or null if it does. The cap
 // case gets its own wording because it's the one that looked like a pass
 // under the old ">= 50" bar (item 42: 6 of 12 "clean" soccer wallets).
-export function qualityFailureReason(score: Pick<WalletScore, "flags" | "qualityScore">): string | null {
+export function qualityFailureReason(score: Pick<WalletScore, "flags" | "qualityScore" | "roi">): string | null {
   if (isQualityWallet(score)) return null;
   if (score.flags.length) return `vetoed: ${score.flags.join(", ")}`;
+  if (score.roi <= 0) return `net ROI ${pct(score.roi)} -- lost money over the window (qualityScore=${score.qualityScore})`;
   const cap = PROFITABILITY_FLOOR_CAP * 100;
   if (score.qualityScore === cap) return `qualityScore=${cap} is the profitability-floor cap (both profitability terms weak), not a pass`;
   return `qualityScore=${score.qualityScore} <= ${cap}`;
