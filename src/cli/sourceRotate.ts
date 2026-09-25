@@ -1,5 +1,7 @@
-// Track L2 (2026-09-24): weekly category-rotating holders sourcing, run by
-// ops/systemd/polycopytrade-source.timer through `npm run job`. One gamma
+// Track L2 (2026-09-24): weekly sourcing, run by
+// ops/systemd/polycopytrade-source.timer through `npm run job`: the
+// early-movers channel over the 600 largest recently settled markets
+// (added 2026-09-25, item 62), then a holders pass on one gamma
 // tag per ISO-ish week (days since epoch / 7, mod the list), so each
 // category comes around every ROTATION.length weeks with fresh holders.
 // source-wallets-holders already auto-confirms shallow passes (M1), records
@@ -23,9 +25,12 @@ function main() {
   const override = process.argv.find((a) => a.startsWith("--tag="))?.slice("--tag=".length);
   const tag = override ?? tagForWeek(Date.now());
   console.log(`source-rotate: this week's tag is "${tag}"${override ? " (override)" : ""}`);
+  console.log("source-rotate: early movers first (item 62: the only channel that has produced a quality wallet since item 41)");
   if (process.argv.includes("--dry-run")) return;
-  const res = spawnSync("npm", ["run", "-s", "source-wallets-holders", "--", `--tag=${tag}`], { stdio: "inherit" });
-  process.exit(res.status ?? 1);
+  // Both run even if one fails; the job's exit code reports the worst.
+  const early = spawnSync("npm", ["run", "-s", "source-early-movers", "--", "--markets=600"], { stdio: "inherit" });
+  const holders = spawnSync("npm", ["run", "-s", "source-wallets-holders", "--", `--tag=${tag}`], { stdio: "inherit" });
+  process.exit(Math.max(early.status ?? 1, holders.status ?? 1));
 }
 
 if (require.main === module) main();
