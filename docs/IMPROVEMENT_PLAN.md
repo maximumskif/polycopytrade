@@ -40,9 +40,10 @@ sourcing continues through category-targeted holders passes (items 42,
   resolved events (`watch:check` entry `lamyk-forward-test`).
 - Quality pool: 13 by `isQualityWallet` (early-movers channel, items
   62-64, supplied 9); CIs clear zero only for lamyk (in-sample). The
-  channel's own out-of-sample test (item 67) FAILED its pre-registered
-  rule (+6.5% ROI, CI [-12.2%, 28.4%]) -- so the forward paper tests are
-  the deciding evidence. Weekly `rescore-pool` keeps the pool current.
+  channel's own pre-registered out-of-sample tests FAILED in two
+  independent windows (items 67-68: +6.5% [-12.2%, 28.4%]; +1.8% [-7.9%,
+  10.2%]) -- it screens out bad traders but finds breakeven ones, so the
+  forward paper tests are the deciding evidence. Weekly `rescore-pool` keeps the pool current.
 
 **Closed, don't revisit without a specific reason**:
 - Track G.20 (funding-source clustering, items 36-38) — 41/95 resolved,
@@ -1592,3 +1593,19 @@ Track F stays gated on the user regardless.
       still decide. If v2 FAILS, the early-movers channel is recorded as
       showing no out-of-sample edge in two independent windows, and stays
       in weekly sourcing only as a candidate generator for forward tests.
+    - **Result (run 2026-09-25, 85 min): FAIL.** 1500 window-A markets, 146
+      with a move; 60 nominees, 16 controls.
+      | group | scored | truncated | no window-B trials | eq-wt ROI | 95% CI | wallets ROI > 0 |
+      |---|---|---|---|---|---|---|
+      | nominees (primary) | 44 | 14 | 2 | **+1.8%** | **[-7.9%, 10.2%]** | 26/44 |
+      | control | 8 | 3 | 5 | -15.1% | [-26.9%, -4.0%] | 3/8 |
+      **Per the reading fixed above: the early-movers channel shows no
+      out-of-sample edge in two independent windows** (item 67 +6.5%
+      [-12.2%, 28.4%]; item 68 +1.8% [-7.9%, 10.2%]). It stays in weekly
+      sourcing only as a candidate generator for forward tests.
+      Secondary (reported, not a pass criterion): nominees beat the
+      control by 16.8pp and the control's CI is entirely negative --
+      the "early winning buys" filter screens OUT bad longshot buyers, but
+      what's left is roughly breakeven, not profitable. The 120-page
+      pulls cut truncation (16 -> 14 of 60) only slightly.
+      Result JSON: `data/research-results/early-movers-oos-2026-01-28.json`.
