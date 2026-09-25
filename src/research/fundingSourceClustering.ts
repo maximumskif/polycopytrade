@@ -48,7 +48,13 @@
 
 import "dotenv/config";
 import { TRACKED_WALLETS } from "../wallets";
-import { getEarliestIncomingTokenTransfer, getTransactionReceiptSender, getSafeOwners, PUSD_CONTRACT, USDC_E_CONTRACT } from "../markets/polygon/client";
+import {
+  getEarliestIncomingTokenTransfer,
+  getTransactionReceiptSender,
+  getSafeOwners,
+  PUSD_CONTRACT,
+  USDC_E_CONTRACT,
+} from "../markets/polygon/client";
 
 interface WalletFundingResult {
   wallet: (typeof TRACKED_WALLETS)[number];
@@ -123,7 +129,9 @@ export async function main() {
   for (const wallet of wallets) {
     const result = await traceFundingHop(wallet);
     results.push(result);
-    const status = result.authorizingAddress ? `authorizingAddress=${result.authorizingAddress} (via ${result.method})` : `unknown (${result.reason})`;
+    const status = result.authorizingAddress
+      ? `authorizingAddress=${result.authorizingAddress} (via ${result.method})`
+      : `unknown (${result.reason})`;
     console.log(`[${wallet.label}] ${status}`);
   }
 
@@ -137,13 +145,17 @@ export async function main() {
 
   const clusters = [...byAuthorizer.entries()].filter(([, group]) => group.length >= 2);
   const resolved = results.filter((r) => r.authorizingAddress).length;
-  console.log(`\n=== ${resolved}/${results.length} wallets resolved to an authorizing address; ${clusters.length} shared-funder cluster(s) found ===`);
+  console.log(
+    `\n=== ${resolved}/${results.length} wallets resolved to an authorizing address; ${clusters.length} shared-funder cluster(s) found ===`
+  );
   for (const [address, group] of clusters) {
     console.log(`\nauthorizingAddress=${address} funds ${group.length} tracked wallets:`);
     for (const r of group) console.log(`  ${r.wallet.label}`);
   }
   if (clusters.length === 0) {
-    console.log("\nNo tracked wallet shares its authorizing address with another -- clean negative, not starvation: every resolved wallet got a real answer.");
+    console.log(
+      "\nNo tracked wallet shares its authorizing address with another -- clean negative, not starvation: every resolved wallet got a real answer."
+    );
   }
 }
 

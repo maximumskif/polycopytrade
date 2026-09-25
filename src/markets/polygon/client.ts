@@ -156,7 +156,14 @@ async function requestJson(url: string, opts: { timeoutMs?: number; maxRetries?:
 // confirmed-observed value — a broader string match risks silently
 // swallowing a real, non-retryable error under the same generic wording.
 function isEtherscanRateLimitBody(body: unknown): boolean {
-  return typeof body === "object" && body !== null && "status" in body && "message" in body && (body as { status: unknown }).status === "0" && (body as { message: unknown }).message === "NOTOK";
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "status" in body &&
+    "message" in body &&
+    (body as { status: unknown }).status === "0" &&
+    (body as { message: unknown }).message === "NOTOK"
+  );
 }
 
 function requireApiKey(explicit: string | undefined): string {
@@ -177,7 +184,11 @@ export interface TokenTransfersOptions {
 // module=account&action=tokentx — ERC-20 transfer events for `address`,
 // optionally filtered to one token contract. Confirmed live 2026-09-15
 // (see file header).
-export async function getTokenTransfers(address: string, contractAddress: string, opts: TokenTransfersOptions = {}): Promise<TokenTransfer[]> {
+export async function getTokenTransfers(
+  address: string,
+  contractAddress: string,
+  opts: TokenTransfersOptions = {}
+): Promise<TokenTransfer[]> {
   const apiKey = requireApiKey(opts.apiKey);
   const qs = new URLSearchParams({
     chainid: String(POLYGON_CHAIN_ID),
@@ -211,7 +222,11 @@ export async function getTokenTransfers(address: string, contractAddress: string
 // signal fundingHop.ts needs (the mint/deposit event that started this
 // wallet's real activity), not just the earliest transfer of any direction.
 // Returns undefined if the wallet has never received this token.
-export async function getEarliestIncomingTokenTransfer(address: string, contractAddress: string, opts: TokenTransfersOptions = {}): Promise<TokenTransfer | undefined> {
+export async function getEarliestIncomingTokenTransfer(
+  address: string,
+  contractAddress: string,
+  opts: TokenTransfersOptions = {}
+): Promise<TokenTransfer | undefined> {
   const transfers = await getTokenTransfers(address, contractAddress, { ...opts, sort: "asc", offset: opts.offset ?? 25 });
   return transfers.find((t) => t.to.toLowerCase() === address.toLowerCase());
 }

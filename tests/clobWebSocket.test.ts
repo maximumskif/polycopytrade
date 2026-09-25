@@ -8,7 +8,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { parseMarketMessages, createBookState, applyPriceChangeEntry, toBookLevels, BookMessageSchema, PriceChangeMessageSchema } from "../src/depthShift/clobWebSocket";
+import {
+  parseMarketMessages,
+  createBookState,
+  applyPriceChangeEntry,
+  toBookLevels,
+  BookMessageSchema,
+  PriceChangeMessageSchema,
+} from "../src/depthShift/clobWebSocket";
 
 const bookFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/clob-ws-book.sample.json"), "utf8"));
 const priceChangeFixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/clob-ws-price-change.sample.json"), "utf8"));
@@ -62,7 +69,7 @@ test("applyPriceChangeEntry sets a new level's size", () => {
   assert.equal(state.bids.get(entry.price), Number(entry.size));
 });
 
-test("applyPriceChangeEntry removes a level on a real live-captured size=\"0\" entry", () => {
+test('applyPriceChangeEntry removes a level on a real live-captured size="0" entry', () => {
   const state = createBookState(BookMessageSchema.parse(bookFixture));
   state.bids.set("0.14", 87.4); // seed a level matching the real fixture's price, so removal is observable
   const entry = PriceChangeMessageSchema.parse(zeroSizeFixture).price_changes.find((c) => c.asset_id === TRACKED_ASSET)!;

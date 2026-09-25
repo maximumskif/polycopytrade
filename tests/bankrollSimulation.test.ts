@@ -79,7 +79,12 @@ test("simulateBankroll: maxStakeFraction caps the stake even when Kelly suggests
   // maxStakeFraction should visibly cap growth per bet.
   const bets = [{ won: true, price: 0.5 }];
   const uncapped = simulateBankroll(bets, { pWinEstimate: 0.999, kellyFractionMultiplier: 1, maxStakeFraction: 1, startingBankroll: 1000 });
-  const capped = simulateBankroll(bets, { pWinEstimate: 0.999, kellyFractionMultiplier: 1, maxStakeFraction: 0.05, startingBankroll: 1000 });
+  const capped = simulateBankroll(bets, {
+    pWinEstimate: 0.999,
+    kellyFractionMultiplier: 1,
+    maxStakeFraction: 0.05,
+    startingBankroll: 1000,
+  });
   assert.ok(capped.finalBankroll < uncapped.finalBankroll, "capped stake should grow the bankroll less than uncapped");
 });
 

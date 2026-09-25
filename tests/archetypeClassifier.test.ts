@@ -142,7 +142,9 @@ test("a single large order fragmented into many near-instant fills still classif
   const smallTrials = Array.from({ length: 3 }, (_, i) =>
     trial({ conditionId: `small${i}`, eventKey: `small-event-${i}`, usdcStaked: 50, netReturn: 5, entryTimestamp: NOW - (3 - i) * DAY })
   );
-  const smallActivity = smallTrials.map((t) => activityRow({ conditionId: t.conditionId, timestamp: t.entryTimestamp, usdcSize: t.usdcStaked }));
+  const smallActivity = smallTrials.map((t) =>
+    activityRow({ conditionId: t.conditionId, timestamp: t.entryTimestamp, usdcSize: t.usdcStaked })
+  );
 
   const trials = [...bigOrderFills, ...smallTrials];
   const activity = [...bigOrderActivity, ...smallActivity];

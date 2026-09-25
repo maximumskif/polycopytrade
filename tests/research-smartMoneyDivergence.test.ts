@@ -79,7 +79,9 @@ test("cheapPrefilter: election-only proxy (>70% politics-titled BUYs) fails", ()
     ...Array.from({ length: 8 }, (_, i) =>
       activity({ conditionId: `p${i}`, eventSlug: `pe${i}`, title: "Will the President win?", timestamp: NOW })
     ),
-    ...Array.from({ length: 2 }, (_, i) => activity({ conditionId: `s${i}`, eventSlug: `se${i}`, title: "Team A vs. Team B", timestamp: NOW })),
+    ...Array.from({ length: 2 }, (_, i) =>
+      activity({ conditionId: `s${i}`, eventSlug: `se${i}`, title: "Team A vs. Team B", timestamp: NOW })
+    ),
   ];
   const result = cheapPrefilter(rows, NOW);
   assert.equal(result.pass, false);

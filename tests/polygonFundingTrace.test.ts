@@ -36,7 +36,10 @@ test("TransactionReceiptEnvelopeSchema accepts a real eth_getTransactionReceipt 
 });
 
 test("topicToAddress extracts the low-order 20 bytes from a 32-byte topic", () => {
-  assert.equal(topicToAddress("0x0000000000000000000000001517e971652da29ee9aeb798d95b215603e73c80"), "0x1517e971652da29ee9aeb798d95b215603e73c80");
+  assert.equal(
+    topicToAddress("0x0000000000000000000000001517e971652da29ee9aeb798d95b215603e73c80"),
+    "0x1517e971652da29ee9aeb798d95b215603e73c80"
+  );
 });
 
 test("findUserOperationSender finds the real authorizing account in a real deposit transaction's logs", () => {
@@ -54,7 +57,9 @@ test("findUserOperationSender returns null when no UserOperationEvent is present
 
 test("decodeErc20Transfer decodes the real pUSD mint log from the receipt fixture", () => {
   const parsed = TransactionReceiptEnvelopeSchema.parse(receiptFixture);
-  const mintLog = parsed.result!.logs.find((l) => l.topics[0]?.toLowerCase() === ERC20_TRANSFER_TOPIC0 && l.address.toLowerCase() === "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb");
+  const mintLog = parsed.result!.logs.find(
+    (l) => l.topics[0]?.toLowerCase() === ERC20_TRANSFER_TOPIC0 && l.address.toLowerCase() === "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb"
+  );
   assert.ok(mintLog);
   const decoded = decodeErc20Transfer(mintLog!);
   assert.ok(decoded);

@@ -134,7 +134,9 @@ export function classifyArchetype(score: WalletScore, trials: BacktestTrial[], a
 
   const marketsPerEvent = sr.distinctEvents > 0 ? sr.distinctMarkets / sr.distinctEvents : 0;
   if (marketsPerEvent >= LADDER_MIN_MARKETS_PER_EVENT) {
-    reasons.push(`${marketsPerEvent.toFixed(1)} markets per event (>= ${LADDER_MIN_MARKETS_PER_EVENT}) — many rungs of the same real event`);
+    reasons.push(
+      `${marketsPerEvent.toFixed(1)} markets per event (>= ${LADDER_MIN_MARKETS_PER_EVENT}) — many rungs of the same real event`
+    );
     return { archetype: "ladder-harvester", confidence: 0.7, reasons };
   }
 
@@ -150,7 +152,9 @@ export function classifyArchetype(score: WalletScore, trials: BacktestTrial[], a
   // conviction").
   const looksLikeFewLargeOrders = orderCount > 0 && orderCount <= WHALE_MAX_ORDERS && avgOrderStakeUsdc >= WHALE_MIN_AVG_ORDER_STAKE_USDC;
   if (looksLikeFewLargeOrders && isSportsDominant) {
-    reasons.push(`${orderCount} real orders (<= ${WHALE_MAX_ORDERS}), avg order stake $${avgOrderStakeUsdc.toFixed(0)}, ${(dominant!.share * 100).toFixed(0)}% sports by event`);
+    reasons.push(
+      `${orderCount} real orders (<= ${WHALE_MAX_ORDERS}), avg order stake $${avgOrderStakeUsdc.toFixed(0)}, ${(dominant!.share * 100).toFixed(0)}% sports by event`
+    );
     return { archetype: "live-sports-whale", confidence: 0.6, reasons };
   }
   if (looksLikeFewLargeOrders && score.concentrationTopEventShare >= WHALE_MIN_TOP_EVENT_SHARE) {
