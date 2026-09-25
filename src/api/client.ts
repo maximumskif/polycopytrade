@@ -76,7 +76,29 @@ function sharedSlots(): SlotReserver | null {
   return defaultSlotStore;
 }
 
-const rateLimiter = new RateLimiter(1100, sharedSlots);
+// Per-host minimum gap between requests (shared across processes via K2).
+// Was a flat 1100ms (~0.9 req/s) everywhere -- 20-100x under Polymarket's
+// documented limits, checked 2026-09-25 at docs.polymarket.com/quickstart/
+// introduction/rate-limits (per IP, per 10s): data-api general 1000,
+// /trades 200, /positions 150; gamma general 4000, /markets 300, /events
+// 500; CLOB /prices-history 1000, /book 1500. Over-limit requests are
+// throttled by Cloudflare, and a 429 still gets requestJson's backoff.
+// 100ms (10 req/s per host) stays under the tightest of those (/positions,
+// 15/s) with margin. POLYCOPY_MIN_GAP_MS overrides every host (e.g. 1100
+// to restore the old pacing).
+const HOST_MIN_GAP_MS: Record<string, number> = {
+  "data-api.polymarket.com": 100,
+  "gamma-api.polymarket.com": 100,
+  "clob.polymarket.com": 100,
+};
+const DEFAULT_MIN_GAP_MS = 1100;
+function minGapFor(host: string): number {
+  const override = Number(process.env.POLYCOPY_MIN_GAP_MS);
+  if (Number.isFinite(override) && override >= 0 && process.env.POLYCOPY_MIN_GAP_MS !== "") return override;
+  return HOST_MIN_GAP_MS[host] ?? DEFAULT_MIN_GAP_MS;
+}
+
+const rateLimiter = new RateLimiter(minGapFor, sharedSlots);
 
 let cacheOverride: ApiResponseCache | null | undefined;
 let defaultCache: ApiResponseCache | null | undefined;

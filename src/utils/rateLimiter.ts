@@ -22,9 +22,13 @@ export class RateLimiter {
   // `shared` is a getter, not an instance, so the store can be opened
   // lazily (and swapped in tests) -- returning null means "in-process only".
   constructor(
-    private readonly minGapMs: number,
+    private readonly minGap: number | ((key: string) => number),
     private readonly shared?: () => SlotReserver | null
   ) {}
+
+  private gapFor(key: string): number {
+    return typeof this.minGap === "number" ? this.minGap : this.minGap(key);
+  }
 
   async wait(key: string): Promise<void> {
     const slot = this.reserveShared(key);
@@ -35,7 +39,7 @@ export class RateLimiter {
       return;
     }
     const last = this.lastCallAt.get(key) ?? 0;
-    const wait = last + this.minGapMs - Date.now();
+    const wait = last + this.gapFor(key) - Date.now();
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     this.lastCallAt.set(key, Date.now());
   }
@@ -45,7 +49,7 @@ export class RateLimiter {
     const reserver = this.shared();
     if (!reserver) return null;
     try {
-      return reserver.reserve(key, this.minGapMs);
+      return reserver.reserve(key, this.gapFor(key));
     } catch (err) {
       if (!this.warnedFallback) {
         console.error(
