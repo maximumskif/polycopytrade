@@ -85,6 +85,12 @@ async function main() {
     }
   }
   printVerdicts(outcomes);
+  // One-line result for `npm run jobs` (see lastLogLine's SUMMARY_LINE).
+  const count = (k: PipelineOutcome["kind"]) => outcomes.filter((o) => o.kind === k).length;
+  console.log(
+    `\nSummary: ${outcomes.length} wallet(s) -> ${count("confirmed-quality")} confirmed quality / ` +
+      `${count("failed-confirmation")} failed / ${count("unconfirmed-truncated")} unconfirmed (truncated) / ${count("error")} errors`
+  );
 }
 
 if (require.main === module) {

@@ -180,6 +180,14 @@ export function runDuration(
 // start/finish lines are skipped unless the command printed nothing -- the
 // ending is already shown via state/exit code, and the command's last words
 // (e.g. an error message) are the useful part.
+// Lines that are never the useful "last words": node's SQLite
+// ExperimentalWarning pair, API retry chatter, and cache stats.
+const NOISE_LINE = /ExperimentalWarning|node --trace-warnings|^\[api\]|^\[api-cache\]|^\[rate-limit\]/;
+const SUMMARY_LINE = /^Summary:/;
+function isNoiseLine(l: string): boolean {
+  return NOISE_LINE.test(l.trim());
+}
+
 export function lastLogLine(chunk: string, maxLen = 100): string {
   const lines = chunk
     .split("\n")
@@ -193,8 +201,12 @@ export function lastLogLine(chunk: string, maxLen = 100): string {
       return afterCr.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trimEnd();
     })
     .filter((l) => l.trim().length > 0);
-  const own = lines.filter((l) => !l.startsWith(WRAPPER_LOG_PREFIX));
-  const last = own.pop() ?? lines.pop() ?? "";
+  const own = lines.filter((l) => !l.startsWith(WRAPPER_LOG_PREFIX) && !isNoiseLine(l));
+  // A script's own one-line result beats whatever it printed last
+  // (2026-09-25, to keep check-ins cheap: `npm run jobs` should answer
+  // "what did it find" without opening the log).
+  const summary = [...own].reverse().find((l) => SUMMARY_LINE.test(l));
+  const last = summary ?? own.pop() ?? lines.pop() ?? "";
   return last.length > maxLen ? `${last.slice(0, maxLen - 1)}…` : last;
 }
 

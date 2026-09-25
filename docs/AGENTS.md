@@ -140,8 +140,10 @@ real pull would take 40 minutes. Pure logic needs unit tests in `tests/`
 
 ## Report format
 
-Keep the final report to the coordinator short. It becomes the
-`docs/IMPROVEMENT_PLAN.md` entry, so include:
+Keep the final report to the coordinator short -- **aim for 25 lines or
+fewer** (2026-09-25: long reports cost the coordinator tokens on every
+read; put detail in commit messages and docs, which it can open if
+needed). It becomes the `docs/IMPROVEMENT_PLAN.md` entry, so include:
 
 1. Commit hashes (oldest first) and the branch.
 2. Files changed, new versus modified, one line each.

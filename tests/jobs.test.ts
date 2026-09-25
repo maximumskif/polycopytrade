@@ -165,3 +165,16 @@ test("isLabeledQualityWallet: label convention, negations excluded", () => {
   assert.ok(!isLabeledQualityWallet("someone — not a QUALITY WALLET (veto flag)"));
   assert.ok(!isLabeledQualityWallet("someone — NOT QUALITY WALLET"));
 });
+
+test("lastLogLine prefers a Summary: line and skips warnings/api chatter", () => {
+  const log = [
+    "scoring [0x1] a...",
+    "Summary: 883 raw sightings -> 0 confirmed quality",
+    "[api-cache] 3 hits, 9 misses, 2 stored",
+    "(node:1) ExperimentalWarning: SQLite is an experimental feature",
+    "(Use `node --trace-warnings ...` to show where the warning was created)",
+    "[api] gamma-api.polymarket.com network (attempt 1): request timed out",
+  ].join("\n");
+  assert.equal(lastLogLine(log), "Summary: 883 raw sightings -> 0 confirmed quality");
+  assert.equal(lastLogLine("working\n[api] data-api 429 (attempt 1)\n"), "working");
+});
