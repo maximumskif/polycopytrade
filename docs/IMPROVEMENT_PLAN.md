@@ -1340,3 +1340,32 @@ Track F stays gated on the user regardless.
     output, zero 429s. Combined with K4 (item 56), a candidate that took
     ~20 min now takes well under a minute; the remaining cost is request
     latency (~250ms, sequential), not pacing.
+
+58. ✅ **Done 2026-09-25. Track K5 (new): closed-positions screen -- built,
+    validated, kept OPT-IN (`--screen=positions`).** Parallel agent,
+    merged as 3 commits. Idea: screen candidates from data-api
+    `/closed-positions` (realized P&L per position, no market lookups)
+    instead of 4 `/activity` pages + gamma lookups. Findings: stake =
+    `totalBought`x`avgPrice` matches the wallet's BUY fills; **losing
+    positions mostly never appear in `/closed-positions`** (they only
+    show once redeemed) so `/positions?redeemable=true` is needed too,
+    and those carry no close time (gamma lookups needed for real close
+    times). Validated read-only against 30 wallets in the main DB's
+    `wallet_scores`: vs anchored confirmations the positions screen
+    missed 3 of the 4 confirmed passes (activity screen missed 0), and
+    after K1/K4 it only saved ~7 vs ~10 requests per wallet. Default
+    stays the activity screen. `npm run validate-positions-screen`
+    reproduces the comparison. 337/337 tests.
+
+59. ✅ **Done 2026-09-25. `isQualityWallet` now requires net ROI > 0.**
+    K5's validation surfaced it: the profitability-floor cap only applies
+    when BOTH profitability terms are weak, so a losing wallet with one
+    middling term plus strong hygiene terms could clear 50 --
+    `0x3804fb...` confirmed at 61/100 on ROI -2.3% over 708 events (in the
+    K5 worktree's soccer run), and a -16.9% ROI wallet screened at 52.
+    `qualityFailureReason` names it ("net ROI ... lost money"). The
+    confirmed pool is unaffected (ndb1 +12.1%, HighTempTation +9.3%,
+    vito3corleone +47.7%). 338/338 tests.
+    - Follow-up noticed: `tsconfig.json` includes only `src`, so `tsc`
+      never typechecks `tests/` (a test passing objects missing `roi`
+      compiled fine).
