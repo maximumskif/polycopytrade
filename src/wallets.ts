@@ -1005,4 +1005,54 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     historyPages: 120,
     historyStart: 1786838400, // 2026-08-16 -- auto-confirm anchor
   },
+  // Added 2026-09-25 (item 64): early movers, 80-candidate re-run.
+  // ROI 95% CIs (anchored 2026-06-24): lamyk [15.1%, 66.2%] (clears zero),
+  // BiDiFakePolls [-1.5%, 23.5%], 0x233B [-10.9%, 58.9%], pbshine
+  // [-18.5%, 39.9%], garbagefriends [-7.5%, 21.3%]. MisTKy (ROI 2.0%)
+  // confirmed too but isn't tracked.
+  {
+    address: "0x233bacfb515aad6871027b95c5e4c6166f5c1f2c",
+    label:
+      "0x233BACFB515aaD (early-mover sourced: early winning buys in 4 events, $1246; e.g. MicroStrategy sells any Bitcoin by May 31, 2026? @0.33; Israel announces Lebanon ceasefire extension by June 7? @0.24; Starmer out by June 30, 2026? @0.32) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 57/100 clean, 52.8% win, ROI 21.4%, 144 events, netPnl=$17.6K, medianGapSeconds=132 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
+  {
+    address: "0xc5bdf06de8ac9e1a904408d101c0cdc86571ceaa",
+    label:
+      "garbagefriends (early-mover sourced: early winning buys in 4 events, $460; e.g. MicroStrategy sells any Bitcoin by May 31, 2026? @0.33; Russia x Ukraine ceasefire by May 31, 2026? @0.33; US x Iran Effective Ceasefire by July 31? @0.20) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 59/100 clean, 55.4% win, ROI 6.2%, 187 events, netPnl=$4.2K, medianGapSeconds=81 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
+  {
+    address: "0x9def9524630e31ff90f884eed32c3eecfbf8d1a5",
+    label:
+      "pbshine (early-mover sourced: early winning buys in 3 events, $3490; e.g. Starmer out by June 30, 2026? @0.29; Will WTI Crude Oil (WTI) hit (LOW) $85 in May? @0.35; Will LeBron James play for the Philadelphia 76ers in 2026-27? @0.10) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 60/100 clean, 39.6% win, ROI 11.6%, 128 events, netPnl=$22.9K, medianGapSeconds=40 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
+  {
+    address: "0xd24b95551eb288ff82bb625dcd7f32f62abdef76",
+    label:
+      "BiDiFakePolls (early-mover sourced: early winning buys in 3 events, $2729; e.g. Starmer out by June 30, 2026? @0.35; Will Oh Se-hoon win the 2026 Seoul Mayoral Election @0.13; Will Abelardo de la Espriella win the 1st round of the 2026 Colombian presidential election? @0.26) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 67/100 clean, 61.6% win, ROI 12.3%, 115 events, netPnl=$30.1K, medianGapSeconds=132 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
+  {
+    address: "0xc004b035b67be284e0d1db56c39e865df6cac095",
+    label:
+      "lamyk (early-mover sourced: early winning buys in 3 events, $1467; e.g. US announces new Iran agreement/ceasefire extension by June 15? @0.32; Will Kai and Speed beat the Minecraft challenge by August 17? @0.20; Will Claude Fable 5 be restored for US customers by July 1? @0.19) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 70/100 clean, 71.2% win, ROI 40.2%, 70 events, netPnl=$19.7K, medianGapSeconds=1248 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
 ];
