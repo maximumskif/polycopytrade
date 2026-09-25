@@ -39,8 +39,10 @@ sourcing continues through category-targeted holders passes (items 42,
 - `lamyk` forward paper test (item 64) -- pre-registered; evaluate at 20
   resolved events (`watch:check` entry `lamyk-forward-test`).
 - Quality pool: 13 by `isQualityWallet` (early-movers channel, items
-  62-64, supplied 9); CIs clear zero only for lamyk. Weekly
-  `rescore-pool` keeps them current.
+  62-64, supplied 9); CIs clear zero only for lamyk (in-sample). The
+  channel's own out-of-sample test (item 67) FAILED its pre-registered
+  rule (+6.5% ROI, CI [-12.2%, 28.4%]) -- so the forward paper tests are
+  the deciding evidence. Weekly `rescore-pool` keeps the pool current.
 
 **Closed, don't revisit without a specific reason**:
 - Track G.20 (funding-source clustering, items 36-38) — 41/95 resolved,
@@ -1546,3 +1548,21 @@ Track F stays gated on the user regardless.
       with ROI > 0 in each group.
     - One run, no parameter changes after seeing results; any variant
       would be a new registration.
+    - **Result (run 2026-09-25, 53 min): FAIL.** 1500 window-A markets,
+      150 with a qualifying move; 60 nominees, but only **7** controls
+      qualified (>= 3 events of early losing buys, excluding nominees).
+      | group | scored | truncated | no window-B trials | eq-wt ROI | 95% CI | wallets ROI > 0 |
+      |---|---|---|---|---|---|---|
+      | nominees (primary) | 33 | 16 | 11 | **+6.5%** | **[-12.2%, 28.4%]** | 22/33 |
+      | control | 5 | 1 | 1 | +2.6% | [-22.2%, 27.1%] | 2/5 |
+      Nominee CI lower bound -12.2% < 0 -> **FAIL per the registered
+      rule.** Directionally positive (two-thirds of nominees profitable in
+      the later window, +3.9pp over the control) but not significant; the
+      control is too small to support a comparison, and excluding 16
+      truncated (very active) nominees may bias either way. **Consequence
+      as registered: items 62-64's confirmations are unproven selection
+      results; the forward paper tests (lamyk, gkeqd, BiDiFakePolls --
+      items 64/66) are the deciding evidence.** The channel stays in the
+      weekly sourcing run (cheap, and it's the only one producing
+      candidates), but its output is no longer described as an edge.
+      Result JSON: `data/research-results/early-movers-oos-2026-05-28.json`.
