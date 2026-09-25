@@ -972,4 +972,16 @@ export const TRACKED_WALLETS: TrackedWallet[] = [
     archetype: "unclassified",
     source: "https://polymarket.com/leaderboard/finance/all/profit",
   },
+  // Added 2026-09-25 (IMPROVEMENT_PLAN.md item 62): the first quality
+  // wallet from the early-movers channel (`npm run source-early-movers`),
+  // auto-confirmed by the M1 pipeline. Tracked so the daemon polls it.
+  {
+    address: "0x41583f2efc720b8e2682750fffb67f2806fece9f",
+    label:
+      "Toncar16 (early-mover sourced: early winning buys in 4 events, $1355; e.g. Will US or Israel strike Iran by January 31, 2026? @0.17; Will Iran close the Strait of Hormuz before 2027? @0.27; US announces halt in Iran offensive operations by July 31? @0.28) — CONFIRMED 2026-09-25 on anchored from 2026-06-24, 40 pages (reached present): 58/100 clean, 37.4% win, ROI 14.0%, 87 events, netPnl=$9.1K, medianGapSeconds=192 — QUALITY WALLET",
+    archetype: "unclassified",
+    source: "npm run source-early-movers",
+    historyPages: 40,
+    historyStart: 1782259200, // 2026-06-24 -- auto-confirm anchor
+  },
 ];
