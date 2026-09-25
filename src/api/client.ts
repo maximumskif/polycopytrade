@@ -31,6 +31,8 @@ import {
   HoldersResponseSchema,
   ClosedPositionsResponseSchema,
   OpenPositionsResponseSchema,
+  MarketTradesResponseSchema,
+  type MarketTrade,
   type ClosedPosition,
   type OpenPosition,
   type Activity,
@@ -40,6 +42,7 @@ import {
   type LeaderboardEntry,
   type HoldersGroup,
 } from "./schemas";
+export type { MarketTrade } from "./schemas";
 
 export type { Activity, GammaMarket, GammaEvent, LeaderboardEntry, HoldersGroup, ClosedPosition, OpenPosition };
 
@@ -508,6 +511,43 @@ export async function getMarketsByConditionIds(conditionIds: string[]): Promise<
     pending = notFound;
   }
   return out;
+}
+
+// Early-movers channel (2026-09-25): settled markets, biggest first, whose
+// end date falls in [endDateMin, endDateMax] (YYYY-MM-DD). Not cached --
+// the listing grows as markets close.
+export async function getClosedMarketsByVolume(opts: {
+  endDateMin: string;
+  endDateMax?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<GammaMarket[]> {
+  const qs = new URLSearchParams({
+    closed: "true",
+    order: "volumeNum",
+    ascending: "false",
+    limit: String(opts.limit ?? 100),
+    offset: String(opts.offset ?? 0),
+    end_date_min: opts.endDateMin,
+  });
+  if (opts.endDateMax) qs.set("end_date_max", opts.endDateMax);
+  return validate(
+    MarketsLookupResponseSchema,
+    await requestJson(`${GAMMA_API}/markets?${qs.toString()}`),
+    "GET /markets (closed by volume)"
+  );
+}
+
+// Taker fills in one market, newest first, optionally windowed by
+// timestamp. Not cached (the K1 policy has no rule for trades).
+export async function getMarketTrades(
+  conditionId: string,
+  opts: { start?: number; end?: number; limit?: number; offset?: number } = {}
+): Promise<MarketTrade[]> {
+  const qs = new URLSearchParams({ market: conditionId, limit: String(opts.limit ?? 500), offset: String(opts.offset ?? 0) });
+  if (opts.start !== undefined) qs.set("start", String(opts.start));
+  if (opts.end !== undefined) qs.set("end", String(opts.end));
+  return validate(MarketTradesResponseSchema, await requestJson(`${DATA_API}/trades?${qs.toString()}`), "GET /trades");
 }
 
 // Resolves a username or profile-slug fragment to the proxyWallet address

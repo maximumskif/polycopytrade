@@ -218,3 +218,25 @@ export const OpenPositionSchema = z.object({
 });
 export type OpenPosition = z.infer<typeof OpenPositionSchema>;
 export const OpenPositionsResponseSchema = z.array(OpenPositionSchema);
+
+// data-api /trades?market=<conditionId> rows (checked live 2026-09-25):
+// newest first, offset paging (works past 10K), start/end honored, taker
+// fills only by default. Used by the early-movers sourcing channel.
+export const MarketTradeSchema = z.looseObject({
+  proxyWallet: z.string(),
+  side: z.enum(["BUY", "SELL"]),
+  asset: z.string(),
+  conditionId: z.string(),
+  size: z.number(),
+  price: z.number(),
+  timestamp: z.number(),
+  outcome: z.string().optional(),
+  outcomeIndex: z.number().optional(),
+  slug: z.string().optional(),
+  eventSlug: z.string().optional(),
+  title: z.string().optional(),
+  name: z.string().nullable().optional(),
+  pseudonym: z.string().nullable().optional(),
+});
+export type MarketTrade = z.infer<typeof MarketTradeSchema>;
+export const MarketTradesResponseSchema = z.array(MarketTradeSchema);
