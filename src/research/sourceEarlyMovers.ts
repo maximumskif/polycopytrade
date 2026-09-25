@@ -23,7 +23,7 @@
 // (walletConfirmation.ts), which scores ALL of the wallet's trades, losers
 // included, and applies isQualityWallet (ROI > 0 since item 59).
 //
-// Usage: npm run source-early-movers [-- --days=45] [-- --markets=150]
+// Usage: npm run source-early-movers [-- --days=45] [-- --markets=150] [-- --candidates=15]
 //   [-- --rescore]   (skip the 14-day recently-confirmed dedupe)
 
 import "dotenv/config";
@@ -51,7 +51,7 @@ const HISTORY_DAYS = 30;
 const MAX_CHUNK_SECONDS = 6 * 24 * 3600; // CLOB rejects spans past ~1 week (see volatilityBreakout.ts)
 const PRICE_FIDELITY_MINUTES = 60;
 const MAX_TRADE_PAGES = 8; // 500 fills each, per market
-const MAX_CANDIDATES = 15;
+const DEFAULT_MAX_CANDIDATES = 15;
 const SHALLOW_HISTORY_PAGES = 4;
 const SOURCE = "source-early-movers";
 
@@ -162,6 +162,7 @@ async function main() {
   runMigrations();
   const days = flag("days", 45);
   const marketCount = flag("markets", 150);
+  const maxCandidates = flag("candidates", DEFAULT_MAX_CANDIDATES);
   const endDateMin = new Date(Date.now() - days * 86400 * 1000).toISOString().slice(0, 10);
   const nowSec = Math.floor(Date.now() / 1000);
 
@@ -210,7 +211,7 @@ async function main() {
 
   const outcomes: PipelineOutcome[] = [];
   let dormant = 0;
-  for (const n of ranked.slice(0, MAX_CANDIDATES)) {
+  for (const n of ranked.slice(0, maxCandidates)) {
     const label = `${n.name ?? n.address} (early-mover sourced: early winning buys in ${n.events.size} events, $${n.usdc.toFixed(0)}; e.g. ${n.examples.join("; ")})`;
     const wallet: TrackedWallet = { address: n.address, label, archetype: "unclassified", source: `npm run ${SOURCE}` };
     const base = { address: n.address, label, provenance: wallet.source };
@@ -247,7 +248,7 @@ async function main() {
   const count = (kind: PipelineOutcome["kind"]) => outcomes.filter((o) => o.kind === kind).length;
   console.log(
     `\nSummary: ${Math.min(markets.length, marketCount)} settled markets -> ${withMove} with a move -> ${ranked.length} nominees -> ` +
-      `${Math.min(ranked.length, MAX_CANDIDATES)} scored (${dormant} dormant) -> ${count("confirmed-quality")} confirmed quality / ` +
+      `${Math.min(ranked.length, maxCandidates)} scored (${dormant} dormant) -> ${count("confirmed-quality")} confirmed quality / ` +
       `${count("failed-confirmation")} failed confirmation / ${count("unconfirmed-truncated")} unconfirmed (truncated) / ` +
       `${count("screened-out")} screened out${count("error") ? ` / ${count("error")} errors` : ""}.`
   );
