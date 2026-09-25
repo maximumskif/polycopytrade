@@ -207,3 +207,15 @@ test("resolveOpenOrders books correct P&L for a win (payout = stake / entryPrice
   assert.equal(loss.payoutUsdc, 0);
   assert.equal(loss.pnlUsdc, -100);
 });
+
+test("a fill before activeFrom is never copied (no look-ahead on a new target's historical fills)", async () => {
+  upsertWallet(wallet);
+  insertActivity(wallet.address, [makeActivity({ timestamp: 1000 })]);
+  __setFetchImplForTests(async () => {
+    throw new Error("should never call the API for a pre-activeFrom fill");
+  });
+
+  const result = await processNewFills({ ...target, activeFrom: 1001 });
+  assert.deepEqual(result, { examined: 0, filled: 0, unresolvable: 0 });
+  assert.equal(listPaperOrders(wallet.address).length, 0);
+});

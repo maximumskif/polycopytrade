@@ -1448,3 +1448,36 @@ Track F stays gated on the user regardless.
     - 110 of 125 nominees went unscored at the default cap of 15;
       `--candidates=N` added and an 80-candidate re-run launched (result
       appended below).
+
+64. ✅ **Done 2026-09-25. Early movers, 80-candidate re-run: 6 more
+    confirmed; `lamyk` goes to a pre-registered forward paper test.**
+    `source-early-movers -- --days=120 --markets=1500 --candidates=80`
+    (19 min): 120 nominees, 80 scored (4 dormant) -> 6 confirmed / 8
+    failed / 62 screened out. ROI 95% CIs, anchored from 2026-06-24:
+    | wallet | score | events | ROI | 95% CI | net | maxDD |
+    |---|---|---|---|---|---|---|
+    | **lamyk** | 70 | 70 | **+40.2%** | **[15.1%, 66.2%]** | $19.7K | 2.1% |
+    | BiDiFakePolls | 67 | 115 | +12.3% | [-1.5%, 23.5%] | $30.1K | 2.9% |
+    | 0x233B... | 57 | 144 | +21.4% | [-10.9%, 58.9%] | $17.6K | 12.1% |
+    | pbshine | 60 | 128 | +11.6% | [-18.5%, 39.9%] | $22.9K | 5.2% |
+    | garbagefriends | 59 | 187 | +6.2% | [-7.5%, 21.3%] | $4.2K | 5.8% |
+    | MisTKy (not tracked) | 57 | 102 | +2.0% | [-12.4%, 13.1%] | $64.8K | 4.5% |
+    The five above MisTKy are added to `wallets.ts`. Across items 62-64
+    the channel has 9 confirmed quality wallets (1 hollow, MEPP) -- vs 0
+    from five holders categories.
+    - **lamyk is the first wallet since `0x1b20a0...` whose CI clears
+      zero.** Copy delay is a non-issue (median gap ~21 min; follower
+      slippage +0.0c at +30s, +1.3c at +60s). **Caveat: in-sample.** Its
+      scored window overlaps the window it was *selected* on (early winning
+      buys), so +40% is optimistic by construction; best-of-80 as well.
+    - **Pre-registered forward test (written before any paper result;
+      commit of this entry = registration time):** paper target `lamyk`,
+      $100/fill, 30s delay, no filters, `activeFrom` = 1790325448
+      (2026-09-25T08:37:28Z; new `PaperTradeTarget.activeFrom` so the
+      daemon's first poll of ~200 historical fills can't be "copied" with
+      known outcomes -- a look-ahead leak the engine had for any newly
+      added target). **Evaluate once its paper orders have resolved on
+      >= 20 distinct events (`npm run paper:report`). PASS = paper net ROI
+      > 0 AND the event-clustered 95% CI lower bound > -10%. Anything else
+      = FAIL: stop paper-trading it.** No parameter changes (stake, delay,
+      filters) before evaluation. 345/345 tests.

@@ -25,6 +25,13 @@ export interface PaperTradeTarget {
   minLeaderStakeUsdc?: number;
   stakeUsdc: number;
   delaySeconds: number;
+  // Only copy leader fills at or after this unix time. Added 2026-09-25
+  // (item 64): the daemon's first poll of a newly tracked wallet stores its
+  // last ~200 HISTORICAL fills, which the engine would otherwise "copy"
+  // with already-known outcomes -- look-ahead that would contaminate a
+  // forward test. Unset = copy everything (the original target, whose
+  // history predates this field).
+  activeFrom?: number;
 }
 
 export const PAPER_TRADE_TARGETS: PaperTradeTarget[] = [
@@ -68,5 +75,20 @@ export const PAPER_TRADE_TARGETS: PaperTradeTarget[] = [
     minLeaderStakeUsdc: 5000,
     stakeUsdc: 100,
     delaySeconds: 30,
+  },
+  {
+    // lamyk -- early-movers channel (IMPROVEMENT_PLAN.md item 64). Confirmed
+    // 70/100 clean on an anchored pull from 2026-06-24: 70 events, ROI
+    // +40.2%, event-clustered 95% CI [15.1%, 66.2%], max drawdown 2.1%,
+    // median gap between trades ~21 min; follower slippage ~0 at +30s. That
+    // window overlaps the one it was SELECTED on (early winning buys), so the
+    // number is in-sample; this target is the forward, out-of-sample test,
+    // pre-registered in item 64 before any paper result existed. No filters:
+    // copy every BUY from activeFrom on.
+    address: "0xc004b035b67be284e0d1db56c39e865df6cac095",
+    label: "lamyk (early-mover, forward test)",
+    stakeUsdc: 100,
+    delaySeconds: 30,
+    activeFrom: 1790325448,
   },
 ];

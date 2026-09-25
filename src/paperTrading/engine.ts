@@ -30,7 +30,7 @@ export interface ProcessNewFillsResult {
 }
 
 export async function processNewFills(target: PaperTradeTarget): Promise<ProcessNewFillsResult> {
-  const uncopied = listUncopiedBuyFills(target.address);
+  const uncopied = listUncopiedBuyFills(target.address).filter((f) => target.activeFrom == null || f.timestamp >= target.activeFrom);
   let candidates = target.categoryFilter ? uncopied.filter((f) => categorize(f.title) === target.categoryFilter) : uncopied;
   if (target.excludeTitleKeywords?.length) {
     const excluded = target.excludeTitleKeywords.map((k) => k.toLowerCase());
