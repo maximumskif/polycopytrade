@@ -68,6 +68,11 @@ export const GammaMarketSchema = z.object({
   // src/api/cachePolicy.ts's isFinalizedMarket -- nullable/optional since
   // older markets may not carry it.
   umaResolutionStatus: z.string().nullable().optional(),
+  // When the market actually closed (seen live 2026-09-25 as
+  // "2026-09-25 04:43:35+00" -- not ISO), which can be a week before its
+  // scheduled endDate (tennis). Read only by the K5 positions screen
+  // (src/scoring/positionsScreen.ts) to window unredeemed positions.
+  closedTime: z.string().nullable().optional(),
   volume: z.string().optional(),
   liquidity: z.string().optional(),
 });

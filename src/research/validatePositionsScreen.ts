@@ -133,6 +133,7 @@ async function main() {
           unsettledSkipped: v.unsettledSkipped,
           windowStart: v.windowStart,
           redeemableCapped: v.redeemableCapped,
+          gammaLookups: v.gammaLookups,
           daysSinceLastActivity: v.score.daysSinceLastActivity,
           medianGapSeconds: v.score.medianGapSeconds,
         },

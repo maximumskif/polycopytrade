@@ -6,8 +6,10 @@
 //   1 x /activity (500 newest rows)  -> dormancy + high-frequency median gap
 //   N x /closed-positions (50/page)  -> positions the wallet closed/redeemed
 //   R x /positions?redeemable=true   -> settled positions it never redeemed
+//   G x gamma /markets (batched 50)  -> close time of those unredeemed ones
 //
-// No gamma lookups at all. Screening only decides who gets the anchored
+// Gamma is only asked about unredeemed positions near the window, and
+// those markets are settled, so the K1 cache keeps them for good. Screening only decides who gets the anchored
 // confirmation (walletConfirmation.ts), which is unchanged and still
 // authoritative.
 //
@@ -33,6 +35,15 @@
 // market, while /positions held 1000+ unredeemed curPrice=0 positions.
 // Without them the screen sees mostly winners.
 //
+// Windowing them is the subtle part. /positions has no timestamp, only
+// the market's SCHEDULED endDate, which can be a week after the market
+// actually closed (tennis). The first version windowed by endDate, and on
+// a 1-day closed-positions window it pulled in a week+ of unredeemed
+// losers: ROI -42.6% where the activity screen saw -16.9% (0x076daa,
+// 2026-09-25). So an unredeemed position is kept iff its market's gamma
+// closedTime falls inside the window (endDate only as a fallback when
+// gamma has no closedTime).
+//
 // Known differences from the activity screen (documented, not hidden):
 // - One trial per POSITION instead of per BUY fill. ROI, the event-
 //   clustered CI, concentration and one-shot are unaffected (they sum by
@@ -46,7 +57,7 @@
 //   activity rows". Both are non-reproducible newest-first screens.
 
 import { getActivity, getClosedPositions, getRedeemablePositions, type Activity, type ClosedPosition, type OpenPosition } from "../api/client";
-import { defaultBacktestConfig } from "../backtesting/engine";
+import { defaultBacktestConfig, resolveMarkets } from "../backtesting/engine";
 import { computeStrategyResult } from "../backtesting/statistics";
 import { categorize } from "../research/categorize";
 import type { BacktestTrial, WalletScore } from "../domain/types";
@@ -59,6 +70,10 @@ export const REDEEMABLE_PAGE_SIZE = 500;
 export const MAX_REDEEMABLE_PAGES = 4;
 export const ACTIVITY_PAGE_SIZE = 500;
 const DAY_SECONDS = 86400;
+// A market can close well after its scheduled endDate (slow resolution),
+// so unredeemed positions are looked up on gamma if their endDate is
+// within this slack of the window start.
+export const REDEEMABLE_ENDDATE_SLACK_SECONDS = 14 * DAY_SECONDS;
 
 type PositionFields = Pick<ClosedPosition, "conditionId" | "outcome" | "avgPrice" | "totalBought" | "curPrice" | "title" | "slug" | "eventSlug">;
 
@@ -99,6 +114,14 @@ export function endDateTs(endDate: string | null | undefined): number | null {
   return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
 }
 
+// gamma's closedTime ("2026-09-25 04:43:35+00", not ISO) -> unix seconds.
+export function gammaTimeTs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const iso = value.trim().replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00");
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
+}
+
 export interface PositionTrialsResult {
   trials: BacktestTrial[];
   unsettledSkipped: number;
@@ -107,13 +130,15 @@ export interface PositionTrialsResult {
 
 // `windowStart`: the oldest closed position's timestamp when the closed
 // pages ran out before the wallet's history did, else 0 (whole history).
-// Unredeemed positions are kept only if their market ended inside the
-// window (one day of slack: endDate is a date, `timestamp` a close time).
+// Unredeemed positions are kept only if their market closed inside the
+// window: by `closeTimes` (gamma closedTime, per conditionId) when known,
+// else by endDate with one day of slack.
 export function buildPositionTrials(
   walletAddress: string,
   closed: ClosedPosition[],
   redeemable: OpenPosition[],
-  windowStart: number
+  windowStart: number,
+  closeTimes: ReadonlyMap<string, number> = new Map()
 ): PositionTrialsResult {
   const trials: BacktestTrial[] = [];
   const seen = new Set<string>();
@@ -131,9 +156,13 @@ export function buildPositionTrials(
     const key = `${p.conditionId}:${p.outcome}`;
     if (seen.has(key)) continue;
     const endTs = endDateTs(p.endDate);
-    if (windowStart > 0 && (endTs === null || endTs + DAY_SECONDS < windowStart)) continue;
+    const closeTs = closeTimes.get(p.conditionId) ?? null;
+    if (windowStart > 0) {
+      const inWindow = closeTs !== null ? closeTs >= windowStart : endTs !== null && endTs + DAY_SECONDS >= windowStart;
+      if (!inWindow) continue;
+    }
     seen.add(key);
-    const trial = positionToTrial(walletAddress, p, endTs ?? windowStart);
+    const trial = positionToTrial(walletAddress, p, closeTs ?? endTs ?? windowStart);
     if (trial) {
       trials.push(trial);
       redeemableIncluded++;
@@ -154,10 +183,11 @@ export function scoreFromPositions(
   closed: ClosedPosition[],
   redeemable: OpenPosition[],
   closedExhausted: boolean,
+  closeTimes: ReadonlyMap<string, number> = new Map(),
   nowSeconds = Math.floor(Date.now() / 1000)
 ): { score: WalletScore; trials: BacktestTrial[]; windowStart: number; unsettledSkipped: number; redeemableIncluded: number } {
   const windowStart = windowStartOf(closed, closedExhausted);
-  const { trials, unsettledSkipped, redeemableIncluded } = buildPositionTrials(wallet.address, closed, redeemable, windowStart);
+  const { trials, unsettledSkipped, redeemableIncluded } = buildPositionTrials(wallet.address, closed, redeemable, windowStart, closeTimes);
   const config = defaultBacktestConfig({
     strategyName: "wallet-copy-positions-screen",
     walletAddresses: [wallet.address],
@@ -178,7 +208,8 @@ export interface PositionsScreenResult {
   redeemableIncluded: number;
   unsettledSkipped: number;
   windowStart: number;
-  requests: number; // API calls made (before retries)
+  dataApiRequests: number;
+  gammaLookups: number; // markets asked about (most are K1-cache hits on a re-screen)
   redeemableCapped: boolean; // hit MAX_REDEEMABLE_PAGES while still inside the window
 }
 
@@ -208,11 +239,32 @@ export async function scoreWalletPositions(wallet: TrackedWallet, closedPages = 
     redeemable.push(...batch);
     if (batch.length < REDEEMABLE_PAGE_SIZE) break;
     const oldestEnd = endDateTs(batch[batch.length - 1].endDate);
-    if (windowStart > 0 && oldestEnd !== null && oldestEnd + DAY_SECONDS < windowStart) break;
+    if (windowStart > 0 && oldestEnd !== null && oldestEnd + REDEEMABLE_ENDDATE_SLACK_SECONDS < windowStart) break;
     if (page === MAX_REDEEMABLE_PAGES - 1) redeemableCapped = true;
   }
 
-  const scored = scoreFromPositions(wallet, activity, closed, redeemable, closedExhausted);
+  // Close times only matter when there's a window to place them in.
+  const closeTimes = new Map<string, number>();
+  const lookupIds =
+    windowStart > 0
+      ? redeemable
+          .filter((p) => settlementOf(p.curPrice) !== null)
+          .filter((p) => {
+            const endTs = endDateTs(p.endDate);
+            return endTs === null || endTs + REDEEMABLE_ENDDATE_SLACK_SECONDS >= windowStart;
+          })
+          .map((p) => p.conditionId)
+      : [];
+  const uniqueLookupIds = [...new Set(lookupIds)];
+  if (uniqueLookupIds.length) {
+    const markets = await resolveMarkets(uniqueLookupIds);
+    for (const [id, market] of markets) {
+      const ts = gammaTimeTs(market?.closedTime);
+      if (ts !== null) closeTimes.set(id, ts);
+    }
+  }
+
+  const scored = scoreFromPositions(wallet, activity, closed, redeemable, closedExhausted, closeTimes);
   return {
     score: scored.score,
     activity,
@@ -222,7 +274,8 @@ export async function scoreWalletPositions(wallet: TrackedWallet, closedPages = 
     redeemableIncluded: scored.redeemableIncluded,
     unsettledSkipped: scored.unsettledSkipped,
     windowStart,
-    requests,
+    dataApiRequests: requests,
+    gammaLookups: uniqueLookupIds.length,
     redeemableCapped,
   };
 }
