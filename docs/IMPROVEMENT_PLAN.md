@@ -1303,3 +1303,26 @@ Track F stays gated on the user regardless.
     by starting `polycopytrade-watch.service` by hand: the job ran and
     exited 0 in `npm run jobs`. Install/pause commands in
     `docs/OPERATIONS.md`. All three ride the shared K2 rate limiter.
+
+54. ✅ **Done 2026-09-25. Sourcing dedupes against `wallet_scores`.**
+    `source-wallets` and `source-wallets-holders` now also skip any wallet
+    whose latest confirmed score is under 14 days old
+    (`src/research/recentlyScored.ts`, `RESCORE_AFTER_DAYS`; `--rescore`
+    bypasses) -- previously every run re-scored the same candidates.
+    Matters now that L2's weekly `source-rotate` runs unattended.
+    `backtest` and `follower-delay-demo` load activity through K3's
+    `getScoringActivity`.
+
+56. ✅ **Done 2026-09-25. Track K4 (new): batched market lookups.** The
+    `holders-mlb-tennis` job ran 8h+ -- mostly one or two gamma `/markets`
+    requests per market at ~1.1s each. Checked live: gamma accepts
+    repeated `condition_ids=` params (a comma list returns nothing) and
+    caps responses at 20 unless `limit` is passed; of 100 real ids the
+    batch returned 97, and the other 3 were absent from single lookups
+    too. `getMarketsByConditionIds` (50 per request, closed=true then
+    closed=false for leftovers) + engine `resolveMarkets` replace the
+    per-market loop in both trial builders; finalized markets are cached
+    under the single-lookup key, so both paths share one cache. Live with
+    cache off: vito3corleone `wallet-score` **36s -> 5s, output
+    identical**. 2 new tests (batch == single over 120 mixed ids; shared
+    cache key). 325/325 tests.
