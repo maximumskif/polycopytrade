@@ -1417,3 +1417,14 @@ Track F stays gated on the user regardless.
       `POLYCOPY_*` into the systemd unit (systemd-run starts clean), so a
       job launched from a worktree used the worktree's DB and limiter --
       fixed (`forwardedEnv`, commit in the same merge). 344/344 tests.
+    - **Follow-up checks (same day):** copy delay is fine --
+      `follower-delay-demo -- toncar16 30` (9s total now): entries ~0.30,
+      follower +0.4c worse at +30s (~4pp ROI cost). But the event-clustered
+      **ROI 95% CI is [-20.4%, +48.8%]** over 87 events -- straddles zero,
+      so per the project's rule (same call as ndb1, item 45) it is NOT
+      paper-traded yet. Category split: "other" (geopolitics) 627 trials
+      +$7.1K, politics 17 trials +$2.5K, sports 10 trials -$0.4K. It's in
+      the confirmed pool, so Monday's `rescore-pool` refreshes it weekly;
+      revisit when the CI clears zero.
+    - `source-rotate` (Wednesday timer) now runs early movers before the
+      weekly holders tag (commit `2a28479`).
