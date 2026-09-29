@@ -1,0 +1,13 @@
+# Item 76: 12:00 local = before most US/EU games that day. Persistent=true
+# catches up after WSL was off.
+
+[Unit]
+Description=polycopytrade: daily sharp-odds snapshot (timer)
+
+[Timer]
+OnCalendar=*-*-* 12:00:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

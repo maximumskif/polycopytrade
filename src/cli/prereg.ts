@@ -36,6 +36,7 @@ import { gitState, REPO_ROOT, ResearchResultSchema, sha256, type DateWindow } fr
 import * as weather from "../research/weatherFavorites";
 import * as volatility from "../research/volatilityBreakout";
 import * as calibration from "../research/calibrationScan";
+import * as mmPaper from "../research/mmPaperEval";
 
 const PREREG_DIR = process.env.POLYCOPY_PREREG_DIR
   ? path.resolve(process.env.POLYCOPY_PREREG_DIR)
@@ -64,6 +65,10 @@ const SCRIPTS: Record<string, ScriptSpec> = {
     parseArgs: (argv) => ({ ...calibration.parseArgs(argv) }),
     keySpace: (a) => calibration.resultKeySpace(a as unknown as calibration.Args),
     windowFor: (a) => calibration.requestedWindow(a as unknown as calibration.Args),
+  },
+  "mm-paper-eval": {
+    parseArgs: (argv) => ({ ...mmPaper.parseArgs(argv) }),
+    keySpace: () => mmPaper.resultKeySpace(),
   },
 };
 

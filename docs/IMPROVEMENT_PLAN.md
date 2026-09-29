@@ -1,3 +1,10 @@
+**Active** (as of 2026-09-29, item 76): strategy pivot to market-level
+mispricing. Closed with no edge: calibration/longshots/endgame (71-72),
+take-profit favourites (75), sportsbook taker comparison (74); negRisk
+basket arb (73) pending its 6h scan. Running: paper market making vs
+Pinnacle (76, pre-registered, daily `odds-snapshot` timer; evaluate at
+>= 50 filled games or 2026-10-27). Copy trading is background only.
+
 # Improvement plan (2026-09-05)
 
 Drafted after a full review of the repo (`README.md`, `docs/AUDIT.md`,
@@ -1820,3 +1827,31 @@ Track F stays gated on the user regardless.
       after entry (prices behave like a martingale), so the take-profit
       reshapes the payoff without improving its mean while entry still
       pays spread + fee. Closed.
+
+76. **Running since 2026-09-29, pre-registered. Paper market making
+    against Pinnacle** (user-approved). Item 74 found Polymarket sports
+    asks = Pinnacle fair + spread, so the remaining sports idea is the
+    maker side: resting bids below fair, filled by uninformed takers.
+    - `npm run odds-snapshot` (`src/research/oddsSnapshot.ts`): daily
+      (timer `polycopytrade-odds.timer`, 12:00 local, units in
+      `ops/systemd/`) Pinnacle de-vigged fair values for every upcoming
+      Polymarket game moneyline in 19 leagues (skips leagues with no
+      Polymarket games, so no credit is spent on them; stops below 20
+      credits). Rows without a Pinnacle line are dropped. First run:
+      144 games, 14 credits (474 left). Pinnacle posts lines only close
+      to game day, so later-dated/preseason games (e.g. most NHL/NBA
+      preseason) match on later snapshots.
+    - `npm run mm-paper-eval` (`src/research/mmPaperEval.ts`, 4 tests):
+      per snapshot and side, a 100-share bid at min(fair - 1/2/3/4c,
+      ask - 1c) from the snapshot until the next snapshot or kickoff,
+      replayed against the real trade tape (complement-token trades
+      mapped to 1-p). fill=through = trades strictly below the bid
+      (conservative), fill=touch = at or below (queue ignored). Fills
+      held to resolution, 0 maker fee, rebate ignored.
+    - **Pre-registered** `mm-paper-pinnacle`: margin 2c; pass = CI lower
+      > 0 (through) AND ROI > 0 (touch). Evaluate at >= 50 filled games
+      for 2c/through or 2026-10-27, whichever comes first. PASS -> scope
+      live execution with the user (Track F); FAIL -> maker idea closed
+      at daily-quote cadence.
+    - Latency test (Polymarket lagging Pinnacle moves) needs frequent
+      odds polling -> a paid Odds API plan; not started.

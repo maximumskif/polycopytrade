@@ -1,0 +1,29 @@
+{
+  "schema": "polycopytrade.preregistration/v1",
+  "registration": {
+    "slug": "mm-paper-pinnacle",
+    "createdAt": "2026-09-29T23:51:37.317Z",
+    "gitCommit": "61f0f3d39400e5f5c878a7e0ba5b5feaa678d891",
+    "gitDirty": true,
+    "hypothesis": "Resting bids 2c below Pinnacle's de-vigged fair value on Polymarket game moneylines (quoted from a daily snapshot, pulled at kickoff, held to resolution, 0 maker fee, rebate ignored) earn a positive return after adverse selection, counting only fills where the tape traded strictly through the bid.",
+    "script": "mm-paper-eval",
+    "args": ["--shares=100", "--json=data/research-results/mm-paper.json"],
+    "resolvedArgs": {
+      "in": "data/mm-paper/snapshots.jsonl",
+      "shares": 100,
+      "json": "data/research-results/mm-paper.json"
+    },
+    "window": {
+      "start": "2026-09-29",
+      "end": "2026-10-27"
+    },
+    "select": {
+      "margin": "2"
+    },
+    "metric": "game-clustered ROI on filled shares",
+    "passRule": "ciLowerBound > 0 at fill=through AND roi > 0 at fill=touch",
+    "notes": "Item 76. Evaluate at the FIRST of: margin=2/through has >= 50 distinct filled games, or 2026-10-27 (4 weeks). Registered before any session had resolved (first snapshot 2026-09-29, 144 games). Paper only: queue position ignored in 'touch'; daily (stale) quotes make adverse selection worse than a live re-quoting maker would see. PASS -> scope live execution with the user (Track F gate); FAIL -> maker idea closed at daily-quote cadence."
+  },
+  "registrationSha256": "2bb194ea18afa1c3f8683306345c100156a2d5da117e15b664cce6ffb8250617",
+  "evaluation": null
+}

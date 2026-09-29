@@ -1,0 +1,13 @@
+# Item 76 (2026-09-29, user-approved paper market-making test): daily
+# Pinnacle-vs-Polymarket snapshot (~12-15 Odds API credits/day of the
+# free tier's 500/month; the script stops below 20 remaining).
+# Same launch pattern as polycopytrade-watch.service.
+
+[Unit]
+Description=polycopytrade: daily sharp-odds snapshot for the paper market-making test
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/polycopytrade
+Environment=PATH=%h/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v22.23.2/bin/npm run -s job -- odds-snapshot -- %h/.nvm/versions/node/v22.23.2/bin/npm run -s odds-snapshot

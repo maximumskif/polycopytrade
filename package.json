@@ -54,7 +54,9 @@
     "early-movers-oos": "tsx src/research/earlyMoversOOS.ts",
     "calibration-scan": "tsx src/research/calibrationScan.ts",
     "negrisk-arb-scan": "tsx src/research/negRiskArbScan.ts",
-    "take-profit-scan": "tsx src/research/takeProfitScan.ts"
+    "take-profit-scan": "tsx src/research/takeProfitScan.ts",
+    "odds-snapshot": "tsx src/research/oddsSnapshot.ts",
+    "mm-paper-eval": "tsx src/research/mmPaperEval.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
