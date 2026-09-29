@@ -1704,3 +1704,19 @@ Track F stays gated on the user regardless.
       is ~+1.5%/trade, below the 5pp bar.
     - **Next ideas in the funnel:** sportsbook-odds comparison (needs an
       odds API key from the user), multi-outcome sum < $1 scan.
+    - **OOS result (2026-06-27..08-10, 20 min; 2,540 events, 4,352
+      markets): both FAIL.** `sports-longshots-oos`: sports 10-20c @-6h
+      113/93, win 19.5%, ROI +19.6%, CI [-24.7%, 66.3%] (+17.3% at
+      300bps) -- CI straddles zero. `endgame-harvest-oos`: 95-99c @+3h
+      124/102, win 98.4%, ROI -0.1% [-3.6%, 1.7%] -- once losses appear
+      the thin edge is gone; 95-99c is flat-to-negative at every
+      snapshot (-0.1% to -3.2%). **Endgame harvesting closed.**
+      Result JSON: `data/research-results/calibration-oos.json`.
+    - **Unregistered but consistent (hypothesis for a third window):**
+      the ALL-tags 10-20c @-6h cell cleared zero in both windows --
+      discovery 364/297, win 21.2% vs 15.4c, +32.5% [3.1%, 61.3%]; OOS
+      308/258, win 20.5% vs 15.2c, +31.2% [0.7%, 63.8%] (at 300bps
+      +28.6% [-1.2%, 60.7%]). OOS also positive at -24h (+19.7%) and -1h
+      (+33.0%). Neighbours are not (20-30c -4% to -8%; 01-10c noise).
+      It was the parent of the registered cell, not the registered cell,
+      so it is NOT a pass -- see item 72.

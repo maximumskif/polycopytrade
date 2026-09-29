@@ -43,5 +43,50 @@
     "notes": "Item 71. Discovery had zero losses, so its CI is degenerate; one loss costs ~40 wins. No 300bps clause: at 97.5c, 300bps slippage exceeds the whole upside by construction. Even a PASS is ~+1.5% per trade -- below the user's beat-the-price-by-5pp bar; it would only matter as a high-turnover sleeve."
   },
   "registrationSha256": "9c8c310e0a5edfd3cf082f1c3040ff75d9bbe3dfd2863db7e9394b933ef01de7",
-  "evaluation": null
+  "evaluation": {
+    "evaluatedAt": "2026-09-29T21:19:57.484Z",
+    "verdict": "FAIL",
+    "clauses": [
+      {
+        "clause": "ciLowerBound > 0 at slippageBps=100",
+        "selector": {
+          "bucket": "95-99",
+          "snapshot": "3",
+          "tag": "all",
+          "slippageBps": "100"
+        },
+        "observed": -0.03631042850868195,
+        "pass": false
+      },
+      {
+        "clause": "roi > 0 at slippageBps=100",
+        "selector": {
+          "bucket": "95-99",
+          "snapshot": "3",
+          "tag": "all",
+          "slippageBps": "100"
+        },
+        "observed": -0.0011559348653740287,
+        "pass": false
+      }
+    ],
+    "result": {
+      "file": "data/research-results/calibration-oos.json",
+      "sha256": "ec4b66b9b8d206c8a24f34e578aa297c7d82ca6eed68137cbe275f589b74be96",
+      "generatedAt": "2026-09-29T21:19:55.556Z",
+      "gitCommit": "abadde72a8c5606626e22973f3b2f7fa630d22f3",
+      "gitDirty": false,
+      "requestedWindow": {
+        "start": "2026-06-27",
+        "end": "2026-08-10"
+      },
+      "observedWindow": {
+        "start": "2026-06-27",
+        "end": "2026-08-10"
+      }
+    },
+    "registrationCommit": "abadde72a8c5606626e22973f3b2f7fa630d22f3",
+    "registrationCommittedAt": "2026-09-29T16:59:59-04:00",
+    "warnings": []
+  }
 }

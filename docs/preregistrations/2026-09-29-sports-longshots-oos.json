@@ -43,5 +43,50 @@
     "notes": "Item 71. Disjoint window 2026-06-26..08-10 (different sports mix: World Cup/MLB vs NFL/MLB). Sports fee applied at today's 5% though it was 3% before July -- conservative. Registered alongside endgame-harvest-oos; two shots, so a lone pass needs a second window before paper trading."
   },
   "registrationSha256": "a334ed510e4f97a8706bf5135895576e52170345ccca6bcfa9fee2262fae7d71",
-  "evaluation": null
+  "evaluation": {
+    "evaluatedAt": "2026-09-29T21:19:57.239Z",
+    "verdict": "FAIL",
+    "clauses": [
+      {
+        "clause": "ciLowerBound > 0 at slippageBps=100",
+        "selector": {
+          "bucket": "10-20",
+          "snapshot": "-6",
+          "tag": "sports",
+          "slippageBps": "100"
+        },
+        "observed": -0.24694687551666258,
+        "pass": false
+      },
+      {
+        "clause": "roi > 0 at slippageBps=300",
+        "selector": {
+          "bucket": "10-20",
+          "snapshot": "-6",
+          "tag": "sports",
+          "slippageBps": "300"
+        },
+        "observed": 0.17284153508484904,
+        "pass": true
+      }
+    ],
+    "result": {
+      "file": "data/research-results/calibration-oos.json",
+      "sha256": "ec4b66b9b8d206c8a24f34e578aa297c7d82ca6eed68137cbe275f589b74be96",
+      "generatedAt": "2026-09-29T21:19:55.556Z",
+      "gitCommit": "abadde72a8c5606626e22973f3b2f7fa630d22f3",
+      "gitDirty": false,
+      "requestedWindow": {
+        "start": "2026-06-27",
+        "end": "2026-08-10"
+      },
+      "observedWindow": {
+        "start": "2026-06-27",
+        "end": "2026-08-10"
+      }
+    },
+    "registrationCommit": "abadde72a8c5606626e22973f3b2f7fa630d22f3",
+    "registrationCommittedAt": "2026-09-29T16:59:59-04:00",
+    "warnings": []
+  }
 }
