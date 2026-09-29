@@ -35,7 +35,11 @@ sourcing continues through category-targeted holders passes (items 42,
   explicit go-ahead from the user — not started, not implied by anything
   else being done.
 
-**Open, awaiting data** (as of item 70):
+**Active** (as of 2026-09-29, item 71): strategy pivot to market-level
+mispricing (calibration-scan, pre-registered OOS tests); copy trading is
+background only.
+
+**Open, awaiting data** (as of item 71):
 - Depth-shift dataset (item 69): collector running since 2026-09-25 into
   `data/depth.db`; research step once ~2 weeks of snapshots exist --
   of uptime: the WSL box is only up intermittently (item 70), ~10h of
@@ -1654,3 +1658,49 @@ Track F stays gated on the user regardless.
       coverage (`captured_at` by hour) before the research step. Keeping
       the VM alive is a Windows-side setting (`.wslconfig`
       `vmIdleTimeout`) plus the PC staying awake -- the user's call.
+
+## Strategy pivot -- find mispriced markets, not traders to copy (2026-09-29)
+
+71. **Pre-registered 2026-09-29 (this entry's commit = registration
+    time).** User call (2026-09-29): after 70 items, every copy-trading
+    edge failed out of sample (items 44, 45/70, 65, 67, 68), so the
+    project's primary track is now **market-level mispricing**, with a
+    fixed funnel per idea: cheap large-sample backtest (~1 day) ->
+    pre-registered out-of-sample window -> 2-3 week paper test. Copy
+    trading continues only in the background (forward tests, weekly
+    sourcing). **Bar (user):** "beat the price" -- win rate above the
+    entry price's implied probability (55% at even money, i.e. ~+5pp),
+    after fees and slippage, out of sample.
+    - **Built `npm run calibration-scan`** (`src/research/calibrationScan.ts`,
+      6 tests): stratified sample of settled, liquid (>= $5k) binary
+      markets per gamma tag per day (top 100 by volume, hash-picked),
+      both sides of each market scored at fixed snapshots vs the
+      market's endDate (-24h/-6h/-1h = favorite-longshot, +1h/+3h =
+      endgame harvesting, only while still trading). **Real taker fees
+      now modeled** (docs.polymarket.com/trading/fees, 2026-09-29: fee
+      = C*rate*p*(1-p), rate 7% crypto, 5% sports/esports/economy/culture/
+      weather, 4% politics/tech; 0 geopolitics) -- earlier work assumed
+      0. Registered with `npm run prereg`.
+    - **Discovery (2026-08-11..09-24, 21 min, ~4.6K requests): 2,577
+      events, 4,627 markets.** Overall the market is well calibrated;
+      after costs almost every bucket is slightly negative, and 80-90c
+      favorites lose (-7% to -11%, CI below zero at -24h/-6h).
+      Standouts, all post hoc (best of 495 cells; Bonferroni CI no
+      longer clears zero):
+      | cell | trials/events | win vs quote | ROI | 95% CI |
+      |---|---|---|---|---|
+      | sports 10-20c @-6h | 147/120 | 26.5% vs 15.6c | +58.8% | [15.8%, 105.4%] |
+      | sports 10-20c @-24h | 122/101 | 24.6% vs 15.3c | +55.0% | [7.5%, 112.6%] |
+      | sports 10-20c @-1h | 112/93 | 25.0% vs 15.7c | +55.3% | [2.8%, 110.5%] |
+      | all 95-99c @+3h | 113/98 | 100% vs 97.5c | +1.5% | [1.3%, 1.7%] |
+      Result JSON: `data/research-results/calibration-discovery.json`.
+    - **Two OOS tests pre-registered** on the disjoint window
+      2026-06-27..08-10 (`docs/preregistrations/2026-09-29-*`):
+      `sports-longshots-oos` (10-20c, -6h, sports; pass = CI lower > 0
+      at 100bps AND ROI > 0 at 300bps) and `endgame-harvest-oos` (95-99c,
+      +3h, all tags; pass = CI lower > 0 AND ROI > 0 at 100bps). Two
+      shots: a lone pass needs a second window before paper trading.
+      Endgame's discovery had zero losses (degenerate CI) and even a pass
+      is ~+1.5%/trade, below the 5pp bar.
+    - **Next ideas in the funnel:** sportsbook-odds comparison (needs an
+      odds API key from the user), multi-outcome sum < $1 scan.

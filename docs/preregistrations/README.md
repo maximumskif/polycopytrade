@@ -56,6 +56,7 @@ dimensions that identify a cell:
 |---|---|---|
 | `weather-favorites` | `bucket` (70-85, 85-90, 90-95, 95-99, 85-99), `leadHours`, `slippageBps`, `grouping` (event, city-date, date) | `--asOf=YYYY-MM-DD` pins "today", which the window is measured back from (**required** for a registration). `--sensitivityBps=150,300` adds rows re-costed at each extra slippage. |
 | `volatility-breakout` | `bucket` (all, BTC, WTI, 0-5c ... 95-100c), `grouping` (event, month), `slippageBps` (0 plus sensitivity) | `--asOf` picks the newest ladders that had ended by that date. `--sensitivityBps` works the same way. The window is by count, so `--window` is required and the ladder months actually used must fall inside it. |
+| `calibration-scan` | `bucket` (01-10 ... 95-99), `snapshot` (-24, -6, -1, 1, 3 hours vs endDate), `tag` (all, sports, esports, crypto, politics, economy, pop-culture, tech, business), `slippageBps` | `--asOf` is **required** (the window is measured back from it). `--sensitivityBps` (default 300) adds re-costed rows. Taker fees are per tag, always on. |
 
 Both scripts also print a multiple-comparison footer (Track N2,
 `src/research/comparisons.ts`), and so does `favorite-harvesting`. The

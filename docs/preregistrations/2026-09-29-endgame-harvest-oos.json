@@ -1,0 +1,47 @@
+{
+  "schema": "polycopytrade.preregistration/v1",
+  "registration": {
+    "slug": "endgame-harvest-oos",
+    "createdAt": "2026-09-29T20:59:05.626Z",
+    "gitCommit": "83dd30fa34f7e19fc9d96cfe9946f7190c3a6c20",
+    "gitDirty": true,
+    "hypothesis": "Outcomes quoted 95-99c three hours AFTER the market's scheduled endDate, while it is still trading, win often enough to profit after costs (discovery: 113 trials/98 events, 113/113 won, ROI +1.5% [1.3%, 1.7%]).",
+    "script": "calibration-scan",
+    "args": [
+      "--days=45",
+      "--skipDays=50",
+      "--asOf=2026-09-29",
+      "--eventsPerTag=15",
+      "--marketsPerEvent=3",
+      "--cache=data/calibration-scan/pull-oos.json",
+      "--json=data/research-results/calibration-oos.json"
+    ],
+    "resolvedArgs": {
+      "days": 45,
+      "skipDays": 50,
+      "eventsPerTag": 15,
+      "marketsPerEvent": 3,
+      "minVolume": 5000,
+      "slippageBps": 100,
+      "sensitivityBps": [300],
+      "maxStaleMinutes": 60,
+      "asOf": "2026-09-29",
+      "cache": "data/calibration-scan/pull-oos.json",
+      "json": "data/research-results/calibration-oos.json"
+    },
+    "window": {
+      "start": "2026-06-27",
+      "end": "2026-08-10"
+    },
+    "select": {
+      "bucket": "95-99",
+      "snapshot": "3",
+      "tag": "all"
+    },
+    "metric": "event-clustered ROI after fees+slippage",
+    "passRule": "ciLowerBound > 0 at slippageBps=100 AND roi > 0 at slippageBps=100",
+    "notes": "Item 71. Discovery had zero losses, so its CI is degenerate; one loss costs ~40 wins. No 300bps clause: at 97.5c, 300bps slippage exceeds the whole upside by construction. Even a PASS is ~+1.5% per trade -- below the user's beat-the-price-by-5pp bar; it would only matter as a high-turnover sleeve."
+  },
+  "registrationSha256": "9c8c310e0a5edfd3cf082f1c3040ff75d9bbe3dfd2863db7e9394b933ef01de7",
+  "evaluation": null
+}

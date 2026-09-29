@@ -1,0 +1,47 @@
+{
+  "schema": "polycopytrade.preregistration/v1",
+  "registration": {
+    "slug": "sports-longshots-oos",
+    "createdAt": "2026-09-29T20:59:05.385Z",
+    "gitCommit": "83dd30fa34f7e19fc9d96cfe9946f7190c3a6c20",
+    "gitDirty": true,
+    "hypothesis": "Sports outcomes quoted 10-20c six hours before the market's endDate win more often than their price implies (discovery 2026-08-11..09-24: 147 trials/120 events, win 26.5% vs 15.6c, ROI +58.8% [15.8%, 105.4%] after per-tag taker fee and 100bps slippage; best of 495 post-hoc cells, same direction at -24h and -1h).",
+    "script": "calibration-scan",
+    "args": [
+      "--days=45",
+      "--skipDays=50",
+      "--asOf=2026-09-29",
+      "--eventsPerTag=15",
+      "--marketsPerEvent=3",
+      "--cache=data/calibration-scan/pull-oos.json",
+      "--json=data/research-results/calibration-oos.json"
+    ],
+    "resolvedArgs": {
+      "days": 45,
+      "skipDays": 50,
+      "eventsPerTag": 15,
+      "marketsPerEvent": 3,
+      "minVolume": 5000,
+      "slippageBps": 100,
+      "sensitivityBps": [300],
+      "maxStaleMinutes": 60,
+      "asOf": "2026-09-29",
+      "cache": "data/calibration-scan/pull-oos.json",
+      "json": "data/research-results/calibration-oos.json"
+    },
+    "window": {
+      "start": "2026-06-27",
+      "end": "2026-08-10"
+    },
+    "select": {
+      "bucket": "10-20",
+      "snapshot": "-6",
+      "tag": "sports"
+    },
+    "metric": "event-clustered ROI after fees+slippage",
+    "passRule": "ciLowerBound > 0 at slippageBps=100 AND roi > 0 at slippageBps=300",
+    "notes": "Item 71. Disjoint window 2026-06-26..08-10 (different sports mix: World Cup/MLB vs NFL/MLB). Sports fee applied at today's 5% though it was 3% before July -- conservative. Registered alongside endgame-harvest-oos; two shots, so a lone pass needs a second window before paper trading."
+  },
+  "registrationSha256": "a334ed510e4f97a8706bf5135895576e52170345ccca6bcfa9fee2262fae7d71",
+  "evaluation": null
+}
