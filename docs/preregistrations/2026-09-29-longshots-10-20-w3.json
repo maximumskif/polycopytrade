@@ -1,0 +1,48 @@
+{
+  "schema": "polycopytrade.preregistration/v1",
+  "registration": {
+    "slug": "longshots-10-20-w3",
+    "createdAt": "2026-09-29T21:20:39.611Z",
+    "gitCommit": "a8cc2b41591fc62303cbb37c5a1883b5dcf1855d",
+    "gitDirty": false,
+    "hypothesis": "Outcomes quoted 10-20c six hours before the market's endDate, across all sampled tags, win more often than their price implies (discovery 2026-08-11..09-24: +32.5% [3.1%, 61.3%]; window 2 2026-06-27..08-10: +31.2% [0.7%, 63.8%]; both at 100bps + per-tag taker fee).",
+    "script": "calibration-scan",
+    "args": [
+      "--days=45",
+      "--skipDays=95",
+      "--asOf=2026-09-29",
+      "--eventsPerTag=15",
+      "--marketsPerEvent=3",
+      "--sensitivityBps=300,1000",
+      "--cache=data/calibration-scan/pull-w3.json",
+      "--json=data/research-results/calibration-w3.json"
+    ],
+    "resolvedArgs": {
+      "days": 45,
+      "skipDays": 95,
+      "eventsPerTag": 15,
+      "marketsPerEvent": 3,
+      "minVolume": 5000,
+      "slippageBps": 100,
+      "sensitivityBps": [300, 1000],
+      "maxStaleMinutes": 60,
+      "asOf": "2026-09-29",
+      "cache": "data/calibration-scan/pull-w3.json",
+      "json": "data/research-results/calibration-w3.json"
+    },
+    "window": {
+      "start": "2026-05-13",
+      "end": "2026-06-26"
+    },
+    "select": {
+      "bucket": "10-20",
+      "snapshot": "-6",
+      "tag": "all"
+    },
+    "metric": "event-clustered ROI after fees+slippage",
+    "passRule": "ciLowerBound > 0 at slippageBps=100 AND roi > 0 at slippageBps=1000",
+    "notes": "Item 72. Third, untouched window. The cell was found post hoc (parent of item 71's failed sports cell), so only a pass here counts. 1000bps (~1.5c at 15c) stands in for thin-longshot spreads. PASS -> 2-3 week paper test; FAIL -> favorite-longshot family closed."
+  },
+  "registrationSha256": "e912564aba69fd164fd95e16a18e49cc37e4b5a66f93419cf81772d93c197fef",
+  "evaluation": null
+}

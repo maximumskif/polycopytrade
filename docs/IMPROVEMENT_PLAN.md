@@ -1720,3 +1720,10 @@ Track F stays gated on the user regardless.
       (+33.0%). Neighbours are not (20-30c -4% to -8%; 01-10c noise).
       It was the parent of the registered cell, not the registered cell,
       so it is NOT a pass -- see item 72.
+
+72. **Pre-registered 2026-09-29 (this entry's commit = registration
+    time).** Third-window test of item 71's consistent-but-unregistered
+    cell: `longshots-10-20-w3` -- all tags, 10-20c, -6h, window
+    2026-05-13..06-26 (untouched). Pass = CI lower > 0 at 100bps AND ROI
+    > 0 at 1000bps (thin-longshot spread stress). PASS -> paper test;
+    FAIL -> favorite-longshot family closed.
