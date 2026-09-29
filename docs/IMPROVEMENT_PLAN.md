@@ -1744,3 +1744,27 @@ Track F stays gated on the user regardless.
       a wide-spread tail that eats most of it. Reopening needs a new,
       explicitly larger registration and the user's call, not a re-cut.
       Result JSON: `data/research-results/calibration-w3.json`.
+
+73. **Running 2026-09-29. Multi-outcome (negRisk) basket-arbitrage
+    scanner** -- `npm run negrisk-arb-scan` (`src/research/negRiskArbScan.ts`,
+    7 tests; `getOrderBooks` = batch POST clob/books, 500 tokens/call).
+    YES basket (buy every outcome's YES, pays $1 if the set is
+    exhaustive) and NO basket (buy every NO, pays n-1, safe even when
+    the set isn't exhaustive), priced by walking real ask/bid depth at
+    10-5000 shares with per-tag taker fees. Live only: historical mids
+    can't show executability. Logs every opportunity + a per-sweep
+    summary to `data/negrisk-arb/*.jsonl`; `--summarize` reports
+    frequency, $ size, persistence (consecutive sweeps) and days to
+    resolution / annualized ROI.
+    - **Smoke sweep (27s, 896 open negRisk events among the top ~2,000
+      by volume: 213 closed-set, 580 augmented-with-Other, 102
+      incomplete; 7,981 books):** 7 YES-basket opportunities, median
+      $0.05, max $1.38 (1.4% on a 100-share basket, "Maduro Prison
+      Time?"); 0 NO-basket. Caveats: several resolve months out, and a
+      "closed-set" event can still resolve all-No if none of its listed
+      outcomes happens, so a YES basket needs a manual exhaustiveness
+      check before it counts.
+    - Job `negrisk-arb-6h` (60s sweeps, 6h) started; result appended
+      here when done. Decision rule: worth building execution for only if
+      opportunities persist >= 3 sweeps and add up to meaningful $ at
+      <= 30 days to resolution.
