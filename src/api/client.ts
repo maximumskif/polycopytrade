@@ -5,6 +5,7 @@
 // runtime response validation (src/api/schemas.ts), structured errors, and
 // URL logging that redacts anything secret-shaped before it's printed.
 
+import { z } from "zod";
 import { config } from "../config/env";
 import { RateLimiter } from "../utils/rateLimiter";
 import { backoffDelayMs, sleep } from "../utils/retry";
@@ -182,11 +183,19 @@ export function __resetFetchImplForTests(): void {
   fetchImpl = fetch;
 }
 
-async function fetchWithTimeout(url: string): Promise<Response> {
+// `body` (JSON) turns the request into a POST -- only clob's batch
+// endpoints (POST /books) need it.
+async function fetchWithTimeout(url: string, body?: unknown): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.apiTimeoutMs);
   try {
-    return await fetchImpl(url, { signal: controller.signal });
+    if (body === undefined) return await fetchImpl(url, { signal: controller.signal });
+    return await fetchImpl(url, {
+      signal: controller.signal,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
   } finally {
     clearTimeout(timeout);
   }
@@ -198,7 +207,7 @@ async function fetchWithTimeout(url: string): Promise<Response> {
 // 429s and transient network errors. A non-429 4xx/5xx fails immediately
 // without burning retries — callers rely on this for control flow (e.g.
 // getActivityFromStart detects the /activity offset cap via a 400).
-async function requestJson(url: string): Promise<unknown> {
+async function requestJson(url: string, body?: unknown): Promise<unknown> {
   const host = hostOf(url);
   const redacted = redactUrl(url);
   let lastError: PolymarketApiError | null = null;
@@ -208,7 +217,7 @@ async function requestJson(url: string): Promise<unknown> {
 
     let res: Response;
     try {
-      res = await fetchWithTimeout(url);
+      res = await fetchWithTimeout(url, body);
     } catch (err) {
       const timedOut = err instanceof Error && err.name === "AbortError";
       lastError = new PolymarketApiError(timedOut ? "request timed out" : (err as Error).message, host, redacted, null, attempt);
@@ -303,6 +312,20 @@ export async function getPricesHistory(
 export async function getOrderBook(tokenId: string): Promise<OrderBook> {
   const url = `https://clob.polymarket.com/book?token_id=${tokenId}`;
   return validate(OrderBookSchema, await requestJson(url), "GET clob/book");
+}
+
+// Batch order books, POST clob/books, <= BOOKS_BATCH_LIMIT tokens per call
+// (1000 is rejected with "Payload exceeds the limit", checked 2026-09-29).
+// Tokens with no resting orders are simply absent from the response (the
+// single-token GET /book 404s for them) -- callers treat absent as empty.
+export const BOOKS_BATCH_LIMIT = 500;
+export async function getOrderBooks(tokenIds: string[]): Promise<OrderBook[]> {
+  const out: OrderBook[] = [];
+  for (let i = 0; i < tokenIds.length; i += BOOKS_BATCH_LIMIT) {
+    const chunk = tokenIds.slice(i, i + BOOKS_BATCH_LIMIT).map((token_id) => ({ token_id }));
+    out.push(...validate(z.array(OrderBookSchema), await requestJson("https://clob.polymarket.com/books", chunk), "POST clob/books"));
+  }
+  return out;
 }
 
 export async function getActivity(

@@ -52,7 +52,8 @@
     "validate-positions-screen": "tsx src/research/validatePositionsScreen.ts",
     "source-early-movers": "tsx src/research/sourceEarlyMovers.ts",
     "early-movers-oos": "tsx src/research/earlyMoversOOS.ts",
-    "calibration-scan": "tsx src/research/calibrationScan.ts"
+    "calibration-scan": "tsx src/research/calibrationScan.ts",
+    "negrisk-arb-scan": "tsx src/research/negRiskArbScan.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
