@@ -35,9 +35,11 @@ sourcing continues through category-targeted holders passes (items 42,
   explicit go-ahead from the user — not started, not implied by anything
   else being done.
 
-**Open, awaiting data** (as of item 69):
+**Open, awaiting data** (as of item 70):
 - Depth-shift dataset (item 69): collector running since 2026-09-25 into
-  `data/depth.db`; research step once ~2 weeks of snapshots exist.
+  `data/depth.db`; research step once ~2 weeks of snapshots exist --
+  of uptime: the WSL box is only up intermittently (item 70), ~10h of
+  snapshots by 2026-09-29.
 - `lamyk` forward paper test (item 64) -- pre-registered; evaluate at 20
   resolved events (`watch:check` entry `lamyk-forward-test`).
 - Quality pool: 13 by `isQualityWallet` (early-movers channel, items
@@ -57,6 +59,8 @@ sourcing continues through category-targeted holders passes (items 42,
 - G.19 items 1-2 (consensus / smart-money divergence among quality
   wallets, item 65) — testable at last (80 events), no edge, CIs straddle
   zero even in-sample.
+- ndb1's NFL segment (item 70) -- at 25 events +10.7%, CI [-28.2%,
+  42.6%]; the 12-event +42% was noise.
 - Holders-based sourcing as a primary channel (items 42, 46, 60) — zero
   durable wallets in five categories; still runs weekly (cheap).
 
@@ -1631,3 +1635,22 @@ Track F stays gated on the user regardless.
       2s fresh. **Next step for this track: once ~2 weeks of snapshots
       exist, do the scope doc's research step (define a depth-shift
       signal, pre-register it, backtest on the collected books).**
+
+70. ✅ **Done 2026-09-29. ndb1's NFL segment reached sample size -- the
+    edge was noise.** The `ndb1-nfl-events` watch (item 45) fired; its
+    action (`npm run sport-segmentation -- ndb1`, job
+    `watch-ndb1-nfl-events`, 42s) gives NFL **25 distinct events, 606
+    trials, win 84.0%, ROI +10.7%, 95% CI [-28.2%, 42.6%]** -- down from
+    +42.0% [12.9%, 70.7%] on 12 events. The CI straddles zero, so per the
+    watch note there is nothing to pre-register. Overall sports for ndb1:
+    148 events, +6.3% [-12.8%, 26.1%]; no league clears zero. Item 45's
+    decision (don't paper-trade ndb1) stands. Watch acked.
+    - **Ops finding: the box is only up intermittently.** WSL shuts the
+      VM down when no terminal is open, stopping the daemon, depth
+      collector and timers together. Depth snapshots since item 69:
+      ~36K (≈10h of ~1/s) over 4 calendar days -- up 09-25 20:00Z to
+      09-26 05:00Z, 09-26 18-19Z, and from 09-29 20:00Z. Item 69's "~2
+      weeks" means ~2 weeks of *uptime*, not calendar time; check
+      coverage (`captured_at` by hour) before the research step. Keeping
+      the VM alive is a Windows-side setting (`.wslconfig`
+      `vmIdleTimeout`) plus the PC staying awake -- the user's call.
