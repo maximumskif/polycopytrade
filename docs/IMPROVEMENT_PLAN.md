@@ -35,8 +35,10 @@ sourcing continues through category-targeted holders passes (items 42,
   explicit go-ahead from the user — not started, not implied by anything
   else being done.
 
-**Active** (as of 2026-09-29, item 71): strategy pivot to market-level
-mispricing (calibration-scan, pre-registered OOS tests); copy trading is
+**Active** (as of 2026-09-29, item 72): strategy pivot to market-level
+mispricing. Calibration scan done (items 71-72, no pass). Next in the
+funnel: multi-outcome sum < $1 scan (no inputs needed), sportsbook-odds
+comparison (needs an odds API key from the user). Copy trading is
 background only.
 
 **Open, awaiting data** (as of item 71):
@@ -65,6 +67,9 @@ background only.
   zero even in-sample.
 - ndb1's NFL segment (item 70) -- at 25 events +10.7%, CI [-28.2%,
   42.6%]; the 12-event +42% was noise.
+- Market calibration / favorite-longshot, all categories (items 71-72)
+  -- three windows; endgame 95-99c flat, 10-20c longshots positive but
+  failed the third pre-registered window. Endgame harvesting closed.
 - Holders-based sourcing as a primary channel (items 42, 46, 60) — zero
   durable wallets in five categories; still runs weekly (cheap).
 
@@ -1727,3 +1732,15 @@ Track F stays gated on the user regardless.
     2026-05-13..06-26 (untouched). Pass = CI lower > 0 at 100bps AND ROI
     > 0 at 1000bps (thin-longshot spread stress). PASS -> paper test;
     FAIL -> favorite-longshot family closed.
+    - **Result (2026-05-13..06-26, 20 min): FAIL.** All tags 10-20c @-6h
+      305/250, win 18.7% vs ~15c, ROI +15.2%, CI [-14.5%, 46.0%] (+5.8%
+      at 1000bps). -24h +3.2%, -1h +36.0% [-2.4%, 77.5%]. Per the rule
+      fixed above, **the favorite-longshot family is closed.** For the
+      record: the -6h point estimate was positive in all three windows
+      (+32.5%, +31.2%, +15.2%), so a small longshot underpricing may
+      exist, but it can't be resolved at this sample size, and live books
+      (2026-09-29, 28 sides quoted 10-20c mid, markets ending <72h) put
+      the median ask 1.5c (~1,050bps) over mid with a p75 of ~4,700bps --
+      a wide-spread tail that eats most of it. Reopening needs a new,
+      explicitly larger registration and the user's call, not a re-cut.
+      Result JSON: `data/research-results/calibration-w3.json`.

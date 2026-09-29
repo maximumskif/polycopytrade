@@ -44,5 +44,50 @@
     "notes": "Item 72. Third, untouched window. The cell was found post hoc (parent of item 71's failed sports cell), so only a pass here counts. 1000bps (~1.5c at 15c) stands in for thin-longshot spreads. PASS -> 2-3 week paper test; FAIL -> favorite-longshot family closed."
   },
   "registrationSha256": "e912564aba69fd164fd95e16a18e49cc37e4b5a66f93419cf81772d93c197fef",
-  "evaluation": null
+  "evaluation": {
+    "evaluatedAt": "2026-09-29T21:40:49.912Z",
+    "verdict": "FAIL",
+    "clauses": [
+      {
+        "clause": "ciLowerBound > 0 at slippageBps=100",
+        "selector": {
+          "bucket": "10-20",
+          "snapshot": "-6",
+          "tag": "all",
+          "slippageBps": "100"
+        },
+        "observed": -0.14545801126677763,
+        "pass": false
+      },
+      {
+        "clause": "roi > 0 at slippageBps=1000",
+        "selector": {
+          "bucket": "10-20",
+          "snapshot": "-6",
+          "tag": "all",
+          "slippageBps": "1000"
+        },
+        "observed": 0.058092826352142225,
+        "pass": true
+      }
+    ],
+    "result": {
+      "file": "data/research-results/calibration-w3.json",
+      "sha256": "d3b2534467a244df93b012a87d61481e2d25b6874f2de885d9c7e6006f33360b",
+      "generatedAt": "2026-09-29T21:40:40.401Z",
+      "gitCommit": "8bbc99e5bc5e9be59d53101a2a6fbf145d36352e",
+      "gitDirty": false,
+      "requestedWindow": {
+        "start": "2026-05-13",
+        "end": "2026-06-26"
+      },
+      "observedWindow": {
+        "start": "2026-05-13",
+        "end": "2026-06-26"
+      }
+    },
+    "registrationCommit": "8bbc99e5bc5e9be59d53101a2a6fbf145d36352e",
+    "registrationCommittedAt": "2026-09-29T17:20:39-04:00",
+    "warnings": []
+  }
 }
