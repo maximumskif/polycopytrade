@@ -1768,3 +1768,34 @@ Track F stays gated on the user regardless.
       here when done. Decision rule: worth building execution for only if
       opportunities persist >= 3 sweeps and add up to meaningful $ at
       <= 30 days to resolution.
+
+74. ✅ **Done 2026-09-29. Sportsbook-odds comparison: Polymarket sports
+    prices are anchored to Pinnacle -- no taker edge.** User supplied an
+    Odds API key (free tier: 500 credits/month, 1 credit = one sport's
+    h2h odds for every upcoming game in the `eu` region, which carries
+    Pinnacle and the Betfair exchange; key in `.env` as `ODDS_API_KEY`;
+    historical odds are paid-only, so no backtest). Probe (12 credits,
+    488 left): NFL + 10 smaller leagues (NHL, Euroleague, SHL, EFL
+    League One/Two, Brazil B, Spain Segunda, MLS, WNBA, Argentina),
+    matched to Polymarket `sportsMarketType=moneyline` game markets by
+    team-name tokens + start time (+/-12h), soccer as 3-way.
+    - **Edge = Pinnacle proportional de-vig fair - Polymarket best ask -
+      taker fee (5% * p * (1-p)).** NFL 28 sides: all -0.3 to -4.2pp
+      except two longshots at +1.4/+1.9pp that the Betfair exchange
+      contradicts (proportional de-vig overstates longshots). The 10
+      leagues: **149 Pinnacle-priced sides, median -2.0pp, max -0.1pp,
+      ZERO with a positive edge**, every league's median -1.5 to
+      -2.2pp. Polymarket's sports makers quote around Pinnacle's fair
+      price plus a spread, down to Spain's second division.
+    - Apparent +6 to +32pp "edges" were all Betfair-fallback artifacts
+      (21 of 33 fallback fair values exactly 1/2 or 1/3 = empty exchange
+      books) -- any future collector must require Pinnacle or a
+      multi-book consensus.
+    - **Reading:** buying at the ask never beats the sharp line on a
+      snapshot days before kickoff. What's left for this idea is (a)
+      latency -- Polymarket lagging a Pinnacle move near kickoff/on news,
+      which needs frequent polling the free tier can't afford (~16
+      credits/day), or (b) the maker side -- resting bids below fair value
+      (0 maker fee + 15% sports rebate) filled by uninformed takers,
+      which needs live execution (Track F, gated on the user).
+      Raw probe data + script: `data/odds-probe/` (gitignored).
