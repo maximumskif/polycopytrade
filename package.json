@@ -53,7 +53,8 @@
     "source-early-movers": "tsx src/research/sourceEarlyMovers.ts",
     "early-movers-oos": "tsx src/research/earlyMoversOOS.ts",
     "calibration-scan": "tsx src/research/calibrationScan.ts",
-    "negrisk-arb-scan": "tsx src/research/negRiskArbScan.ts"
+    "negrisk-arb-scan": "tsx src/research/negRiskArbScan.ts",
+    "take-profit-scan": "tsx src/research/takeProfitScan.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

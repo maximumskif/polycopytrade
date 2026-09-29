@@ -1799,3 +1799,24 @@ Track F stays gated on the user regardless.
       (0 maker fee + 15% sports rebate) filled by uninformed takers,
       which needs live execution (Track F, gated on the user).
       Raw probe data + script: `data/odds-probe/` (gitignored).
+
+75. ✅ **Done 2026-09-29. Take-profit favourites ("buy high-probability
+    outcomes over and over, cash out small gains") -- no edge in any
+    variant.** User idea. `npm run take-profit-scan` (`src/research/
+    takeProfitScan.ts`, 3 tests) replays item 71's cached price paths
+    (no API calls, 2s per window): buy the favoured side (YES or NO) at
+    -24h/-6h vs endDate in 70-80/80-90/90-95/95-99c, sell at the first
+    touch of +1/2/3/5c (or hold to resolution), optional -10c stop =
+    80 cells per window.
+    - **Taker both ways (100bps/side + taker fee both legs): 0 of 240
+      cells positive** across the three windows; every take-profit rule
+      does WORSE than holding (a round trip costs ~2c, more than a
+      1-2c target). Window 1 best: 95-99c hold @-6h, 0.0% [-2.3%, 1.5%].
+    - **Maker exits (`--makerExit`: resting limit sell filled at exactly
+      the target, 0 fee, 0 slippage -- an optimistic upper bound): still
+      0 of 240 positive**; best 95-99c tp=1c: -0.6% [-2.0%, 0.3%],
+      -0.5% [-1.5%, 0.1%], -1.5% [-2.4%, -0.8%].
+    - Why: capped small wins vs uncapped collapses, and no upward drift
+      after entry (prices behave like a martingale), so the take-profit
+      reshapes the payoff without improving its mean while entry still
+      pays spread + fee. Closed.
