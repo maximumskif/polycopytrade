@@ -1,7 +1,7 @@
 **Active** (as of 2026-09-29, item 76): strategy pivot to market-level
 mispricing. Closed with no edge: calibration/longshots/endgame (71-72),
 take-profit favourites (75), sportsbook taker comparison (74); negRisk
-basket arb (73). Running: paper market making vs
+basket arb (73); Kalshi cross-venue (78). Running: paper market making vs
 Pinnacle (76, pre-registered, daily `odds-snapshot` timer; evaluate at
 >= 50 filled games or 2026-10-27). Copy trading is background only.
 
@@ -79,6 +79,8 @@ background only.
   failed the third pre-registered window. Endgame harvesting closed.
 - negRisk basket arbitrage (item 73) -- 6h live scan: 17 events,
   median $0.14, ~1%/yr annualized; nothing within 30 days worth doing.
+- Polymarket vs Kalshi cross-venue arbitrage (item 78) -- identical
+  markets agree within ~1c; fees close any gap.
 - Holders-based sourcing as a primary channel (items 42, 46, 60) — zero
   durable wallets in five categories; still runs weekly (cheap).
 
@@ -1897,3 +1899,31 @@ Track F stays gated on the user regardless.
       > 0 with rewards halved (share overstatement buffer). PASS ->
       verify real payouts with a tiny live account (Track F, user's call);
       FAIL -> rewards farming closed at 5-min re-quote cadence.
+
+78. ✅ **Done 2026-09-30 (closed). Polymarket vs Kalshi cross-venue
+    arbitrage -- none on genuinely identical markets.** Kalshi market data
+    is public (api.elections.kalshi.com/trade-api/v2, no key); taker fee
+    0.07*P*(1-P)/contract. Probe (`data/kalshi-probe/*.py`, gitignored):
+    12,693 open Kalshi events (121,680 markets, combo "MVE" parlays
+    excluded) vs Polymarket's top 2,100 events, matched by title then
+    outcome label; both directions priced (YES on one venue + NO on the
+    other < $1 after both fees).
+    - **Automated matching is a trap:** loose matching "found" +50 to
+      +98c gaps that were all different questions -- Polymarket range
+      buckets vs Kalshi thresholds (Core CPI "2.1%" vs "above 2.1%"),
+      Germany vs US GDP, spread vs total, 1st vs 3rd place, US vs global
+      Spotify charts, "before 2027" vs "by 2029" deadlines, OpenAI vs
+      Anthropic IPO. Even title-identical pairs (1,043 legs / 62 events)
+      are median -1.9c after fees, and their positive tail is again
+      mismatches or Kalshi sides with no size behind the quote.
+    - **Hand-checked identical market:** Fed October decision -- hold
+      Kalshi 0.54/0.55 vs Polymarket 0.55/0.56; hike 25bps 0.44/0.45 vs
+      0.43/0.44. Opposite sides across venues cost exactly $1.00 before
+      fees (~-3c after). The venues are kept aligned by arbitrage bots.
+    - Any future cross-venue work needs hand-curated series pairs with
+      matching resolution rules, and a Kalshi (US KYC) account to act.
+    - (item 77 addendum, 2026-09-30) A 1-minute re-quote variant runs
+      alongside (`polycopytrade-rewards-paper-1m.service` ->
+      `data/rewards-paper/samples-1m.jsonl`; eval with `--out=`). The
+      fixed decision rule stays on the 5-min run; 1-min is reported as
+      the fast-bot bracket.

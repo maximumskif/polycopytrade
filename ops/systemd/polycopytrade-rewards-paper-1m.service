@@ -1,0 +1,27 @@
+# 1-minute re-quote variant of polycopytrade-rewards-paper.service (item 77,
+# added 2026-09-30): a real maker bot re-quotes far faster than 5 min, so
+# this brackets the stale-quote adverse selection from the other side.
+# Original header:
+# systemd user service for `npm run rewards-paper -- collect` (item 77,
+# 2026-09-29): paper liquidity-rewards maker. Every 5 min, re-quotes a
+# basket of <= 40 competitive rewarded markets resolving within 3 days
+# from their live books and logs the formula reward share to
+# data/rewards-paper/samples.jsonl (~2 book requests per sample, basket
+# re-picked hourly). No orders are placed. Evaluate with
+# `npm run rewards-paper -- eval`. Paths as in polycopytrade-depth.service.
+
+[Unit]
+Description=polycopytrade paper liquidity-rewards maker, 1-min re-quote (no orders placed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/polycopytrade
+Environment=PATH=%h/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin
+ExecStart=%h/.nvm/versions/node/v22.23.2/bin/npm run -s rewards-paper -- collect --intervalMin=1 --out=data/rewards-paper/samples-1m.jsonl
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=default.target
