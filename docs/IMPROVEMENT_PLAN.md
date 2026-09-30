@@ -34,6 +34,16 @@ Track E
 sourcing continues through category-targeted holders passes (items 42,
 46 -- both clean negatives).
 
+**Paused 2026-09-30 (user call).** Background collection keeps running
+unattended: `polycopytrade-rewards-paper(-1m)`, `polycopytrade-odds.timer`,
+depth collector, tracking daemon (forward copy tests). Resume points:
+~2026-10-03/04 item 77 verdict (`npm run rewards-paper -- eval`, >= 100
+resolved markets; PASS -> user decides on a $50-100 live payout check);
+2026-10-27 at the latest item 76 verdict (`npm run mm-paper-eval` +
+`npm run prereg -- evaluate mm-paper-pinnacle`). If both fail, remaining
+paths need money or a go-ahead (paid odds plan for latency; live
+execution). Collection only runs while WSL is up.
+
 **Blocked, needs user input**:
 - Track H Phase D (Solana wallet scoring, item 29): needs a
   `BIRDEYE_API_KEY`, or a real wallet address with actual token swaps to
