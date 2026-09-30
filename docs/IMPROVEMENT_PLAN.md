@@ -1,7 +1,7 @@
 **Active** (as of 2026-09-29, item 76): strategy pivot to market-level
 mispricing. Closed with no edge: calibration/longshots/endgame (71-72),
 take-profit favourites (75), sportsbook taker comparison (74); negRisk
-basket arb (73) pending its 6h scan. Running: paper market making vs
+basket arb (73). Running: paper market making vs
 Pinnacle (76, pre-registered, daily `odds-snapshot` timer; evaluate at
 >= 50 filled games or 2026-10-27). Copy trading is background only.
 
@@ -77,6 +77,8 @@ background only.
 - Market calibration / favorite-longshot, all categories (items 71-72)
   -- three windows; endgame 95-99c flat, 10-20c longshots positive but
   failed the third pre-registered window. Endgame harvesting closed.
+- negRisk basket arbitrage (item 73) -- 6h live scan: 17 events,
+  median $0.14, ~1%/yr annualized; nothing within 30 days worth doing.
 - Holders-based sourcing as a primary channel (items 42, 46, 60) — zero
   durable wallets in five categories; still runs weekly (cheap).
 
@@ -1752,7 +1754,7 @@ Track F stays gated on the user regardless.
       explicitly larger registration and the user's call, not a re-cut.
       Result JSON: `data/research-results/calibration-w3.json`.
 
-73. **Running 2026-09-29. Multi-outcome (negRisk) basket-arbitrage
+73. ✅ **Done 2026-09-29 (closed). Multi-outcome (negRisk) basket-arbitrage
     scanner** -- `npm run negrisk-arb-scan` (`src/research/negRiskArbScan.ts`,
     7 tests; `getOrderBooks` = batch POST clob/books, 500 tokens/call).
     YES basket (buy every outcome's YES, pays $1 if the set is
@@ -1775,6 +1777,14 @@ Track F stays gated on the user regardless.
       here when done. Decision rule: worth building execution for only if
       opportunities persist >= 3 sweeps and add up to meaningful $ at
       <= 30 days to resolution.
+    - **Result (6h, 360 sweeps, ~8,000 books each): CLOSED -- fails the
+      rule.** YES baskets: 17 distinct events ever, median $0.14 per
+      sighting (max $1.38), median 183 days to resolution = ~1.0%/yr
+      annualized; they persist only because nobody bothers. Within 30
+      days: 6 events, best $0.86 (an already-held election awaiting
+      resolution), the rest <= $0.27. NO baskets: 1 sighting, $0.00.
+      Multi-outcome books are priced tight by bots; no arbitrage worth
+      building for.
 
 74. ✅ **Done 2026-09-29. Sportsbook-odds comparison: Polymarket sports
     prices are anchored to Pinnacle -- no taker edge.** User supplied an
