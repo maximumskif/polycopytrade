@@ -56,7 +56,9 @@
     "negrisk-arb-scan": "tsx src/research/negRiskArbScan.ts",
     "take-profit-scan": "tsx src/research/takeProfitScan.ts",
     "odds-snapshot": "tsx src/research/oddsSnapshot.ts",
-    "mm-paper-eval": "tsx src/research/mmPaperEval.ts"
+    "mm-paper-eval": "tsx src/research/mmPaperEval.ts",
+    "rewards-scan": "tsx src/research/rewardsScan.ts",
+    "rewards-paper": "tsx src/research/rewardsPaper.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

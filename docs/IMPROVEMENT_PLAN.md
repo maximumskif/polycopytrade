@@ -1855,3 +1855,35 @@ Track F stays gated on the user regardless.
       at daily-quote cadence.
     - Latency test (Polymarket lagging Pinnacle moves) needs frequent
       odds polling -> a paid Odds API plan; not started.
+
+77. **Running since 2026-09-29. Liquidity-rewards maker, paper.**
+    Polymarket pays daily USDC pools to makers resting orders near the
+    midpoint (docs.polymarket.com/developers/market-makers/liquidity-rewards:
+    S = ((v-s)/v)^2 per order >= min size within max spread v; Q_one/Q_two
+    include complement-book orders; Qmin = max(min(Q1,Q2), max(Q1,Q2)/3)
+    for mid in [0.10, 0.90], else min(Q1,Q2); sampled each minute, paid
+    daily). Income that needs no view on the outcome -- only rewards
+    larger than the adverse-selection losses on fills.
+    - `npm run rewards-scan` (`src/research/rewardsScan.ts`, 4 tests):
+      ~17,900 open markets with a pool (total ~$246K/day; median $3,
+      p90 $50, max $2,000/day). 5,345 have empty books -- quoting first
+      there is the "get picked off" trap (e.g. a brand-new SPX-open
+      market, 27c/97c book). On ~10,400 competitive ones a min-size
+      two-sided quote would still take 10-50% of the pool (upper bound:
+      existing makers are aggregated into one book-level Qmin).
+    - `npm run rewards-paper -- collect` (`src/research/rewardsPaper.ts`,
+      2 tests; service `polycopytrade-rewards-paper`, units in
+      `ops/systemd/`): every 5 min re-quotes <= 40 competitive rewarded
+      markets resolving within 3 days (pool >= $20/day, mid 0.10-0.90,
+      our share < 50%), placements top (join best) and behind (1c back),
+      credits the formula reward. First basket: 40 daily-temperature
+      markets, pools $3,544/day, ~$3.80 credited per 5-min sample for
+      top (~$1,000/day upper bound on ~$4K of quotes, BEFORE fills).
+      `eval` replays the tape per interval (YES prints below our bid fill
+      the bid, above our ask fill the ask, capped at size), holds fills to
+      resolution.
+    - **Decision rule (fixed here, before any market resolved):** at >= 100
+      resolved markets, PASS = top NET (rewards + fill P&L) > 0 AND still
+      > 0 with rewards halved (share overstatement buffer). PASS ->
+      verify real payouts with a tiny live account (Track F, user's call);
+      FAIL -> rewards farming closed at 5-min re-quote cadence.
